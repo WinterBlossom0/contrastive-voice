@@ -197,7 +197,7 @@ The baseline rows use the one-detection-per-change accounting; no pre-registered
 
 A FastAPI server and one static page. Cards follow the brief's categories (Cadence: pace, word time, speech tempo; Pauses; Tone: pitch variation, emphasis, ending; Volume; Clarity proxy); each key is marked scored, listed or not scored, with the reason. Charts overlay both recordings on the participant's time axis with tolerance bands, flagged regions and injected-edit markers. Panels give the evaluation (pre-registered accounting first) and the stress matrix. Uploads (up to 180 s) are analysed in R2 against the Reagan passage, the Gettysburg bank (median of five) or an own reference, with stage progress. The 17 gallery examples were rebuilt on CPU with the frozen detector after the final evaluation. A browser harness checks every example against its result JSON at 320 to 1440 px: 0 failures, 0 console errors.
 
-![The local app on gallery example "Level 3, set A" (R1). Score cards by brief category; the selected finding with A/B playback, explanation, group note and fix; flagged regions with shared-penalty groups; the waveform with flagged spans. Per-key rows with tolerance bands follow below on the page.](img/tech_dashboard.png){width=58%}
+![The local app on gallery example "Level 3, set A" (R1): the score, the labelled time view of both readings, and the three biggest fixes with A/B listening.](img/tech_dashboard.png){width=58%}
 
 # 8. Reproducibility and code quality
 

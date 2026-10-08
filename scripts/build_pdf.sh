@@ -7,12 +7,6 @@ cd "$ROOT"
 for command in pandoc tectonic pdfinfo; do
   command -v "$command" >/dev/null || { echo "Required PDF tool missing: $command" >&2; exit 1; }
 done
-figure="docs/evidence/figures/detection_vs_level.png"
-if [[ ! -f "$figure" ]]; then
-  echo "Missing figure: $figure. Copy the run's eval/figures/ into docs/evidence/figures/ before building." >&2
-  exit 1
-fi
-
 pandoc docs/technical.md -o docs/technical.pdf --pdf-engine=tectonic --resource-path=docs:.
 pages="$(pdfinfo docs/technical.pdf | awk '/^Pages:/ {print $2}')"
 if [[ ! "$pages" =~ ^[0-9]+$ ]]; then

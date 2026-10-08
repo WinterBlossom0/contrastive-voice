@@ -527,7 +527,7 @@ The CLI writes results and exits nonzero on section errors.
 - **reproducibility:** two uncached analyses compare result JSON for byte identity.
 - **device_agreement:** fresh GPU/CPU alignment compares word times and local/whole-clip flag identity on six clips (`DEVICE_AGREEMENT_CLIPS`). CPU runs skip it. Results are per split with an optional validation+test aggregate.
 
-`docs/evidence/tables.md` is the schema-3 development run on train and validation.
+The final evaluation tables are in `docs/evidence_final_782d7df7/`.
 It also reports the check-reader populations.
 It is not the second final evaluation.
 

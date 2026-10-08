@@ -194,8 +194,7 @@ The second command runs 561 tests (all pass, about 85 s on a laptop CPU); two sl
 | `docs/research/` | The research reports that record each cited paper as read, and the lab decisions |
 | `docs/FINAL_EVALUATION_PLAN.md` | Plan for the final evaluation, written before it ran |
 | `docs/evidence_final_782d7df7/`, `docs/evidence_final_32cdd86f3d6e/` | Evidence of the final evaluation and of the earlier look at the test split |
-| `docs/evidence/` | Superseded: a development run (configuration `3af96976…`, train and validation only), not the final evaluation; `scripts/import_run.sh` writes a newly imported run here |
-| `docs/DESIGN.md`, `docs/video_script.md` | The original build contract and a draft video script, both written for the 2026-10-02 detector; not the final numbers |
+| `docs/DESIGN.md` | The original build contract, written for the 2026-10-02 detector; not the final numbers |
 | `kaggle/run.py`, `kaggle/data/fetch.py`, `kaggle/lab/` | Build kernel, corpus fetch kernel, measurement lab kernel |
 | `scripts/` | `stage_project.sh`, `import_run.sh`, `rebuild_after_final.sh`, `build_pdf.sh`, `make_pipeline_figure.py` |
 | `tests/` | Unit and regression tests |
