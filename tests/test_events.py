@@ -150,8 +150,6 @@ def test_run_pair_flags_the_whole_clip_when_the_clip_median_passes_the_regime_th
 
 
 def test_pending_family_counts_only_registered_secondary_dimensions(base, pinned_detector):
-    from synth import label, local
-    from cvoice.events import eval_clip, run_pair
     lab = label(base, typ="REPEATED_CONTOUR", secondary=C.EXPECTED_SECONDARY["REPEATED_CONTOUR"])
     run = run_pair(base, base, pinned_detector(), "R1").with_regions([local("D4", 10, 15), local("D5", 10, 15)])
     ev = eval_clip(run, lab)
@@ -168,7 +166,7 @@ def rush_truth_run(base, pinned_detector, typ, regions):
 
 
 def test_one_detection_per_change_a_same_change_region_detects_a_change_no_own_key_region_detects(base, pinned_detector):
-    # K2: no D1- region fired on the rush, so the D9- region (pauses not kept: part of the RUSH change) is its detection.
+    # One detection per change: no D1- region fired on the rush, so the D9- region (pauses not kept: part of the RUSH change) is its detection.
     run, lab = rush_truth_run(base, pinned_detector, "RUSH", [local("D9", 10, 14)])
     ev = eval_clip(run, lab, secondary_exempt=False)
     assert ev["truth"][0]["detected"] and ev["truth"][0]["detected_by"] == "same change: D9-"

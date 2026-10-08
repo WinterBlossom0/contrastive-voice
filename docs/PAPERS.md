@@ -4,7 +4,7 @@ One row per source cited in `docs/GROUNDING.md`, with the same number. Each row 
 
 **Read status.** *full* = the full text was read; *full-F* = full text read through a fetch tool that returns a model-written extraction (the report marks its numbers "to re-check"; the citation check confirmed those used here); *abstract* = only the abstract was read; *secondary* = read through the named source; *metadata* = only the bibliographic record. A claim from an abstract or a secondary source is weaker support.
 
-**Report keys** (all under `build/work/research/`):
+**Report keys** (all under `docs/research/`):
 
 | Key | Report | Round |
 |---|---|---|
@@ -196,7 +196,7 @@ Every chain-report source has a file `sources/<key>.txt` in its report folder wi
 
 The chain reports list about 270 sources (PP 57, DF 52, PE about 60, VC 103); the first-round reports list more. Only the sources above carry a claim in `docs/GROUNDING.md`. The full lists, with read status, are in section 6 of each chain report and in the source sections of the first-round reports. Points to note:
 
-- **Not cited because no research report records them as read.** Verhelst & Roelands 1993 (WSOLA), Moulines & Charpentier 1990 (PSOLA), Morise et al. 2016 (WORLD) and Baevski et al. 2020 (wav2vec 2.0) appear only in the condensed log of the flaw-synthesis research (`flaw_synthesis/RUN2_condensed.md`, which has no REPORT.md) or not at all. The edit tools and the acoustic model are named in `docs/GROUNDING.md` without a paper citation.
+- **Not cited because no research report records them as read.** Verhelst & Roelands 1993 (WSOLA), Moulines & Charpentier 1990 (PSOLA), Morise et al. 2016 (WORLD) and Baevski et al. 2020 (wav2vec 2.0) appear only in the condensed log of the flaw-synthesis research (`flaw_synthesis/RUN2_condensed.md`, which has no REPORT.md and is not in the repository) or not at all. The edit tools and the acoustic model are named in `docs/GROUNDING.md` without a paper citation.
 - **Could not be opened by any agent.** Goberman, Hughes & Haydock 2011 (acoustics of public-speaking anxiety), the one paper most likely to say whether nervousness speeds up or flattens a prepared speech (SY §6). Laukka et al. 2008 is read only through [22].
 - **Read and set aside by the reports.** Interval rhythm metrics (contradictory, PP §2.1 Reason F); envelope modulation spectrum (needs a trained discriminant); trained disfluency, prominence, creak and breath detectors (outside the no-training constraint, DF §2.6 M8, PE §2.2); jitter, shimmer and tremor indices as nervousness cues (directions disagree, defined on sustained vowels, VC §2.3).
 - **Read only through another source or as a search summary** (not cited): Fry 1955 (FE §6.1); Wingrove 2017 and Foulke & Sticht 1969 (RE §3.1); Megehee, Dobie & Grant 2003, Nooteboom & Eefting 1994 and Janse 2004 as reported in [13] (RE §3.1); Sadler 1989 and Nicol & Macfarlane-Dick 2006 (RE §6.4).

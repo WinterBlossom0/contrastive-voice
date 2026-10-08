@@ -2,21 +2,30 @@
 
 Evidence tags in the trailing comments follow DESIGN.md: (K) measured on a Kaggle CPU kernel during research,
 (S) from a fetched source, (D) design value fixed before any evaluation run. Units are stated per constant.
-`as_dict()` feeds the released detector hash. Dataset recipe metadata is versioned separately.
+Each constant is defined once. `as_dict()` feeds the released detector hash (schema 4; `as_dict(3)` gives the schema-3
+subset of the eight core types). Dataset recipe metadata is versioned separately (REGISTRY_VERSION).
 """
 from __future__ import annotations
 
 import math
 
 # --------------------------------------------------------------------------------------------- dimensions
-DIMS = ("D1", "D2", "D3", "D4", "D5", "D6")
-DIM_LABEL = {"D1": "Pace", "D2": "Pauses", "D3": "Pitch variation", "D4": "Emphasis", "D5": "Volume", "D6": "Clarity (spectral-change proxy)"}
-DIM_BRIEF = {"D1": "Cadence", "D2": "Pauses", "D3": "Tone", "D4": "Tone", "D5": "Volume", "D6": "Clarity"}  # brief's words
-DIM_UNIT = {"D1": "ln", "D2": "s", "D3": "ln", "D4": "p", "D5": "dB", "D6": "ln"}
+# D1-D6 are the dimensions of the eight core flaw types (detector schema 3); D7-D9 measure the extra types.
+DIMS = ("D1", "D2", "D3", "D4", "D5", "D6", "D7", "D8", "D9")
+DIM_LABEL = {"D1": "Pace", "D2": "Pauses", "D3": "Pitch variation", "D4": "Emphasis", "D5": "Volume", "D6": "Clarity (spectral-change proxy)",
+             "D7": "Word time", "D8": "Ending", "D9": "Speech tempo"}
+DIM_BRIEF = {"D1": "Cadence", "D2": "Pauses", "D3": "Tone", "D4": "Tone", "D5": "Volume", "D6": "Clarity",
+             "D7": "Cadence", "D8": "Tone", "D9": "Cadence"}  # brief's words
+DIM_UNIT = {"D1": "ln", "D2": "s", "D3": "ln", "D4": "p", "D5": "dB", "D6": "ln", "D7": "ln", "D8": "st", "D9": "ln"}
 REGIMES = ("R1", "R2")
-REGIME_DIMS = {"R1": DIMS, "R2": ("D1", "D2", "D3", "D5")}  # D4, D6 are displayed, never flagged or scored in R2 (D)
-FLAG_SIGNS = {"D1": (-1, 1), "D2": (-1, 1), "D3": (-1,), "D4": (-1,), "D5": (-1,), "D6": (-1,)}  # (D) see DESIGN 5.1
-CLIP_DIMS = ("D1", "D3")  # dimensions with a whole-clip measure next to the local one: overall tempo, overall pitch range
+# (D) D4, D6 are displayed, never flagged or scored in R2. D8 is listed in R1: val has two eligible ending events.
+REGIME_DIMS = {"R1": ("D1", "D2", "D3", "D4", "D5", "D6", "D7", "D9"), "R2": ("D1", "D2", "D3", "D5")}
+# Dimensions shown with their measures but never flagged or scored, whatever the validation gates give.
+LISTED_DIMS = {"R1": ("D7", "D8"), "R2": ("D7", "D8", "D9")}
+FLAG_SIGNS = {"D1": (-1, 1), "D2": (-1, 1), "D3": (-1,), "D4": (-1,), "D5": (-1,), "D6": (-1,),
+              "D7": (1,), "D8": (1,), "D9": (-1,)}  # (D) see DESIGN 5.1
+CLIP_DIMS = ("D1", "D3", "D7")  # dimensions with a whole-clip measure next to the local one: overall tempo, overall pitch range, uneven tempo
+UNIT_KIND = {dim: "boundary" if dim == "D2" else "word" if dim in ("D4", "D7", "D8") else "window" for dim in DIMS}
 
 
 def is_event(dim: str) -> bool:
@@ -92,53 +101,42 @@ RANGE_REG_ST = 1.0  # (D) st added to both pitch ranges before their ratio, so t
 PAUSE_DROP_MIN_BASE_S = 0.5  # x < 0 counts only where the baseline pause is at least this
 
 # --------------------------------------------------------------------------------------------- detector (5.2)
-FLOORS = {"D1": math.log(1.10), "D2": 0.15, "D3": math.log(1.4), "D4": 0.5, "D5": 2.0, "D6": math.log(1.25)}  # (D) minimum scale;
-#   D3: a 2 st narrowing of a 6 st window range, ln((6 + 1) / (4 + 1))
+FLOORS = {"D1": math.log(1.10), "D2": 0.15, "D3": math.log(1.4), "D4": 0.5, "D5": 2.0, "D6": math.log(1.25),
+          "D7": math.log(1.25), "D8": 1.0, "D9": math.log(1.05)}  # (D) minimum scale;
+#   D3: a 2 st narrowing of a 6 st window range, ln((6 + 1) / (4 + 1)); D7 a timing ratio; D8 pitch discrimination in st
 Q68 = 0.682689492  # quantile of |x| used as a scale
 HYSTERESIS_LOW = 0.5  # regions extend over |z| >= h * this ...
-REGION_PEAK_FRACTION = {"D1": 0.5, "D3": 0.0, "D5": 0.5, "D6": 0.5}  # (D) ... and over |z| >= this * the run's peak |z| (half-maximum
+REGION_PEAK_FRACTION = {"D1": 0.5, "D3": 0.0, "D5": 0.5, "D6": 0.5, "D9": 0.5}  # (D) ... and over |z| >= this * the run's peak |z| (half-maximum
 #   rule, DESIGN 5.2); the larger bound applies. A window mean (D1, D5, D6) responds in proportion to how much of the window an edit
-#   covers, so half the peak marks the edit's edge. The pitch range (D3) collapses only once the window lies inside a flat stretch:
+#   covers, so half the peak marks the edit's edge (also D9). The pitch range (D3) collapses only once the window lies inside a flat stretch:
 #   its response is already narrower than the stretch and is not trimmed.
-MIN_REGION_WORDS = {"D1": 2, "D2": 1, "D3": 2, "D4": 1, "D5": 1, "D6": 1}
+MIN_REGION_WORDS = {"D1": 2, "D2": 1, "D3": 2, "D4": 1, "D5": 1, "D6": 1, "D7": 1, "D8": 1, "D9": 2}
 H_GRID = tuple(round(1.0 + 0.05 * i, 2) for i in range(221))  # 1.00:0.05:12.00
 R1_H_RANGE = (1.0, 3.0)  # train supervised selection keeps one bounded common threshold
 MIN_MEASUREMENT_COVERAGE = 0.50  # below this coverage, a dimension is scored only if it has a flag
 DIFFERENCE_H, MAX_DIFFERENCES = 1.0, 5  # unscored R2 local differences, ranked by absolute z
 FALSE_RATE_BUDGET = 0.50  # false regions per minute on the regime's train nulls
-CLIP_LN = {"D1": math.log(1.25), "D3": math.log(2.0)}  # (D) R1 whole-clip thresholds: overall tempo off by 25 %, overall pitch range halved
+# (D) R1 whole-clip thresholds: overall tempo off by 25 %, overall pitch range halved, typical word-time ratio spread 25 %
+CLIP_LN = {"D1": math.log(1.25), "D3": math.log(2.0), "D7": math.log(1.25)}
 CLIP_H = 3.5  # (S) R2 whole-clip threshold in robust units of the reader-pair clip medians: the modified z-score outlier convention
 #   of the NIST/SEMATECH handbook, section 1.3.5.17. The spread is floored like the local scale, so a threshold can be CLIP_H * floor.
 
 # --------------------------------------------------------------------------------------------- scores (6)
-X_SAT = {"D1": math.log(1.9), "D2": 1.0, "D3": math.log(5.0), "D4": 1.5, "D5": 12.0, "D6": 1.0}  # (D) L3 magnitude, physical units;
-#   D3: a 4 st window range flattened to nothing, ln((4 + 1) / (0 + 1))
+X_SAT = {"D1": math.log(1.9), "D2": 1.0, "D3": math.log(5.0), "D4": 1.5, "D5": 12.0, "D6": 1.0,
+         "D7": math.log(5), "D8": 6.0, "D9": math.log(1.9)}  # (D) L3 magnitude, physical units;
+#   D3: a 4 st window range flattened to nothing, ln((4 + 1) / (0 + 1)); D9: the RUSH L3 word-time ratio 1.90, as D1
+#   (a ln(1.18) cap put a G1 rush below the G3 mix)
 R2_SAT_THRESHOLD_FACTOR = 2.0  # keep positive severity width above every fitted R2 threshold
-CLIP_SAT = {"D1": X_SAT["D1"], "D3": X_SAT["D3"]}  # whole-clip measures saturate where the local ones do
-PMAX_START = {"D1": 0.40, "D2": 0.50, "D3": 0.40, "D4": 0.50, "D5": 0.40, "D6": 0.40}  # (D) refit on train
+CLIP_SAT = {"D1": X_SAT["D1"], "D3": X_SAT["D3"], "D7": math.log(1.9)}  # D1, D3 saturate where the local measures do
+PMAX_START = {"D1": 0.40, "D2": 0.50, "D3": 0.40, "D4": 0.50, "D5": 0.40, "D6": 0.40, "D7": 0.5, "D8": 0.4, "D9": 0.4}  # (D) refit on train
 PMAX_FACTOR_GRID = tuple(round(0.20 * 1.05 ** i, 4) for i in range(0, 80))  # uniform factor searched by calibrate
 GATE_IDENTITY, GATE_L1_MIN, GATE_G5_MAX = 100.0, 90.0, 50.0
 
 # --------------------------------------------------------------------------------------------- flaws (2.4)
-FLAW_TYPES = ("RUSH", "DRAG", "PAUSE_DROPPED", "PAUSE_INTRUSIVE", "MONOTONE", "DEEMPHASIS", "FADE", "MUMBLE")
-FLAW_DIM = {"RUSH": "D1", "DRAG": "D1", "PAUSE_DROPPED": "D2", "PAUSE_INTRUSIVE": "D2", "MONOTONE": "D3",
-            "DEEMPHASIS": "D4", "FADE": "D5", "MUMBLE": "D6"}
+# The registry of all flaw types (FLAW_REGISTRY) and its tables (FLAW_TYPES, FLAW_DIM, ...) follow the recipe constants.
+CORE8_TYPES = ("RUSH", "DRAG", "PAUSE_DROPPED", "PAUSE_INTRUSIVE", "MONOTONE", "DEEMPHASIS", "FADE", "MUMBLE")
 LEVELS = (1, 2, 3)
-LEVEL_PARAM = {  # physical magnitude per level (D)
-    "RUSH": (1.20, 1.45, 1.90),  # speech duration x 1/r
-    "DRAG": (1.20, 1.45, 1.90),  # speech duration x r
-    "PAUSE_DROPPED": (0.40, 0.20, 0.0),  # fraction f of the pause kept; level 3 keeps PAUSE_FLOOR_S
-    "PAUSE_INTRUSIVE": (0.35, 0.6, 1.2),  # s of inserted room tone
-    "MONOTONE": (0.50, 0.25, 0.0),  # F0 range kept k
-    "DEEMPHASIS": (0.5, 0.75, 1.0),  # strength
-    "FADE": (4.0, 8.0, 14.0),  # dB
-    "MUMBLE": (0.3, 0.6, 1.0),  # strength m
-}
 PAUSE_FLOOR_S = 0.06  # s, level-3 PAUSE_DROPPED keeps this much
-EXPECTED_SECONDARY = {  # (D) dimensions where a firing is not counted as a false region
-    "RUSH": ("D4",), "DRAG": ("D2", "D4", "D6"), "PAUSE_DROPPED": ("D1",), "PAUSE_INTRUSIVE": ("D1",), "MONOTONE": ("D4",),
-    "DEEMPHASIS": ("D1", "D3", "D5"), "FADE": ("D4",), "MUMBLE": (),
-}
 SPAN_WORDS = (5, 8)  # windowed dimensions, inclusive
 EDIT_GAP_WORDS = 2  # edits stay at least this many words apart (D)
 COVERAGE_CAP = 0.35  # edited word coverage per clip; the botched rung and identity clips are exempt
@@ -184,26 +182,8 @@ SPEAKER_TRANSFORM = (1.25, 1.10)  # WORLD (f0 ratio, formant ratio) used as a di
 RANDOM_SEEDS = 20  # trivial random-span baseline repetitions (D)
 DEVICE_AGREEMENT_CLIPS = 6  # (D) held-out clips aligned on GPU and on CPU for the device-agreement section
 
-
-def _base_dict() -> dict:
-    """All public constants as JSON-able values (tuples become lists); used for the config hash."""
-    out = {}
-    for k, v in globals().items():
-        if k.isupper() and not k.startswith("_"):
-            out[k] = _plain(v)
-    return out
-
-
-def _plain(v):
-    if isinstance(v, (tuple, list)):
-        return [_plain(i) for i in v]
-    if isinstance(v, dict):
-        return {str(k): _plain(i) for k, i in v.items()}
-    return v
-
-
-_DETECTOR_KEYS = tuple(_base_dict())
-CORE8_TYPES = FLAW_TYPES
+# --------------------------------------------------------------------------------------------- recipes of the extra flaw types
+# "<topic> REPORT §n" cites docs/research/chain/<topic>/REPORT.md; "SYNTHESIS §n" cites docs/research/chain/SYNTHESIS.md.
 # pace_pauses REPORT §1/§4: articulation-rate rise 13–18%; 13/15/18% chosen within that range.
 RUSH_RATE = (1.13, 1.15, 1.18)
 # pace_pauses REPORT §4: shorten/delete pauses, no numeric fraction; chosen fractions ending in deletion.
@@ -261,37 +241,59 @@ CONTOUR_STRENGTH = (1 / 3, 2 / 3, 1.0)
 ALIGNMENT_ERROR_S = (0.048, 0.089)
 
 
-FLAW_REGISTRY = {t: {"primary": FLAW_DIM[t], "family": FLAW_DIM[t], "levels": LEVEL_PARAM[t],
-                     "secondary": EXPECTED_SECONDARY[t], "event": "boundary" if t.startswith("PAUSE") else "word" if t == "DEEMPHASIS" else "span",
-                     "sign": 1 if t in ("DRAG", "PAUSE_INTRUSIVE") else -1} for t in CORE8_TYPES}
+
+def _core(primary, event, sign, secondary, levels):
+    return {"primary": primary, "family": primary, "levels": levels, "secondary": secondary, "event": event, "sign": sign}
 
 
-def _extra(primary, event, sign, secondary, **params):
-    return {"primary": primary, "family": primary, "event": event, "sign": sign, "secondary": secondary,
-            "levels": tuple({k: v[i] for k, v in params.items()} for i in range(3))}
+def _extra(primary, event, sign, secondary, family=None, **params):
+    return {"primary": primary, "family": primary if family is None else family, "event": event, "sign": sign,
+            "secondary": secondary, "levels": tuple({k: v[i] for k, v in params.items()} for i in range(3))}
 
 
-# recipes_report.md: primary families, secondary effects and named recipe units.
-FLAW_REGISTRY.update({
-    "NATURAL_RUSH": _extra("D1", "span", -1, ("D2", "D4"), speech_rate=RUSH_RATE, pause_kept_fraction=RUSH_PAUSE_KEEP),
-    "HESITATION": _extra("D1", "word", 1, ("D2", "D4"), word_duration_factor=HESITATION_STRETCH, silence_s=HESITATION_PAUSE_S),
+# Per type: primary dimension (the flag key that detects it, with sign; sign 0 = either direction), family (the group it
+# is reported under), event kind, expected secondary dimensions (D: a firing there is not counted as a false region) and
+# the physical magnitude per level (D). Extra types: docs/research/recipes_report.md, primary families, secondary effects
+# and named recipe units.
+FLAW_REGISTRY = {
+    "RUSH": _core("D1", "span", -1, ("D4",), (1.20, 1.45, 1.90)),  # speech duration x 1/r
+    "DRAG": _core("D1", "span", 1, ("D2", "D4", "D6", "D7"), (1.20, 1.45, 1.90)),  # speech duration x r
+    "PAUSE_DROPPED": _core("D2", "boundary", -1, ("D1",), (0.40, 0.20, 0.0)),  # fraction f of the pause kept; level 3 keeps PAUSE_FLOOR_S
+    "PAUSE_INTRUSIVE": _core("D2", "boundary", 1, ("D1",), (0.35, 0.6, 1.2)),  # s of inserted room tone
+    "MONOTONE": _core("D3", "span", -1, ("D4", "D8"), (0.50, 0.25, 0.0)),  # F0 range kept k
+    "DEEMPHASIS": _core("D4", "word", -1, ("D1", "D3", "D5"), (0.5, 0.75, 1.0)),  # strength
+    "FADE": _core("D5", "span", -1, ("D4",), (4.0, 8.0, 14.0)),  # dB
+    "MUMBLE": _core("D6", "span", -1, (), (0.3, 0.6, 1.0)),  # strength m
+    # D9 measures the words of a natural rush; the change is reported under pace (D1).
+    "NATURAL_RUSH": _extra("D9", "span", -1, ("D2", "D4"), family="D1", speech_rate=RUSH_RATE, pause_kept_fraction=RUSH_PAUSE_KEEP),
+    "HESITATION": _extra("D2", "word", 1, ("D1", "D4", "D7"), word_duration_factor=HESITATION_STRETCH, silence_s=HESITATION_PAUSE_S),
     "WORD_BY_WORD": _extra("D2", "span", 1, ("D1",), silence_s=READING_PAUSE_S, every_words=(1, 1, 1)),
-    "UNEVEN_TEMPO": _extra("D1", "span", 0, ("D4", "D6"), max_duration_deviation=TEMPO_DEVIATION),
-    "WORD_REPETITION": _extra("DISFLUENCY", "word", 0, ("D1", "D2"), first_token_duration_factor=WORD_REPEAT_STRETCH,
+    "UNEVEN_TEMPO": _extra("D7", "clip", 1, ("D4", "D6", "D7"), family="D1", max_duration_deviation=TEMPO_DEVIATION),
+    "WORD_REPETITION": _extra("D7", "word", 1, ("D1", "D2"), family="DISFLUENCY", first_token_duration_factor=WORD_REPEAT_STRETCH,
                               silence_s=WORD_REPEAT_PAUSE_S, inserted_copies=(1, 1, 1)),
-    "SOUND_REPETITION": _extra("DISFLUENCY", "word", 0, ("D1", "D2", "D6"), inserted_copies=SOUND_REPEAT_COPIES, silence_s=SOUND_REPEAT_PAUSE_S),
-    "RHYME_PROLONGATION": _extra("DISFLUENCY", "word", 0, ("D1", "D4"), added_duration_s=RHYME_ADDED_S),
-    "ONSET_PROLONGATION": _extra("DISFLUENCY", "word", 0, ("D1", "D6"), onset_target_s=ONSET_TARGET_S),
-    "BLOCK": _extra("DISFLUENCY", "word", 0, ("D1", "D2", "D6"), silence_s=BLOCK_PAUSE_S),
+    "SOUND_REPETITION": _extra("D7", "word", 1, ("D1", "D2", "D6"), family="DISFLUENCY", inserted_copies=SOUND_REPEAT_COPIES,
+                               silence_s=SOUND_REPEAT_PAUSE_S),
+    "RHYME_PROLONGATION": _extra("D7", "word", 1, ("D1", "D4"), family="DISFLUENCY", added_duration_s=RHYME_ADDED_S),
+    "ONSET_PROLONGATION": _extra("D7", "word", 1, ("D1", "D6"), family="DISFLUENCY", onset_target_s=ONSET_TARGET_S),
+    "BLOCK": _extra("D7", "word", 1, ("D1", "D2", "D6"), family="DISFLUENCY", silence_s=BLOCK_PAUSE_S),
     "LOW_EFFORT": _extra("D5", "span", -1, ("D3", "D4", "D6"), attenuation_db=EFFORT_GAIN_DB, alpha_drop_per_db=(EFFORT_ALPHA_PER_DB,) * 3,
                          pitch_lowering_st=EFFORT_PITCH_ST),
     "TRAILING_OFF": _extra("D5", "span", -1, ("D4", "D6"), final_attenuation_db=TRAIL_GAIN_DB, alpha_drop_per_db=(EFFORT_ALPHA_PER_DB,) * 3),
-    "MISPLACED_EMPHASIS": _extra("D4", "span", -1, ("D1", "D3", "D5"), function_duration_factor=EMPH_DURATION,
+    "MISPLACED_EMPHASIS": _extra("D4", "span", -1, ("D1", "D3", "D5", "D7"), function_duration_factor=EMPH_DURATION,
                                  function_pitch_st=EMPH_PITCH_ST, function_gain_db=EMPH_GAIN_DB, stressed_removal_strength=EMPH_REMOVE),
-    "RISING_ENDING": _extra("ENDINGS", "word", 0, ("D3", "D4"), rise_st=ENDING_RISE_ST),
-    "FLAT_FINAL_FALL": _extra("ENDINGS", "word", 0, ("D3", "D4"), strength=CONTOUR_STRENGTH),
-    "REPEATED_CONTOUR": _extra("D3", "span", -1, ("D4",), contour_strength=CONTOUR_STRENGTH),
-})
+    "RISING_ENDING": _extra("D8", "word", 1, ("D3", "D4"), family="ENDINGS", rise_st=ENDING_RISE_ST),
+    "FLAT_FINAL_FALL": _extra("D8", "word", 1, ("D3", "D4"), family="ENDINGS", strength=CONTOUR_STRENGTH),
+    # No dimension measures a repeated contour: the type is generated, never detected.
+    "REPEATED_CONTOUR": _extra("NO_DETECTOR", "span", -1, ("D4",), family="CONTOUR", contour_strength=CONTOUR_STRENGTH),
+}
+FLAW_TYPES = tuple(FLAW_REGISTRY)
+EXTRA_TYPES = tuple(t for t in FLAW_REGISTRY if t not in CORE8_TYPES)
+FLAW_DIM = {t: r['primary'] for t, r in FLAW_REGISTRY.items()}
+FLAW_FAMILY = {t: r['family'] for t, r in FLAW_REGISTRY.items()}
+LEVEL_PARAM = {t: r['levels'] for t, r in FLAW_REGISTRY.items()}
+EXPECTED_SECONDARY = {t: r['secondary'] for t, r in FLAW_REGISTRY.items()}
+if any(d not in DIMS for r in FLAW_REGISTRY.values() for d in r['secondary']):
+    raise ValueError('registry secondary dimension has no measure')
 EXTRA_SINGLE_LEVEL_SETS = (
     ("NATURAL_RUSH", "WORD_REPETITION", "LOW_EFFORT", "RISING_ENDING"),
     ("HESITATION", "SOUND_REPETITION", "MISPLACED_EMPHASIS", "FLAT_FINAL_FALL"),
@@ -310,21 +312,8 @@ EXTRA_CROSS_CLIPS = tuple((lv, ts) for lv in (2, 3) for ts in EXTRA_CROSS_SETS i
                           ("NATURAL_RUSH", "HESITATION", "WORD_BY_WORD", "UNEVEN_TEMPO"))
 REGISTRY_VERSION = 3
 
-
-def _released_dict() -> dict:
-    """Released detector constants; dataset-only metadata must not invalidate the frozen detector."""
-    out = {k: _plain(globals()[k]) for k in _DETECTOR_KEYS}
-    out["FLAW_TYPES"] = list(CORE8_TYPES)
-    for name in ("FLAW_DIM", "LEVEL_PARAM", "EXPECTED_SECONDARY"):
-        out[name] = {t: out[name][t] for t in CORE8_TYPES}
-    return out
-
-
-UNIT_KIND = {dim: "boundary" if dim == "D2" else "word" if dim == "D4" else "window" for dim in DIMS}
-
-# Schema 3 remains readable for the frozen artifact and the refactor regression check.
-_LEGACY_CONFIG = _released_dict()
-BLOCK_S, STABLE_S = 0.25, 0.20  # s, disfluency report duration floors
+# --------------------------------------------------------------------------------------------- measures of D7-D9 and the extra types
+BLOCK_S, STABLE_S = 0.25, 0.20  # s, duration floors of docs/research/chain/disfluency/REPORT.md
 STABLE_PITCH_ST, STABLE_SPECTRUM = 0.50, 0.08  # lab stability limits; low F0 is below the voiced median
 ORPHAN_MIN_S = 0.20  # s, lab voiced-gap floor
 FINAL_WINDOW_S, MIN_FINAL_VOICED = 0.20, 5  # s and frames, sentence-ending comparison stretches
@@ -342,6 +331,22 @@ FUNCTION_WORDS = tuple('a an the and or but if as at by for from in into of on t
                        'must i you he she it we they me him her us them my your his its our their this '
                        'that these those not'.upper().split())
 FALSE_CLIP_RATE_BUDGET = 0.05  # false whole-clip flags per null clip, separate from the local budget
+D7_REG_S = CTC_FRAME_S  # Occupancy is quantised in CTC frames.
+D7_MIN_S = 3 * CTC_FRAME_S
+D7_IDENTITY_TOL_LN = 0.05
+WORD_BY_WORD_MIN_EVENTS = 3  # Design: isolated pauses do not establish word-by-word reading.
+HESITATION_STRETCH_MIN = math.log(1.25)  # Lab timing floor; independent of recipe levels.
+ALPHA_DROP_DB = 1.0  # Lab alpha-ratio resolution for supporting effort evidence, dB.
+STUTTER_BASE_RATE = 0.0021  # disfluency REPORT §3: 0.21% stuttered syllables in fluent readers.
+# (D) natural-rushing rule (pace_pauses REPORT §1/§4; recipe edits_extra.natural_rushing): faster words and shorter pauses.
+# A D9- region is natural rushing only when the paired pause time in its windows' words is below both the word-time ratio
+# and this kept fraction, the ln midpoint between pauses kept (1.0) and the mildest recipe fraction (0.6).
+NATURAL_RUSH_PAUSE_KEPT_MAX = math.sqrt(RUSH_PAUSE_KEEP[0])
+# (D) A region of the key flags the same change as a region or truth of the value key: duplicate, not false.
+SAME_CHANGE = {'D9-': 'D1-'}
+
+# --------------------------------------------------------------------------------------------- R2 reference pool
+CONSENSUS_K = 5  # reference readings in a consensus reference
 R2_REFERENCES = 5  # seeded draws per participant; smaller sets repeat references without treating draws as readers
 R2_BOOTSTRAPS = 1000  # participant-reader cluster resamples for the reported upper bound
 R2_FIT_SHARE, R2_SELECT_SHARE = 0.50, 0.25  # reader-disjoint split; the remainder is lockbox
@@ -352,81 +357,77 @@ R2_SELECT_EDIT_CAP = 160  # maximum full-text select edits across all calibrated
 R2_SELECT_EDIT_BATCH = 8  # clips held during injection, preparation and matching
 R2_SELECT_EDIT_BUDGET_S = 600  # wall s reserved inside the 30-minute calibration forecast
 R2_PREPARE_BATCH = 64  # bound temporary WAV/job copies while using every pool worker
-FLAW_REGISTRY['HESITATION'].update(primary='D2', secondary=('D1', 'D4', 'D7'))
-DIMS += ('D7', 'D8')
-DIM_LABEL.update(D7='Word time', D8='Ending')
-DIM_BRIEF.update(D7='Cadence', D8='Tone')
-DIM_UNIT.update(D7='ln', D8='st')
-REGIME_DIMS['R1'] = tuple(d for d in DIMS if d != 'D8')  # (D) D8 is listed in R1: two eligible val ending events
-LISTED_DIMS = {'R1': ('D7', 'D8'), 'R2': ('D7', 'D8')}
-D7_REG_S = CTC_FRAME_S  # Occupancy is quantised in CTC frames.
-D7_MIN_S = 3 * CTC_FRAME_S
-D7_IDENTITY_TOL_LN = 0.05
-FLAG_SIGNS.update(D7=(1,), D8=(1,))
-CLIP_DIMS += ('D7',)
-UNIT_KIND.update(D7='word', D8='word')
-FLOORS.update(D7=math.log(1.25), D8=1.0)  # Design floors: timing ratio and pitch discrimination in st.
-MIN_REGION_WORDS.update(D7=1, D8=1)
-X_SAT.update(D7=math.log(5), D8=6.0)  # Design saturation; refit Pmax on train.
-PMAX_START.update(D7=0.5, D8=0.4)
-CLIP_LN['D7'] = math.log(1.25)  # Typical word-time ratio spread, ln.
-CLIP_SAT['D7'] = math.log(1.9)
-WORD_BY_WORD_MIN_EVENTS = 3  # Design: isolated pauses do not establish word-by-word reading.
-HESITATION_STRETCH_MIN = math.log(1.25)  # Lab timing floor; independent of recipe levels.
-ALPHA_DROP_DB = 1.0  # Lab alpha-ratio resolution for supporting effort evidence, dB.
-STUTTER_BASE_RATE = 0.0021  # disfluency REPORT §3: 0.21% stuttered syllables in fluent readers.
-PROMOTION_RECALL_MIN, PROMOTION_AUC_MIN = 0.5, 0.70  # Agreed select-set product gate.
-LABEL_PRECISION_MIN, PROMOTION_AUC_LOWER_MIN = 0.5, 0.5  # Real precision and chance-AUC gates in design §8.
+
+# --------------------------------------------------------------------------------------------- validation gates of the pattern labels
+PROMOTION_RECALL_MIN, PROMOTION_AUC_MIN = 0.5, 0.70  # select-set recall and AUC that a label needs for the product
+LABEL_PRECISION_MIN, PROMOTION_AUC_LOWER_MIN = 0.5, 0.5  # Real precision and chance-AUC gates of docs/DESIGN.md section 8
 PROMOTION_MAX_EXISTING_LOSS = 1
 # Real validation is supplied in the calibration report; unvalidated labels retain the fallback.
 PATTERN_GATES = {'BLOCK': 'block', 'WORD_REPETITION': 'repetition', 'SOUND_REPETITION': 'repetition',
                  'ONSET_PROLONGATION': 'prolongation', 'RHYME_PROLONGATION': 'prolongation',
                  'FILLED_PAUSE': 'filled_pause', 'LOW_EFFORT': 'low_effort', 'TRAILING_OFF': 'trailing_off',
                  'NATURAL_RUSH': 'natural_rush', 'UNEVEN_TEMPO': 'uneven_tempo'}
-FLAW_REGISTRY['HESITATION']['family'] = 'D2'
-for _type in ('WORD_REPETITION', 'SOUND_REPETITION', 'RHYME_PROLONGATION', 'ONSET_PROLONGATION', 'BLOCK'):
-    FLAW_REGISTRY[_type].update(primary='D7', sign=1)
-for _type in ('RISING_ENDING', 'FLAT_FINAL_FALL'):
-    FLAW_REGISTRY[_type].update(primary='D8', sign=1)
-FLAW_REGISTRY['UNEVEN_TEMPO'].update(primary='D7', event='clip', sign=1)
-FLAW_REGISTRY['REPEATED_CONTOUR'].update(primary='NO_DETECTOR', family='CONTOUR')
-for _type, _dim in (('DRAG', 'D7'), ('MISPLACED_EMPHASIS', 'D7'), ('UNEVEN_TEMPO', 'D7'), ('MONOTONE', 'D8')):
-    FLAW_REGISTRY[_type]['secondary'] = tuple(dict.fromkeys((*FLAW_REGISTRY[_type]['secondary'], _dim)))
-EXTRA_TYPES = tuple(t for t in FLAW_REGISTRY if t not in CORE8_TYPES)
-FLAW_TYPES = tuple(FLAW_REGISTRY)
-FLAW_DIM = {t: r['primary'] for t, r in FLAW_REGISTRY.items()}
-FLAW_FAMILY = {t: r['family'] for t, r in FLAW_REGISTRY.items()}
-LEVEL_PARAM = {t: r['levels'] for t, r in FLAW_REGISTRY.items()}
-EXPECTED_SECONDARY = {t: r['secondary'] for t, r in FLAW_REGISTRY.items()}
-if any(d not in DIMS for r in FLAW_REGISTRY.values() for d in r['secondary']):
-    raise ValueError('registry secondary dimension has no measure')
-
-
-CONSENSUS_K = 5
-DIMS += ('D9',)
-DIM_LABEL['D9'] = 'Speech tempo'
-DIM_BRIEF['D9'] = 'Cadence'
-DIM_UNIT['D9'] = 'ln'
-FLAG_SIGNS['D9'] = (-1,)
-UNIT_KIND['D9'] = 'window'
-FLOORS['D9'] = math.log(1.05)
-MIN_REGION_WORDS['D9'] = 2
-REGION_PEAK_FRACTION['D9'] = 0.5
-X_SAT['D9'] = X_SAT['D1']  # (D) RUSH L3 word-time ratio 1.90, as D1: a ln(1.18) cap put a G1 rush below the G3 mix
-PMAX_START['D9'] = 0.4
-REGIME_DIMS['R1'] += ('D9',)
-LISTED_DIMS['R2'] += ('D9',)
-# (D) Owner decisions: listed and unscored whatever the validation gates give, with the reason shown in the API.
+# (D) Dimensions listed and unscored whatever the validation gates give; the API shows the reason. The name and the
+#   strings are inside the detector hash, so a change needs a new calibration.
 OWNER_LISTED = {'R1': {'D8': 'owner decision: the RISING_ENDING recipe mostly does not realise; val has 2 eligible ending events'},
                 'R2': {'D9': 'owner decision: dev v13 found 0 of 68 R2 rush positives, at one seventh of the local budget'}}
-# (D) natural-rushing rule (pace_pauses REPORT §1/§4; recipe edits_extra.natural_rushing): faster words and shorter pauses.
-# A D9- region is natural rushing only when the paired pause time in its windows' words is below both the word-time ratio
-# and this kept fraction, the ln midpoint between pauses kept (1.0) and the mildest recipe fraction (0.6).
-NATURAL_RUSH_PAUSE_KEPT_MAX = math.sqrt(RUSH_PAUSE_KEEP[0])
-FLAW_REGISTRY['NATURAL_RUSH']['primary'] = 'D9'
-FLAW_DIM['NATURAL_RUSH'] = 'D9'
-# (D) A region of the key flags the same change as a region or truth of the value key: duplicate, not false.
-SAME_CHANGE = {'D9-': 'D1-'}
+
+
+# --------------------------------------------------------------------------------------------- detector hash
+# Constants of detector schema 3, in hash order; as_dict adds the later constants of schema 4.
+_DETECTOR_KEYS = (
+    "DIMS", "DIM_LABEL", "DIM_BRIEF", "DIM_UNIT", "REGIMES", "REGIME_DIMS", "FLAG_SIGNS", "CLIP_DIMS", "SR",
+    "STEREO_SIDE_DB", "MAX_UPLOAD_BYTES", "MAX_UPLOAD_S", "DECODE_TIMEOUT_S", "THREAD_ENV", "TORCH_THREADS",
+    "POOL_WORKERS_PER_GPU", "POOL_MAX_CPU_WORKERS", "POOL_TORCH_THREADS", "SEED", "WIN", "HOP", "HOP_S", "NFFT",
+    "LEVEL_EPS", "MIN_VOICED_REF", "F0_PASS1", "F0_FLOOR_MIN", "F0_FLOOR_Q25_FACTOR", "F0_CEIL_MAX", "F0_CEIL_Q75_FACTOR",
+    "F0_FALLBACK", "F0_MIN_FIRST_PASS", "F0_MEDIAN_FRAMES", "PRAAT_AC", "N_MEL", "MEL_FMIN", "MEL_FMAX", "N_CEPS",
+    "DELTA_HALF_WIDTH", "MEL_LOG_EPS", "MIN_VOICED_WORD", "REGION_MAX_EXT_S", "REGION_SHARE_BELOW_S", "STRESS_P_MIN",
+    "STRESS_SIGMA_FLOOR", "MAD_SCALE", "CTC_FRAME_S", "CTC_STRIDE", "CHUNK_S", "CONTEXT_S", "CHECKPOINT_NAME",
+    "CHECKPOINT_SHA256", "CHECKPOINT_BYTES", "LOW_COMPAT_NOTICE", "MEAN_COMPAT_MIN", "PAUSE_MIN_S", "PAUSE_FRAC",
+    "PAUSE_CLIP_DB", "PAUSE_Q", "PAUSE_PEAK_Q", "PAUSE_PEAK_DB", "PAUSE_BRIDGE_FRAMES", "WINDOW_WORDS", "WINDOW_MIN_WORDS",
+    "D3_MIN_VOICED_FRAMES", "RANGE_REG_ST", "PAUSE_DROP_MIN_BASE_S", "FLOORS", "Q68", "HYSTERESIS_LOW",
+    "REGION_PEAK_FRACTION", "MIN_REGION_WORDS", "H_GRID", "R1_H_RANGE", "MIN_MEASUREMENT_COVERAGE", "DIFFERENCE_H",
+    "MAX_DIFFERENCES", "FALSE_RATE_BUDGET", "CLIP_LN", "CLIP_H", "X_SAT", "R2_SAT_THRESHOLD_FACTOR", "CLIP_SAT",
+    "PMAX_START", "PMAX_FACTOR_GRID", "GATE_IDENTITY", "GATE_L1_MIN", "GATE_G5_MAX", "FLAW_TYPES", "FLAW_DIM", "LEVELS",
+    "LEVEL_PARAM", "PAUSE_FLOOR_S", "EXPECTED_SECONDARY", "SPAN_WORDS", "EDIT_GAP_WORDS", "COVERAGE_CAP", "PRAAT_SEED",
+    "PSOLA_F0", "PSOLA_STEP_S", "WSOLA_FRAME_MS", "WSOLA_TOL_MS", "XFADE_S", "SPLICE_FADE_S", "WSOLA_MIN_PIECE_S",
+    "INSERT_MIN_GAP_S", "PAUSE_FADE_S", "FLATTEN_RAMP_S", "DEEMPH_RAMP_S", "DEEMPH_MAX_RATE", "DEEMPH_MAX_GAIN_DB",
+    "FADE_RELEASE_S", "FADE_RAMP_FRACTION", "MUMBLE_NFFT", "MUMBLE_HOP", "MUMBLE_SIGMA_MS", "MUMBLE_MAX_GAIN_DB",
+    "ROOM_TONE_GUARD_S", "ROOM_TONE_MIN_S", "ROOM_TONE_XFADE_S", "ROOM_TONE_DB_SPREAD", "G5_FADES", "G1_TYPE", "G3_TYPES",
+    "SINGLE_LEVEL_SETS", "CROSS_SPEAKER_CLIPS", "CHAIN_B_TYPES", "PLACEBO_SEEDS", "PASSAGE_S", "PASSAGE_TARGET_S",
+    "SENTENCE_COVERAGE_MIN", "PASSAGE_CONTEXT_S", "CLIP_PAD_S", "ABBREVIATIONS", "IOU_MIN", "EVENT_TOL_S",
+    "PAUSE_DIAGNOSIS_FRACTION", "HEADLINE_LEVELS", "RULE_OF_THREE", "GAIN_DB", "LOWPASS_HZ", "NOISE_SNR_DB", "MP3_KBPS",
+    "COMPRESSION", "SPEAKER_TRANSFORM", "RANDOM_SEEDS", "DEVICE_AGREEMENT_CLIPS",
+)
+
+
+def _plain(v):
+    if isinstance(v, (tuple, list)):
+        return [_plain(i) for i in v]
+    if isinstance(v, dict):
+        return {str(k): _plain(i) for k, i in v.items()}
+    return v
+
+
+def _released_dict() -> dict:
+    """Schema-3 constants: the detector of the eight core types on D1-D6. They keep the core-8 label bytes (flaws) and
+    the loading of schema-3 detector files unchanged."""
+    core_dims = ("D1", "D2", "D3", "D4", "D5", "D6")
+    out = {k: _plain(globals()[k]) for k in _DETECTOR_KEYS}
+    out["DIMS"] = list(core_dims)
+    out["CLIP_DIMS"] = [d for d in out["CLIP_DIMS"] if d in core_dims]
+    out["REGIME_DIMS"] = {r: [d for d in dims if d in core_dims] for r, dims in out["REGIME_DIMS"].items()}
+    for name in ("DIM_LABEL", "DIM_BRIEF", "DIM_UNIT", "FLAG_SIGNS", "FLOORS", "REGION_PEAK_FRACTION", "MIN_REGION_WORDS",
+                 "CLIP_LN", "X_SAT", "CLIP_SAT", "PMAX_START"):
+        out[name] = {d: v for d, v in out[name].items() if d in core_dims}
+    out["FLAW_TYPES"] = list(CORE8_TYPES)
+    for name in ("FLAW_DIM", "LEVEL_PARAM"):
+        out[name] = {t: out[name][t] for t in CORE8_TYPES}
+    out["EXPECTED_SECONDARY"] = {t: [d for d in out["EXPECTED_SECONDARY"][t] if d in core_dims] for t in CORE8_TYPES}
+    return out
+
+
+_LEGACY_CONFIG = _released_dict()
 
 
 def as_dict(schema: int = 4) -> dict:

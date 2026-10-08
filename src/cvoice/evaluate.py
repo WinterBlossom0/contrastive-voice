@@ -30,7 +30,8 @@ import numpy as np
 from . import audio, flaws, stress
 from . import config as C
 from .detect import scale
-from .calibrate import calibration_policy, grouped_nulls, lockbox_null_report, null_check, r1_nulls, r2_nulls, reader_ids
+from .calibrate import (Null, best_by_f1, calibration_policy, g5_gate_fails, grouped_nulls, identity_gate_fails, l1_gate_fails,
+                        lockbox_null_report, null_check, r1_common_grid, r1_nulls, r2_nulls, reader_ids)
 from .dataset import Dataset, load_dataset, sha256_file
 from .detect import KEYS, Region, clip_flags, decode, decode_dim, flagged_dims, key, load_detector, threshold
 from .events import Run, clip_key, eval_clip, f1, false_change_duplicates, match, near, overlaps, run_pair, truths
@@ -47,8 +48,10 @@ EXPECTED = {  # DESIGN 2.4 expectation table (fixed before evaluation): level ->
 }
 HELD_OUT = ("val", "test")
 DEFAULT_SPLITS = ("train", "val")
+ALL_SPLITS = ("train", "val", "test")
+LEVEL_GROUPS = {"headline (L2+L3)": C.HEADLINE_LEVELS, "sensitivity (L1)": (1,)}
 FINAL_LOG = "final_evaluations.json"
-# Kaggle T4 x2 forecast of the last run per stage, s [low, high]: v13 measured, plus the test split and the R2 lockbox.
+# Kaggle T4 x2 forecast per stage, s [low, high]: measured development-run times (STAGE_FORECAST_BASIS), plus the test split and the R2 lockbox.
 STAGE_FORECAST_SECONDS = {'dataset': [1260, 1380], 'calibrate': [1140, 1320], 'evaluate': [4400, 5200], 'gallery': [55, 70],
                           'bootstrap_packaging': [180, 240]}
 STAGE_FORECAST_BASIS = ('v13 measured on T4 x2: dataset 1299.7 s, calibrate 1179.0, evaluate 3374.4 (stress about 2500 of it), gallery '
@@ -191,10 +194,10 @@ def null_section(ds: Dataset, det: dict, splits: tuple[str, ...]) -> dict:
     rows.append(regime_rate_row(f"R2 check-reader pairs, not fitted but seen during the detector redesign ({len(n2)} ordered pairs; {len(set(cal + chk))} recordings / readers)", r2, sum(len(f) for _, f in regs),
                                 sum(n.minutes for n in n2)))
     rows[-1][4] = None
-    reader_rows = [{"reader": p, "comparisons": sum(n.id.split(">")[1] == p for n in n2),
-                    "minutes": sum(n.minutes for n in n2 if n.id.split(">")[1] == p),
-                    "regions": sum(len(f) for n, f in regs if n.id.split(">")[1] == p),
-                    "by_key": dict(Counter(k for n, f in regs if n.id.split(">")[1] == p for k in f))} for p in chk]
+    reader_rows = [{"reader": p, "comparisons": sum(participant_of(n.id) == p for n in n2),
+                    "minutes": sum(n.minutes for n in n2 if participant_of(n.id) == p),
+                    "regions": sum(len(f) for n, f in regs if participant_of(n.id) == p),
+                    "by_key": dict(Counter(k for n, f in regs if participant_of(n.id) == p for k in f))} for p in chk]
     detail["R2 check readers"] = {"unique_recordings": len(set(cal + chk)), "unique_readers": len(set(cal + chk)),
                              "disabled_keys": [k for k in KEYS if C.dim_of(k) in r2["enabled"] and r2["h"][k] is None], "reader_counts": reader_rows,
                              "by_pair": dict((n.id, f) for n, f in regs)}
@@ -208,6 +211,11 @@ def null_section(ds: Dataset, det: dict, splits: tuple[str, ...]) -> dict:
     tab += "\n\nReader-level R2 null counts:\n\n" + md_table(["participant reader", "comparisons", "comparison-minutes", "flags", "by flag key"],
                         [[r["reader"], r["comparisons"], r["minutes"], r["regions"], r["by_key"]] for r in reader_rows])
     return {"rows": rows, "detail": detail, "table": tab}
+
+
+def participant_of(pair_id: str) -> str:
+    """The participant of an R2 pair id '<reference>><participant>'."""
+    return pair_id.split(">")[1]
 
 
 def null_flags(n, regime: dict) -> list[str]:
@@ -225,7 +233,7 @@ def duplicates(evs, group='all') -> int:
 
 
 def every_prediction(evs) -> dict:
-    """The accounting of dev_v9 and earlier, which counted every region not matched by its own key as false: per region key
+    """The pre-registered accounting, which counts every region not matched by its own key as false: per region key
     the false regions, whole-clip flags, same-change duplicates and same-change detections (these are FN there)."""
     keys = Counter()
     for ev in evs:
@@ -239,8 +247,8 @@ def every_prediction(evs) -> dict:
 F1_INTERVAL_HEADER = ('F1 interval (speaker bootstrap with >= 5 speakers: train, in-sample, 5 speakers, coverage not assured; '
                       'else per-speaker F1 and range, no interval)')
 PRE_REGISTERED = 'pre-registered: every region not matched by its own key is false'
-# K2 as truth_changes and false_change_duplicates apply it; the frozen registry scope (protocol.exemption_policy) states
-# only the duplicate case and stays unchanged with its sha256.
+# The one-detection-per-change rule as events.truth_changes and events.false_change_duplicates apply it; the frozen registry
+# scope (protocol.exemption_policy) states only the duplicate case and stays unchanged with its sha256.
 COUNT_ONCE_RULE = ('One detection per change. A truth of a linked key (config.SAME_CHANGE: D9- measures the D1- change) is '
                    'detected by its own-key region (IoU >= 0.5) or its own-key whole-clip flag; when there is none, the '
                    'same-change region with the largest |z| within half a window (2 words) is the detection, without an IoU '
@@ -284,12 +292,11 @@ def _headline_section(ds: Dataset, det: dict, splits: tuple[str, ...], types=Non
     dur = {c["id"]: r.P.duration for c, r, _ in runs}  # exposure = the participant clip's own minutes
     groups = split_groups(splits)
     out = {"per_speech": [], "by_split": [], "by_split_strict": [], "overlap": [], "clip_flags": [], "pause_localisation": [], "magnitude": [], "onset_offset": [], "activation": {}, "false_on_flawed": []}
-    levels = {"headline (L2+L3)": C.HEADLINE_LEVELS, "sensitivity (L1)": (1,)}
-    for lname, lv in levels.items():
+    for lname, lv in LEVEL_GROUPS.items():
         for split, gs in groups:
             sel = [(c, e) for c, e in results if c["level"] in lv and c["split"] in gs]
             tally: dict[str, list[int]] = {}
-            for c, e in sel:
+            for _, e in sel:
                 for t in e["truth"]:
                     if not t["available"]:
                         continue
@@ -415,7 +422,7 @@ def _headline_section(ds: Dataset, det: dict, splits: tuple[str, ...], types=Non
     for typ in types:
         for lv in C.LEVELS:
             cells = {}
-            for split in ("train", "val", "test"):
+            for split in ALL_SPLITS:
                 sel = [m for m in out["magnitude"] if m["type"] == typ and m["level"] == lv and m["split"] == split]
                 cells[split] = (proportion(sum(bool(m['detected']) for m in sel), len(sel)) if not any(m['status'] == 'no detector' for m in sel) else f"no detector ({len(sel)})") if sel else ""
             mag.append([typ, lv, C.LEVEL_PARAM[typ][lv - 1], cells["train"], cells["val"], cells["test"], EXPECTED["R1"][lv] if C.FLAW_DIM[typ] in C.DIMS else "no detector"])
@@ -490,7 +497,7 @@ def null_tables(reports: list[tuple[str, str, dict]]) -> str:
 
 
 def lockbox_section(ds, det, splits) -> dict:
-    """K9 final evaluation: R2 false regions per comparison-minute of both modes on the lockbox readers
+    """Final evaluation: R2 false regions per comparison-minute of both modes on the lockbox readers
     (calibrate.lockbox_null_report, final task only), with the select report's tables and stated limits."""
     report = lockbox_null_report(ds, det, final=True)
     if 'modes' not in report:
@@ -517,7 +524,7 @@ def headline_section(ds, det, splits):
     for name in ('table_overlap', 'table_per_speech', 'table_clip', 'table_pause', 'table_onset', 'table_magnitude', 'table_activation'):
         out[name] = '\n\n'.join(tier + (' (unvalidated)' if tier == 'synthetic_only' else '') + ':\n\n' + group[name] for tier, group in groups.items())
     shortfalls = []
-    for c, run, lab in clip_runs(ds, det, [c for c in ds.clips(kind='single') if c['split'] in splits]):
+    for c, _, lab in clip_runs(ds, det, [c for c in ds.clips(kind='single') if c['split'] in splits]):
         for t in truths(lab, excluded=True):
             shortfalls.append({'clip': c['id'], 'split': c['split'], **t})
     counts_by = Counter((r['split'], r['type'], r['level']) for r in shortfalls)
@@ -690,8 +697,12 @@ def edit_direction(run0: Run, run1: Run, t: dict) -> dict:
 def new_worsened(run0: Run, run1: Run, reg: dict) -> list[Region]:
     """New or larger signed deviations, compared by shared word indices."""
     old = decode(run0.comp, reg, run0.B.tr.sentence)
-    return [r for r in decode(run1.comp, reg, run1.B.tr.sentence)
-            if not (prior := [q for q in old if overlaps(r, q)]) or abs(r.z) > max(abs(q.z) for q in prior) + 1e-9]
+    out = []
+    for r in decode(run1.comp, reg, run1.B.tr.sentence):
+        prior = [q for q in old if overlaps(r, q)]
+        if not prior or abs(r.z) > max(abs(q.z) for q in prior) + 1e-9:
+            out.append(r)
+    return out
 
 
 def consensus_of(ds: Dataset, parent: str, refs: list[str]):
@@ -861,9 +872,9 @@ def budget_limits(name: str, null: dict) -> list[str]:
                if r.get('rate') is not None and r['rate'] > C.FALSE_RATE_BUDGET]
     languages = [f"{r['language']} {md_cell(r['rate'])}/min ({r['readers']} readers, {md_cell(float(r['comparison_minutes']))} min)"
                  for r in languages_above_budget(total)]
-    return [f"{name}: false-region budget {total.get('budget_status')} (weighted {md_cell(total.get('rate'))}/min, bootstrap upper95 "
-            f"{md_cell(total.get('bootstrap_upper95'))}, budget {C.FALSE_RATE_BUDGET}/min); sources above the budget: "
-            f"{', '.join(sources) or 'none'}; first languages above it: {', '.join(languages) or 'none'}"]
+    return [(f"{name}: false-region budget {total.get('budget_status')} (weighted {md_cell(total.get('rate'))}/min, bootstrap upper95 "
+             f"{md_cell(total.get('bootstrap_upper95'))}, budget {C.FALSE_RATE_BUDGET}/min); sources above the budget: "
+             f"{', '.join(sources) or 'none'}; first languages above it: {', '.join(languages) or 'none'}")]
 
 
 def select_scope(select: dict) -> str:
@@ -912,12 +923,11 @@ def r2_curve(ds: Dataset, det: dict, kept: list[tuple], consensus=False) -> dict
     reg = det["regimes"]["R2"]
     nulls = r2_nulls(ds, reader_ids(ds, "reader_calibration"), reader_ids(ds, "reader_check"))
     if consensus:
-        from .calibrate import Null
         unique = {c['parent']: run0 for c,run1,run0,lab in kept if c['split'] == 'check'}
         nulls = [Null('consensus>'+p, run.comp, run.B.tr.sentence, run.P.duration/60, reader=p) for p,run in unique.items()]
     minutes = sum(n.minutes for n in nulls)
     check = [k for k in kept if k[0]["split"] == "check"]
-    readers = sorted({n.id.split(">")[1] for n in nulls})
+    readers = sorted({participant_of(n.id) for n in nulls})
     rows = []
     for dim in reg["enabled"]:
         for sign in C.FLAG_SIGNS[dim]:
@@ -926,7 +936,7 @@ def r2_curve(ds: Dataset, det: dict, kept: list[tuple], consensus=False) -> dict
                 trial = {**reg, "enabled": [dim], "h": {key(dim, sign): h}}
                 counts = {n.id: len(decode_dim(n.comp.dims[dim], scale(reg, dim, sign), h, n.sentence, (sign,))) for n in nulls}
                 found, total = Counter(), Counter()
-                for c, run1, run0, lab in check:
+                for _, run1, run0, lab in check:
                     tr = [t for t in truths(lab) if t["dim"] == dim and t["sign"] in (0, sign) and edit_direction(run0, run1, t)["direction"] == "away from the reference"]
                     m = match(tr, run1.with_regions(new_worsened(run0, run1, trial)))
                     for i, t in enumerate(tr):
@@ -934,7 +944,7 @@ def r2_curve(ds: Dataset, det: dict, kept: list[tuple], consensus=False) -> dict
                         found[t["type"]] += i in m
                 rows.append({"key": key(dim, sign), "h": h, "threshold": h * scale(reg, dim, sign), "fitted": h == fitted, "null_regions": sum(counts.values()),
                              "null_per_min": sum(counts.values()) / minutes if minutes else None,
-                             "reader_counts": {p: sum(n for pair, n in counts.items() if pair.split(">")[1] == p) for p in readers},
+                             "reader_counts": {p: sum(n for pair, n in counts.items() if participant_of(pair) == p) for p in readers},
                              "detected": sum(found.values()), "injected": sum(total.values()),
                              "detected_by_type": {t: proportion(found[t],n) for t, n in total.items()}})
     tab = md_table(["flag key", "h", "threshold", "fitted on null fit pool", "observed false regions per comparison-minute", "reader counts", "away-edits detected", "by type"],
@@ -1020,12 +1030,18 @@ def ladder_section(ds: Dataset, det: dict, splits: tuple[str, ...]) -> dict:
         scores[(c["split"], rung)].append(run.scored.overall)
         by_speech[c["parent"]][rung], split_of[c["parent"]] = run.scored.overall, c["split"]
     order = ["identity", "G1", "level 1 (four edits)", "G3", "level 2 (four edits)", "level 3 (four edits)", "G5", "extra level 1", "extra level 2", "extra level 3"]
-    rows = [[sp, rung, len(v), float(min(v)), float(np.median(v)), float(max(v))] for sp in splits for rung in order if (v := scores.get((sp, rung)))]
+    rows = []
+    for sp in splits:
+        for rung in order:
+            values = scores.get((sp, rung))
+            if values:
+                rows.append([sp, rung, len(values), float(min(values)), float(np.median(values)), float(max(values))])
     gates = []  # the score gates of calibration (fitted on train), checked on every split evaluated
     for sp in splits:
         got = {rung: scores.get((sp, rung), []) for rung in order}
-        gates.append([sp, sum(v < C.GATE_IDENTITY - 0.005 for v in got["identity"]), sum(v < C.GATE_L1_MIN for v in got["G1"] + got["level 1 (four edits)"]),
-                      sum(v > C.GATE_G5_MAX for v in got["G5"]), sum(by_speech[b].get("G1", 100) < by_speech[b].get("G3", 0) or by_speech[b].get("G3", 100) < by_speech[b].get("G5", 0)
+        gates.append([sp, len([v for v in got["identity"] if identity_gate_fails(v)]),
+                      len([v for v in got["G1"] + got["level 1 (four edits)"] if l1_gate_fails(v)]),
+                      len([v for v in got["G5"] if g5_gate_fails(v)]), sum(by_speech[b].get("G1", 100) < by_speech[b].get("G3", 0) or by_speech[b].get("G3", 100) < by_speech[b].get("G5", 0)
                                                                for b in by_speech if split_of[b] == sp)])
     tab = md_table(["split", "rung", "clips", "lowest score", "median score", "highest score"], rows)
     tab += "\n\nScore gates (violations):\n\n" + md_table(["split", f"identity below {C.GATE_IDENTITY:.0f}", f"level-1 clip below {C.GATE_L1_MIN:.0f}", f"G5 above {C.GATE_G5_MAX:.0f}", "ladder G1 >= G3 >= G5 broken"], gates)
@@ -1101,10 +1117,14 @@ def reference_free(comp: Comparison, P: Recording) -> Comparison:
     return dataclasses.replace(comp, dims=dims)
 
 
+def _decoded_view(run: Run, comp: Comparison, reg: dict) -> Run:
+    """The run with `comp` decoded under the regime `reg`; no whole-clip flag."""
+    return Run(run.B, run.P, comp, decode(comp, reg, run.P.tr.sentence), run.scored, run.regime, {}, run.scale, run.enabled)
+
+
 def reference_free_run(run: Run, reg: dict) -> Run:
     """The run decoded on its reference-free comparison under the regime `reg`; no whole-clip flag."""
-    comp = reference_free(run.comp, run.P)
-    return Run(run.B, run.P, comp, decode(comp, reg, run.P.tr.sentence), run.scored, run.regime, {}, run.scale, run.enabled)
+    return _decoded_view(run, reference_free(run.comp, run.P), reg)
 
 
 def strict_counts(run: Run, lab: dict) -> tuple[list[int], int]:
@@ -1125,14 +1145,13 @@ def reference_free_h(ds: Dataset, det: dict) -> dict:
         return {'h': None, 'reason': 'no train clips evaluated'}
     comps = [(run, reference_free(run.comp, run.P), lab) for run, lab in pairs]
     curve = []
-    for h in (h for h in C.H_GRID if C.R1_H_RANGE[0] <= h <= C.R1_H_RANGE[1]):
+    for h in r1_common_grid():
         trial = {**reg, 'h': {k: None if v is None else h for k, v in reg['h'].items()}}
         total = np.zeros(3)
         for run, comp, lab in comps:
-            view = Run(run.B, run.P, comp, decode(comp, trial, run.P.tr.sentence), run.scored, run.regime, {}, run.scale, run.enabled)
-            total += strict_counts(view, lab)[0]
+            total += strict_counts(_decoded_view(run, comp, trial), lab)[0]
         curve.append({'h': h, 'tp': int(total[0]), 'fp': int(total[1]), 'fn': int(total[2]), 'f1': f1(*total)['f1'] or 0.0})
-    best = max(curve, key=lambda r: (r['f1'], -r['h']))
+    best = best_by_f1(curve, 'f1')
     return {'h': best['h'], 'train': best, 'rule': 'in-sample train core8 L2+L3 strict F1 maximum on the R1 common grid; ties use smaller h',
             'curve': curve}
 
@@ -1207,6 +1226,9 @@ def diff_regions(ref: Run, new: Run) -> tuple[list[str], int]:
     return added, removed
 
 
+STRESS_BATCH = 8  # transform jobs per pool batch; it bounds the transformed audio held in memory at one time
+STRESS_SECONDS_PER_AUDIO_SECOND = 0.008  # forecast: preparation seconds per second of transformed audio on four T4 x2 workers
+STRESS_SECONDS_PER_JOB = 0.08  # forecast: fixed seconds per transform job on four T4 x2 workers
 STRESS_RETENTION_LIMIT = 0.95  # a key whose detections are kept less often than this under a condition is stated as broken by it
 
 
@@ -1328,7 +1350,7 @@ def stress_limits(added_by_key: dict, retention_by_key: dict, share: float) -> l
 
 
 def stress_section(ds: Dataset, det: dict, splits: tuple[str, ...]) -> dict:
-    """K7: the measured degradation per condition and key, participant-only transforms on every selected clip and on the
+    """The measured degradation per condition and key, participant-only transforms on every selected clip and on the
     check readers (R2 single and median-of-five references): added false regions per minute and the retention of the
     detections found on the unperturbed clip, with intervals clustered by recording. No pass rule: the rows state which
     conditions break which keys (stress_limits)."""
@@ -1355,9 +1377,9 @@ def stress_section(ds: Dataset, det: dict, splits: tuple[str, ...]) -> dict:
     audio_seconds = sum(case[4].P.duration for case in cases) * draws
     jobs = len(cases) * draws
     forecast = {'clips': len(selected), 'transform_jobs': jobs, 'transformed_audio_minutes': audio_seconds / 60,
-                'expected_seconds': .008 * audio_seconds + .08 * jobs,
+                'expected_seconds': STRESS_SECONDS_PER_AUDIO_SECOND * audio_seconds + STRESS_SECONDS_PER_JOB * jobs,
                 'basis': 'v10 pooled preparation 233.5 s / 1329 jobs, evaluation 541.6 s / 1458 jobs; 0.008 s/audio-s plus 0.08 s/job on four T4 x2 workers',
-                'batch_size': 8}
+                'batch_size': STRESS_BATCH}
     forecast['stage_seconds'] = dict(STAGE_FORECAST_SECONDS)
     forecast['run_seconds'] = [sum(v[i] for v in forecast['stage_seconds'].values()) for i in (0, 1)]
     forecast['v13_run_seconds'] = 6115.4
@@ -1376,8 +1398,8 @@ def stress_section(ds: Dataset, det: dict, splits: tuple[str, ...]) -> dict:
                 babble_sources[cid] = [b['id'] for b in donors]
                 fn = functools.partial(stress.babble, speakers=[baselines[b['id']].wav for b in donors], snr=10 if '10 dB' in name else 20)
             pending.extend((cid, split, speaker, kind, ref, lab, mode, fn, seed) for seed in stress.seeds(fn))
-        for start in range(0, len(pending), 8):
-            batch = pending[start:start + 8]
+        for start in range(0, len(pending), STRESS_BATCH):
+            batch = pending[start:start + STRESS_BATCH]
             wavs = map_calls(stress.apply, [(fn, ref.P.wav, seed) for _, _, _, _, ref, _, _, fn, seed in batch], ds.pool)
             recs = ds.prepare_many([(wav, row[4].P.tr) for wav, row in zip(wavs, batch)])
             for (cid, split, speaker, kind, ref, lab, mode, fn, seed), P in zip(batch, recs):
@@ -1423,7 +1445,7 @@ def stress_section(ds: Dataset, det: dict, splits: tuple[str, ...]) -> dict:
                              'max_abs_delta_score': max(deltas) if deltas else None, 'measurable_score_pairs': len(deltas),
                              'missing_score_pairs': len(records) - len(deltas)})
     baseline = []
-    for cid, split, speaker, kind, ref, lab, mode in cases:
+    for cid, split, speaker, kind, ref, _, mode in cases:
         if kind in ('identity', 'null'):
             baseline.append({'clip': cid, 'split': split, 'speaker': speaker, 'reference_mode': mode, 'minutes': ref.P.duration/60, 'flags': ref.n_flags,
                              'by_key': ref.flag_keys, 'scope': 'unperturbed chain; excluded from added/removed counts'})
@@ -1504,6 +1526,11 @@ def chain_b_section(ds: Dataset, det: dict, splits: tuple[str, ...]) -> dict:
 
 
 # ============================================================================================ directional, repair, validity
+def labelled_boundary(first_word: int, flaw_type: str) -> int:
+    """The pause boundary that an edit changes: a HESITATION inserts its pause before the first labelled word."""
+    return first_word - 1 if flaw_type == 'HESITATION' else first_word
+
+
 def directional_clip(rec: Recording, baseline_id: str, typ: str, lv: int):
     """One single-flaw chain-A clip whose span depends on (speech, type) only, so the three levels edit the same words
     (a pool worker runs this). None when no span fits."""
@@ -1539,7 +1566,7 @@ def directional_section(ds: Dataset, det: dict, splits: tuple[str, ...]) -> dict
         if typ in C.CHAIN_B_TYPES and lv in (2, 3) and b["split"] in held_out(splits):
             ds._directional[(b["id"], typ, lv)] = (P, lab)
         if f["dimension"] == "D2":
-            values, w = run.comp.dims['D2'].x, f['words'][0] - (typ == 'HESITATION')
+            values, w = run.comp.dims['D2'].x, labelled_boundary(f['words'][0], typ)
             value = values[w] if w < len(values) else np.nan
             realised = f["realised"]["value"]
             if not np.isfinite(value) or (realised is not None and abs(value) < C.PAUSE_DIAGNOSIS_FRACTION * abs(realised)):
@@ -1701,7 +1728,7 @@ def span_realised(run: Run, f: dict) -> float:
         if C.FLAW_REGISTRY[f['type']]['event'] == 'clip':
             return float(d.g)
         if C.is_event(dim):
-            w = f['words'][0] - (f['type'] == 'HESITATION')
+            w = labelled_boundary(f['words'][0], f['type'])
             return float(d.x[w]) if 0 <= w < len(d.x) else float('nan')
         return float(np.nanmedian(d.x[f['words'][0]:f['words'][-1] + 1]))
     typ, w = f["type"], f["words"][0]
@@ -1750,7 +1777,7 @@ def validity_section(ds: Dataset, det: dict, splits: tuple[str, ...]) -> dict:
             if C.FLAW_REGISTRY[f['type']]['event'] == 'clip':
                 meas = [float(d.g)] if np.isfinite(d.g) else []
             elif C.UNIT_KIND[d.key] == 'boundary':
-                boundary = w0 - 1 if f["type"] == "HESITATION" else w0
+                boundary = labelled_boundary(w0, f["type"])
                 meas = [float(run.P.sil_raw[boundary] - run.B.sil_raw[boundary])] if 0 <= boundary < len(run.P.sil_raw) else []
             elif C.is_event(d.key):
                 meas = [float(d.x[w0])] if np.isfinite(d.x[w0]) else []
@@ -1947,11 +1974,12 @@ def final_gate(models: Path, det: dict, splits: tuple[str, ...], device: str, fo
               "detector_sha256": sha256_file(models)}
     path = Path(models).parent / FINAL_LOG
     seen = json.loads(path.read_text()) if path.exists() else {}
-    h = det["config_sha256"]
-    if h in seen and not force:
-        raise RuntimeError(f"the test split was already evaluated for config {h[:12]} ({seen[h]}); --force repeats it knowingly")
-    seen[h] = {**hashes, "history": seen.get(h, {}).get("history", []) + [hashes], "splits": list(splits),
-               "r2_lockbox_modes": ["single", "consensus5"], "alignment_device": device, "runs": seen.get(h, {}).get("runs", 0) + 1}
+    config_sha256 = det["config_sha256"]
+    if config_sha256 in seen and not force:
+        raise RuntimeError(f"the test split was already evaluated for config {config_sha256[:12]} ({seen[config_sha256]}); --force repeats it knowingly")
+    seen[config_sha256] = {**hashes, "history": seen.get(config_sha256, {}).get("history", []) + [hashes], "splits": list(splits),
+                           "r2_lockbox_modes": ["single", "consensus5"], "alignment_device": device,
+                           "runs": seen.get(config_sha256, {}).get("runs", 0) + 1}
     path.write_text(json.dumps(seen, indent=1, sort_keys=True) + "\n")
 
 
@@ -2013,8 +2041,8 @@ def tables_markdown(res: dict) -> str:
     headline F1 table is rebuilt from the saved per-split rows; every other table is the saved text, with raw floats
     formatted by format_floats."""
     expected = {regime: {int(lv): v for lv, v in table.items()} for regime, table in res["expectation_table"].items()}
-    md = ["# Evaluation tables", "", f"Detector config {res['detector_config_sha256']}. Splits {', '.join(res['splits'])}; alignment on {res['alignment_device']}. Regimes are never pooled and "
-          "train is never pooled with validation or test; counts are k of n; exposure beside every rate.", "",
+    md = ["# Evaluation tables", "", (f"Detector config {res['detector_config_sha256']}. Splits {', '.join(res['splits'])}; alignment on {res['alignment_device']}. Regimes are never pooled and "
+          "train is never pooled with validation or test; counts are k of n; exposure beside every rate."), "",
           "## Sample sizes (evaluated single-level clips)", "", md_table(["split", "speakers", "clips", "type", "level", "trials"],
               [[sp, n["speakers"], n["clips"], typ, lv, count] for sp, n in res['n'].items()
                for typ, levels in n["trials_per_type_level"].items() for lv, count in levels.items()]), "",

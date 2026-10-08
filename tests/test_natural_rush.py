@@ -1,10 +1,11 @@
+"""Natural rushing against RUSH, one detection per change under a whole-clip flag, D9 threshold and severity limits."""
 import math
 from types import SimpleNamespace
 
 import numpy as np
 import pytest
 from synth import label, local, regime, with_x
-from test_dev_v12_owner import _run
+from runs import r1_run
 
 from cvoice import calibrate, config as C, patterns
 from cvoice.compare import compare
@@ -54,7 +55,7 @@ def test_d9_h_grid_stays_above_the_alignment_noise_floor(base, monkeypatch):
     comp = with_x(base, 'D9', [(10, 15, -0.6)])
     reg = regime('R1')
     floor = 2.5 * reg['scales']['D9']
-    calibrate.select_r1([(_run(base, comp), label(base, 'NATURAL_RUSH', (10, 15)))], [], reg, floor)
+    calibrate.select_r1([(r1_run(base, comp), label(base, 'NATURAL_RUSH', (10, 15)))], [], reg, floor)
     chosen = reg['natural_rush_selection']
     assert chosen['grid_min_h'] == 3.0 and reg['h']['D9-'] * reg['scales']['D9'] > floor
     assert chosen['threshold_ln'] == pytest.approx(reg['h']['D9-'] * reg['scales']['D9'])
@@ -74,7 +75,7 @@ def test_lockbox_is_read_only_by_the_final_task():
 def test_whole_passage_edit_is_detected_by_its_own_whole_clip_flag(base):
     comp = compare(base, base)
     regions = [local('D9', 10, 12, -3)]
-    run = _run(base, comp, regions)
+    run = r1_run(base, comp, regions)
     run.clip = {'D1': -0.3}
     ev = eval_clip(run, label(base, 'RUSH', (0, len(base.tr) - 1)), secondary_exempt=False)
     rush = next(t for t in ev['truth'] if t['type'] == 'RUSH')

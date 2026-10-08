@@ -1,7 +1,7 @@
 """Evaluation addendum, computed after the final evaluation from its saved outputs (no Kaggle run, no new measurement).
 
-    python -m cvoice.addendum --run build/work/kaggle_runs/last_run/x \
-        --first-final docs/evidence_final_32cdd86f3d6e/results.json --cache build/work/agents/final_scratch/cache
+    python -m cvoice.addendum --run <final run folder> \
+        --first-final docs/evidence_final_32cdd86f3d6e/results.json [--cache <alignment cache>]
 
 Reads <run>/eval/results.json, <run>/models/{detector.json,final_evaluations.json}, <run>/calibration/report.json and the
 saved dataset <run>/data/dataset; writes <run>/eval/addendum.json and <run>/eval/addendum.md. The tables from results.json
@@ -19,34 +19,35 @@ from collections import Counter, defaultdict
 from pathlib import Path
 
 from . import config as C
+from .calibrate import Null, calibration_clip, r1_items, r1_noise_items
+from .compare import compare
 from .dataset import sha256_file
 from .detect import fit_scales, key, load_detector
 from .events import Run, cluster_f1, eval_clip, f1, on_shortfall, truths
-from .evaluate import (COUNT_ONCE_RULE, EXPECTED, PRE_REGISTERED, bounds_text, every_prediction, interval_text, md_cell, md_table, pre_registered,
-                       reference_free, reference_free_run, speaker_stress_row, split_groups, strict_counts, tier_labels)
+from .evaluate import (ALL_SPLITS, COUNT_ONCE_RULE, EXPECTED, LEVEL_GROUPS, PRE_REGISTERED, bounds_text, every_prediction, interval_text, md_cell,
+                       md_table, pre_registered, reference_free, reference_free_run, speaker_stress_row, split_groups, strict_counts,
+                       tier_labels)
 from .explain import FLAW_TYPE, clip_type
 from .patterns import annotate, within_half_window
 from .protocol import STRICT_ACCOUNTING, tiers
 from .uncertainty import MIN_BOOTSTRAP_CLUSTERS, cluster_summary, wilson
 
-SPLITS = ('train', 'val', 'test')
-LEVELS = {'headline (L2+L3)': C.HEADLINE_LEVELS, 'sensitivity (L1)': (1,)}
 COUNT_ONCE = 'introduced after the plan: ' + STRICT_ACCOUNTING
 PLAN = 'docs/FINAL_EVALUATION_PLAN.md item 4'
 PROVENANCE = ('Computed after the final evaluation by `python -m cvoice.addendum` (src/cvoice/addendum.py) from the saved '
               'outputs of the final run; no number below was measured on Kaggle again.')
-EXPECTATION_DIMS = ('D1', 'D2', 'D3', 'D5')
+EXPECTATION_DIMS = ('D1', 'D2', 'D3', 'D5')  # the dimensions the pre-registered R2 level-3 expectation names (pace, pauses, pitch, volume)
 READER_UNIT = {'single': 'Each of the 3 check readers counts once per calibration reference',
-               'consensus5': 'Each check reader is compared once with the median of 5 calibration readers'}  # the dimensions the pre-registered R2 level-3 expectation names (pace, pauses, pitch, volume)
+               'consensus5': 'Each check reader is compared once with the median of 5 calibration readers'}
 
 
-# ============================================================================================ formatting (finding 15)
+# ============================================================================================ formatting
 def kn(k, n) -> str:
     return f'{md_cell(k)}/{md_cell(n)}'
 
 
 def saved_f1_interval(row: dict, split: str) -> str:
-    """The saved F1 interval of a headline row, labelled by what it is (finding 7)."""
+    """The saved F1 interval of a headline row, labelled by what it is."""
     if row.get('f1_per_speaker'):
         return interval_text(None, row['f1_per_speaker'], row.get('f1_range'))
     ci = row.get('f1_ci95')
@@ -56,7 +57,7 @@ def saved_f1_interval(row: dict, split: str) -> str:
     return 'n/a'
 
 
-# ============================================================================================ accounting (findings 0, 2)
+# ============================================================================================ accounting
 def strict_rows(results: dict, tier: str) -> list[dict]:
     return [r for r in results['headline']['groups'][tier]['by_split_strict'] if r['group'] == 'all']
 
@@ -81,13 +82,13 @@ def accounting_section(results: dict, first: dict, per_speaker: dict | None) -> 
 
 
 def same_change_section(results: dict, calibration: dict, detector: dict) -> dict:
-    """Finding 2 disclosure: same-change detections (credited without the IoU test) per split and level, own-key regions
+    """Same-change detections (credited without the IoU test) per split and level, own-key regions
     on the injected edit that count as false, and the h-selection's separate D1- / D9- counting."""
     head = results['headline']
     rows = []
     for r in strict_rows(results, 'core8'):
-        sel = [t for t in head['true_positive_detail'] if t['split'] in r['split'].split('+') and t['level'] in LEVELS[r['levels']]]
-        false = [f for f in head['false_detail'] if f['split'] in r['split'].split('+') and f['level'] in LEVELS[r['levels']]]
+        sel = [t for t in head['true_positive_detail'] if t['split'] in r['split'].split('+') and t['level'] in LEVEL_GROUPS[r['levels']]]
+        false = [f for f in head['false_detail'] if f['split'] in r['split'].split('+') and f['level'] in LEVEL_GROUPS[r['levels']]]
         rows.append({'levels': r['levels'], 'split': r['split'], 'tp': r['tp'],
                      'same_change_detections': sum(str(t.get('detected_by', '')).startswith('same change') for t in sel),
                      'by_type': dict(Counter(t['type'] for t in sel if str(t.get('detected_by', '')).startswith('same change'))),
@@ -99,7 +100,7 @@ def same_change_section(results: dict, calibration: dict, detector: dict) -> dic
             'selection_limit': detector['regimes']['R1']['natural_rush_selection']['limit']}
 
 
-# ============================================================================================ intervals (finding 7)
+# ============================================================================================ intervals
 def stress_by_speaker(results: dict) -> list[dict]:
     """Val and test stress rows (R1) with speakers, not edited recordings, as clusters (evaluate.speaker_stress_row): per-speaker
     added rate and kept fraction and their range, beside the saved recording-cluster intervals."""
@@ -180,7 +181,7 @@ def label_rows(c: dict, run: Run, ev: dict, labels: dict | None, tier: str) -> l
 
 
 def d9_near_rush(c: dict, run: Run, lab: dict, labels: dict | None) -> list[dict]:
-    """Every D9- region within half a window of a RUSH or NATURAL_RUSH edit, with the K1 label it is shown under."""
+    """Every D9- region within half a window of a RUSH or NATURAL_RUSH edit, with the label it is shown under (the natural-rush pause rule of patterns.annotate)."""
     shown = shown_types(run, labels)
     return [{'split': c['split'], 'clip': c['id'], 'level': t['level'], 'type': t['type'], 'shown_type': shown[j]['type']}
             for t in truths(lab) if t['type'] in ('RUSH', 'NATURAL_RUSH')
@@ -220,10 +221,10 @@ def counts(ev: dict) -> dict:
 
 
 def fair_reference_free(ds, det: dict, nulls_and_controls) -> dict:
-    """Finding 6: the reference-free baseline with its own scales (detect.fit_scales on the reference-free comparisons of
+    """The reference-free baseline with its own scales (detect.fit_scales on the reference-free comparisons of
     the train identity and placebo nulls) and its own common and speech-tempo h, chosen by calibrate.select_r1 (the
     detector's objective: joint train strict F1 on core8 + NATURAL_RUSH L2+L3 with the train controls)."""
-    from .calibrate import choose_r1_row, noise_floor, select_r1
+    from .calibrate import choose_r1_row, noise_floor, select_r1  # local imports, so tests can replace these functions
     from .evaluate import clip_runs
     n1, controls = nulls_and_controls
     free = lambda n: dataclasses.replace(n, comp=reference_free(n.comp, n.P))  # noqa: E731
@@ -242,39 +243,29 @@ def fair_reference_free(ds, det: dict, nulls_and_controls) -> dict:
             'at_grid_edge': best['h'] == max(r['h'] for r in curve)}
 
 
-@dataclasses.dataclass
-class NullWithP:
+@dataclasses.dataclass(kw_only=True)
+class NullWithP(Null):
     """A calibrate.Null with its participant recording, which the reference-free view needs."""
-    id: str
-    comp: object
-    sentence: tuple
-    minutes: float
-    split: str
-    reader: str
     P: object
 
 
 def train_nulls(ds) -> tuple[list[NullWithP], list[NullWithP]]:
     """The train R1 nulls (identity and placebo seeds) and controls (those plus the 20 dB noise identities), built as
     calibrate.run builds them."""
-    from .calibrate import calibration_clip, noisy_identity, r1_items
-    from .compare import compare
-    from .pipeline import map_calls
     items = r1_items(ds, ('train',))
     identities = [c for c in ds.clips(kind='identity') if ds.entry('baselines', c['parent'])['split'] == 'train' and calibration_clip(c)]
-    noisy = map_calls(noisy_identity, [(ds.wav(c), c['id']) for c in identities], ds.pool)
-    noise_items = [{'id': c['id'] + '__noise20', 'split': 'train', 'B': ds.rec(ds.entry('baselines', c['parent'])),
-                    'tr': ds.clip_transcript(c), 'wav': w} for c, w in zip(identities, noisy)]
+    noise_items = r1_noise_items(ds, identities)
     recs = ds.prepare_many([(i['wav'], i['tr']) for i in items + noise_items])
-    nulls = [NullWithP(i['id'], compare(i['B'], P), i['tr'].sentence, P.duration / 60, 'train', i['id'].split('__')[0], P)
+    nulls = [NullWithP(id=i['id'], comp=compare(i['B'], P), sentence=i['tr'].sentence, minutes=P.duration / 60, split='train',
+                       reader=i['id'].split('__')[0], P=P)
              for i, P in zip(items + noise_items, recs)]
     return nulls[:len(items)], nulls
 
 
 def local_section(run_dir: Path, results: dict, cache: Path | None, workers: int) -> dict:
-    """The frozen detector re-run on the saved audio on CPU (H2: computed after the final evaluation)."""
+    """The frozen detector re-run on the saved audio on CPU, computed after the final evaluation."""
     from .dataset import load_dataset
-    from .evaluate import clip_runs
+    from .evaluate import clip_runs  # a local import, so tests can replace this function
     from .pool import PreparePool
     started = time.monotonic()
     det = load_detector(run_dir / 'models' / 'detector.json')
@@ -282,7 +273,7 @@ def local_section(run_dir: Path, results: dict, cache: Path | None, workers: int
     labels_on = det['regimes']['R1'].get('pattern_labels')
     with PreparePool(workers=workers, devices=['cpu'], cache_dir=cache) as pool:
         ds = load_dataset(run_dir / 'data' / 'dataset', cache, pool)
-        clips = [c for c in ds.clips(kind='single') if c['split'] in SPLITS]
+        clips = [c for c in ds.clips(kind='single') if c['split'] in ALL_SPLITS]
         runs = clip_runs(ds, det, clips)
         nulls = train_nulls(ds)
         fair = fair_reference_free(ds, det, nulls)
@@ -300,8 +291,8 @@ def local_section(run_dir: Path, results: dict, cache: Path | None, workers: int
     by_id = {c['id']: c for c in clips}
     for tier, rows in per_clip.items():
         saved = {(r['levels'], r['split']): r for r in strict_rows(results, tier)}
-        for lname, lv in LEVELS.items():
-            for split, gs in split_groups(SPLITS):
+        for lname, lv in LEVEL_GROUPS.items():
+            for split, gs in split_groups(ALL_SPLITS):
                 sel = {cid: v for cid, v in rows.items() if by_id[cid]['level'] in lv and by_id[cid]['split'] in gs}
                 total = {k: sum(v[k] for v in sel.values()) for k in ('tp', 'fp', 'fn', 'dup')}
                 pre = [sum(v['pre'][i] for v in sel.values()) for i in range(3)]
@@ -348,11 +339,11 @@ def local_section(run_dir: Path, results: dict, cache: Path | None, workers: int
 # ============================================================================================ summaries of the local part
 def label_summary(rows: list[dict]) -> dict:
     """Cause-label accuracy of detected truths per tier, split group and injected type, and the confusion of injected
-    type against the shown title type (finding 3)."""
+    type against the shown title type."""
     out = {}
     for tier in sorted({r['tier'] for r in rows}):
-        for split, gs in split_groups(SPLITS):
-            for lname, lv in LEVELS.items():
+        for split, gs in split_groups(ALL_SPLITS):
+            for lname, lv in LEVEL_GROUPS.items():
                 sel = [r for r in rows if r['tier'] == tier and r['split'] in gs and r['level'] in lv and r['detected_by']]
                 by_type, confusion = defaultdict(lambda: [0, 0]), defaultdict(Counter)
                 for r in sel:
@@ -374,7 +365,7 @@ def rush_confusion(rows: list[dict], d9: list[dict]) -> dict:
     """RUSH against NATURAL_RUSH: injected type x shown title type of the detecting region (or not detected), and of
     every D9- region within half a window of the edit."""
     out = {}
-    for split, gs in split_groups(SPLITS):
+    for split, gs in split_groups(ALL_SPLITS):
         det_cells, d9_cells = defaultdict(Counter), defaultdict(Counter)
         for r in rows:
             if r['type'] in ('RUSH', 'NATURAL_RUSH') and r['split'] in gs and r['level'] in C.LEVELS:
@@ -388,8 +379,8 @@ def rush_confusion(rows: list[dict], d9: list[dict]) -> dict:
 
 def excluded_summary(rows: list[dict]) -> list[dict]:
     out = []
-    for split, gs in split_groups(SPLITS):
-        for lname, lv in LEVELS.items():
+    for split, gs in split_groups(ALL_SPLITS):
+        for lname, lv in LEVEL_GROUPS.items():
             sel = [r for r in rows if r['split'] in gs and r['level'] in lv]
             out.append({'split': split, 'levels': lname, 'regions': len(sel), 'by_key': dict(sorted(Counter(r['key'] for r in sel).items())),
                         'other_dimension': sum(not r['same_dimension'] for r in sel),
@@ -405,12 +396,7 @@ def accounting_md(acc: dict) -> str:
     for r in acc['rows']:
         pre, once, old = r['pre_registered'], r['count_once'], r['first_final']
         spk = r['pre_registered_per_speaker']
-        if spk and spk.get('f1_per_speaker'):
-            pre_int = interval_text(None, spk['f1_per_speaker'], spk['f1_range'])
-        elif spk and spk.get('f1_ci95') and spk['f1_ci95'][0] is not None:
-            pre_int = f"{bounds_text(spk['f1_ci95'], 'percentile bootstrap')} (in-sample, {MIN_BOOTSTRAP_CLUSTERS} speaker clusters, coverage not assured)"
-        else:
-            pre_int = 'n/a'
+        pre_int = saved_f1_interval(spk, r['split']) if spk else 'n/a'
         rows.append([r['tier'], r['levels'], r['split'], f"{pre['tp']}/{pre['fp']}/{pre['fn']}", pre['f1'], pre_int,
                      f"{once['tp']}/{once['fp']}/{once['same_change_duplicates']}/{once['fn']}", once['f1'], r['count_once_interval'],
                      pre['same_change_detections'], 'n/a' if old is None else f"{old['tp']}/{old['fp']}/{old['fn']}",
@@ -424,32 +410,32 @@ def render(add: dict) -> str:
     acc, sc = add['accounting'], add['same_change']
     test = next(r for r in acc['rows'] if r['tier'] == 'core8' and r['split'] == 'test' and r['levels'].startswith('headline'))
     md = ['# Evaluation addendum (computed after the final evaluation)', '', PROVENANCE, '',
-          f"Inputs: {', '.join(f'`{k}` sha256 {v[:12]}' for k, v in add['inputs'].items())}. Detector config "
-          f"{add['detector_config_sha256'][:12]}; detector.json sha256 {add['detector_sha256'][:12]} equals the final-evaluation "
-          'entry of that config in models/final_evaluations.json.', '',
+          (f"Inputs: {', '.join(f'`{k}` sha256 {v[:12]}' for k, v in add['inputs'].items())}. Detector config "
+           f"{add['detector_config_sha256'][:12]}; detector.json sha256 {add['detector_sha256'][:12]} equals the final-evaluation "
+           'entry of that config in models/final_evaluations.json.'), '',
           '## 1. Headline accounting: pre-registered first (findings 0, 2)', '',
-          f"Pre-registered accounting ({acc['pre_registered']}): core8 L2+L3 test F1 {md_cell(test['pre_registered']['f1'])} "
-          f"(TP {test['pre_registered']['tp']} / FP {test['pre_registered']['fp']} / FN {test['pre_registered']['fn']}). "
-          f"One-detection-per-change accounting ({acc['count_once']}): {md_cell(test['count_once']['f1'])}. "
-          f"The test split was evaluated twice: the first final evaluation (config {acc['first_final_config'][:12]}, an earlier "
-          f"detector without the speech-tempo key D9, all predictions counted) gave {md_cell(test['first_final']['f1'])} "
-          f"({test['first_final']['tp']}/{test['first_final']['fp']}/{test['first_final']['fn']}); that result was seen before the redesign.", '',
-          'Pre-registered: TP = count-once TP minus same-change detections; FP = every region not matched by its own key '
-          '(count-once FP + duplicates + same-change detections); FN = count-once FN plus same-change detections. '
-          'Per-speaker values come from the local re-run, whose counts equal the saved ones (section 7).', '',
+          (f"Pre-registered accounting ({acc['pre_registered']}): core8 L2+L3 test F1 {md_cell(test['pre_registered']['f1'])} "
+           f"(TP {test['pre_registered']['tp']} / FP {test['pre_registered']['fp']} / FN {test['pre_registered']['fn']}). "
+           f"One-detection-per-change accounting ({acc['count_once']}): {md_cell(test['count_once']['f1'])}. "
+           f"The test split was evaluated twice: the first final evaluation (config {acc['first_final_config'][:12]}, an earlier "
+           f"detector without the speech-tempo key D9, all predictions counted) gave {md_cell(test['first_final']['f1'])} "
+           f"({test['first_final']['tp']}/{test['first_final']['fp']}/{test['first_final']['fn']}); that result was seen before the redesign."), '',
+          ('Pre-registered: TP = count-once TP minus same-change detections; FP = every region not matched by its own key '
+           '(count-once FP + duplicates + same-change detections); FN = count-once FN plus same-change detections. '
+           'Per-speaker values come from the local re-run, whose counts equal the saved ones (section 7).'), '',
           accounting_md(acc), '',
           '### Count-once rule as the code applies it (finding 21)', '',
           COUNT_ONCE_RULE + ' The frozen registry text printed in tables.md ("A region of a same_change key within half a '
           'window of a truth of its value key duplicates that change\'s detection") describes only the duplicate case; the '
           'registry string and its sha256 are unchanged.', '',
           '### Stated limits of the count-once rule (finding 2)', '',
-          '- Asymmetry: a speech-tempo (D9-) region within two words of a rush edit counts as its detection without the IoU '
-          'test, while a second own-key region on the same edit that fails IoU counts as a false region.',
-          f"- The h selection counted D1- and D9- separately (detector.json regimes.R1.natural_rush_selection.limit: "
-          f"\"{sc['selection_limit']}\"); it reports {sc['selection_same_change_duplicates']} same-change duplicates on "
-          f"train (calibration/report.json R1_selected), against "
-          f"{next(r for r in acc['rows'] if r['tier'] == 'core8' and r['split'] == 'train' and r['levels'].startswith('headline'))['count_once']['same_change_duplicates']} "
-          'in the evaluation train row.', '',
+          ('- Asymmetry: a speech-tempo (D9-) region within two words of a rush edit counts as its detection without the IoU '
+           'test, while a second own-key region on the same edit that fails IoU counts as a false region.'),
+          (f"- The h selection counted D1- and D9- separately (detector.json regimes.R1.natural_rush_selection.limit: "
+           f"\"{sc['selection_limit']}\"); it reports {sc['selection_same_change_duplicates']} same-change duplicates on "
+           f"train (calibration/report.json R1_selected), against "
+           f"{next(r for r in acc['rows'] if r['tier'] == 'core8' and r['split'] == 'train' and r['levels'].startswith('headline'))['count_once']['same_change_duplicates']} "
+           'in the evaluation train row.'), '',
           md_table(['levels', 'split', 'count-once TP', 'of them same-change detections (no IoU test)', 'by type',
                  'false regions', 'of them own-key regions on the injected edit', 'by key'],
                 [[r['levels'], r['split'], r['tp'], r['same_change_detections'], json.dumps(r['by_type']), r['false'],
@@ -457,12 +443,12 @@ def render(add: dict) -> str:
     loc = add.get('local')
     if loc:
         md += ['## 2. Cause-label accuracy (finding 3)', '',
-               'For each detected truth: the title type the product shows for the detecting region (after grouping; '
-               'patterns.annotate) and its pattern chip, against the injected type. Correct = the injected type is the '
-               'title type or the pattern chip. Recovery elsewhere is scored by dimension and direction only. '
-               'The RUSH / NATURAL_RUSH rule constant NATURAL_RUSH_PAUSE_KEPT_MAX = sqrt(RUSH_PAUSE_KEEP[0]) = '
-               f"{md_cell(C.NATURAL_RUSH_PAUSE_KEPT_MAX)} comes from the recipe parameters (config.RUSH_PAUSE_KEEP), and the rule "
-               'is checked here only on clips made by those recipes.', '']
+               ('For each detected truth: the title type the product shows for the detecting region (after grouping; '
+                'patterns.annotate) and its pattern chip, against the injected type. Correct = the injected type is the '
+                'title type or the pattern chip. Recovery elsewhere is scored by dimension and direction only. '
+                'The RUSH / NATURAL_RUSH rule constant NATURAL_RUSH_PAUSE_KEPT_MAX = sqrt(RUSH_PAUSE_KEEP[0]) = '
+                f"{md_cell(C.NATURAL_RUSH_PAUSE_KEPT_MAX)} comes from the recipe parameters (config.RUSH_PAUSE_KEEP), and the rule "
+                'is checked here only on clips made by those recipes.'), '']
         rows = []
         for k, v in add['labels'].items():
             tier, lname, split = k.split('|')
@@ -475,39 +461,39 @@ def render(add: dict) -> str:
                md_table(['injected type', 'shown labels (count)'],
                      [[t, '; '.join(f'{s} {n}' for s, n in sorted(c.items()))]
                       for t, c in sorted(merge_levels(add['labels'], 'val+test').items())]), '',
-               'RUSH against NATURAL_RUSH (all levels): the shown title type of the detecting region, and of every D9- region '
-               'within half a window of the edit:', '',
+               ('RUSH against NATURAL_RUSH (all levels): the shown title type of the detecting region, and of every D9- region '
+                'within half a window of the edit:'), '',
                md_table(['split', 'injected', 'detecting region', 'D9- regions near the edit'],
                      [[split, t, json.dumps(v['detecting_region'].get(t, {}), sort_keys=True), json.dumps(v['d9_regions'].get(t, {}), sort_keys=True)]
                       for split, v in add['rush_confusion'].items() for t in ('RUSH', 'NATURAL_RUSH')]), '']
         md += ['## 3. Regions on excluded edit spans (finding 5)', '',
-               'Single-level clips. A region that overlaps the words of an excluded (unrealised) edit is dropped from both '
-               'TP and FP in every tier (events.on_shortfall), whatever its dimension. These regions are not counted as '
-               'false. "Other dimension, unclaimed" regions would be false regions if only same-dimension responses were '
-               'excluded.', '',
+               ('Single-level clips. A region that overlaps the words of an excluded (unrealised) edit is dropped from both '
+                'TP and FP in every tier (events.on_shortfall), whatever its dimension. These regions are not counted as '
+                'false. "Other dimension, unclaimed" regions would be false regions if only same-dimension responses were '
+                'excluded.'), '',
                md_table(['split', 'levels', 'clips', 'regions on excluded spans', 'by key', 'other dimension', 'other dimension, unclaimed', 'excluded edit types'],
                      [[r['split'], r['levels'], r['clips'], r['regions'], json.dumps(r['by_key']), r['other_dimension'],
                        r['other_dimension_unclaimed'], json.dumps(r['by_excluded_type'])] for r in add['excluded_spans']]), '']
         fair = loc['reference_free_fair']
         md += ['## 4. Reference-free baseline with its own scales and h (finding 6)', '',
-               'The existing reference_free rows reuse the detector\'s scales (fitted on identity nulls, all at their floors) and '
-               'its h grid. The added row fits its own scales on the reference-free comparisons of the 30 train identity and '
-               'placebo nulls (detect.fit_scales) and chooses its own common and speech-tempo h with the detector\'s objective '
-               '(calibrate.select_r1: joint train strict F1 on core8 + NATURAL_RUSH L2+L3 with the 35 train controls). '
-               'No text (syllable) normalisation is applied, so it is a reference-free lower bound.', '',
+               ('The existing reference_free rows reuse the detector\'s scales (fitted on identity nulls, all at their floors) and '
+                'its h grid. The added row fits its own scales on the reference-free comparisons of the 30 train identity and '
+                'placebo nulls (detect.fit_scales) and chooses its own common and speech-tempo h with the detector\'s objective '
+                '(calibrate.select_r1: joint train strict F1 on core8 + NATURAL_RUSH L2+L3 with the 35 train controls). '
+                'No text (syllable) normalisation is applied, so it is a reference-free lower bound.'), '',
                f"Own scales: {json.dumps({k: md_cell(v) for k, v in fair['scales'].items() if k[:2] in ('D1', 'D2', 'D3', 'D5', 'D6', 'D9')})}; "
                f"common h {md_cell(fair['train']['h'])}, speech-tempo h {md_cell(fair['train']['natural_rush_h'])} (D9 noise floor "
                f"{md_cell(fair['d9_noise_floor_ln'])} ln); train TP/FP/FN {fair['train']['TP']}/{fair['train']['FP']}/{fair['train']['FN']}, "
                f"F1 {md_cell(fair['train']['F1'])}" + ('; the common h is at the top of the R1 grid (3.0)' if fair['at_grid_edge'] else '') + '.', '',
                md_table(['tier', 'split', 'method', 'TP', 'FP', 'same-change duplicates', 'FN', 'F1'],
                      [r for r in add['baselines'] if r[2].startswith(('detector', 'reference_free'))]), '',
-               'The detector row of each split is given first under the pre-registered accounting; every other row counts one '
-               'detection per change, an accounting adopted after the plan.', '']
+               ('The detector row of each split is given first under the pre-registered accounting; every other row counts one '
+                'detection per change, an accounting adopted after the plan.'), '']
     md += ['## 5. Intervals relabelled (finding 7)', '',
-           'Val and test have 2 speakers each. A percentile bootstrap over the 58 edited recordings of 2 speakers, or a '
-           'Wilson interval on pooled events, is not a 95% interval for a new speaker; the tables below give per-speaker '
-           'values and their range instead. The train F1 bootstrap resamples 5 speakers (in-sample; 126 distinct '
-           'resamples), so its coverage is not assured.', '',
+           ('Val and test have 2 speakers each. A percentile bootstrap over the 58 edited recordings of 2 speakers, or a '
+            'Wilson interval on pooled events, is not a 95% interval for a new speaker; the tables below give per-speaker '
+            'values and their range instead. The train F1 bootstrap resamples 5 speakers (in-sample; 126 distinct '
+            'resamples), so its coverage is not assured.'), '',
            '### Stress (R1, val and test): per speaker', '',
            md_table(['split', 'condition', 'added/min', 'added/min per speaker', 'saved interval (58 recordings, 2 speakers)', 'kept',
                   'kept per speaker', 'pooled Wilson (clusters ignored)'],
@@ -622,7 +608,7 @@ def reference_free_reproduction(results: dict, local: dict) -> list[dict]:
 
 
 def check_frozen(run_dir: Path, results: dict) -> tuple[str, str]:
-    """H1: the run's detector.json is the one the final evaluation of its config recorded."""
+    """The run's detector.json is the one the final evaluation of its config recorded."""
     det = json.loads((run_dir / 'models' / 'detector.json').read_text())
     log = json.loads((run_dir / 'models' / 'final_evaluations.json').read_text())
     digest = sha256_file(run_dir / 'models' / 'detector.json')

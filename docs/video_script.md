@@ -1,5 +1,7 @@
 # Demonstration video: shot list and narration
 
+> Draft written for the detector of 2026-10-02 (configuration `32cdd86f…`). Its numbers, paths and on-screen values are not those of the final evaluation (configuration `782d7df7…`, `docs/NUMBERS.md`); they must be updated before recording.
+
 Length: **7 minutes 35 seconds**. Narration is spoken English at about 140 words per minute, with pauses for clicks and playback. `video.srt` contains the narration below, word for word, as English subtitles.
 
 | Chapter | Time |

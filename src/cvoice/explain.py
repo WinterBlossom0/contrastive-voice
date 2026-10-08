@@ -10,9 +10,8 @@ import math
 import numpy as np
 
 from . import config as C
-from .detect import scale as get_scale
 from . import patterns
-from .detect import clip_flags, threshold
+from .detect import clip_flags, scale as get_scale, threshold
 from .score import unit_severity
 
 # One rubric quotation per flaw type: (verbatim quotation, source). Sources are quoted from the judging instruments
@@ -66,8 +65,14 @@ def context(tr, i0: int, i1: int, dim: str) -> str:
     """Sentence position and punctuation context of words i0..i1."""
     sent = tr.sentence[i0]
     first, last = tr.sentence_words(sent)
-    where = ("start of the sentence" if i0 == first and i1 < last else "end of the sentence" if i1 == last and i0 > first
-             else "whole sentence" if (i0 == first and i1 == last) else "middle of the sentence")
+    if i0 == first and i1 < last:
+        where = "start of the sentence"
+    elif i1 == last and i0 > first:
+        where = "end of the sentence"
+    elif i0 == first and i1 == last:
+        where = "whole sentence"
+    else:
+        where = "middle of the sentence"
     out = f"sentence {sent + 1} of {tr.n_sentences}, {where}"
     if dim == "D2":
         out += f"; punctuation after '{tr.disp[i0]}': {tr.punct[i0] or 'none'}"
@@ -226,7 +231,9 @@ def _event(key, where, words, participant, baseline, x, theta, mult, **_):
     return what, how, fix
 
 
-EXPLAIN = {(dim, sign, None): (renderer, None) for (dim, sign), renderer in {
+# (dimension, sign of x, pattern name or None) -> renderer of (what, how, fix). A pattern keeps the renderer of its
+# dimension and direction; pattern_text adds the pattern sentence.
+EXPLAIN = {(dim, sign, None): renderer for (dim, sign), renderer in {
     ('D9', -1): _natural, ('D1', -1): _d1, ('D1', 1): _d1, ('D2', -1): _d2, ('D2', 1): _d2, ('D3', -1): _d3,
     ('D4', -1): _d4, ('D5', -1): _d5, ('D6', -1): _d6, ('D7', 1): _event, ('D8', 1): _event}.items()}
 for _dim, _sign, _names in [('D9', -1, ('NATURAL_RUSH',)), ('D2', 1, ('HESITATION', 'WORD_BY_WORD')),
@@ -235,7 +242,7 @@ for _dim, _sign, _names in [('D9', -1, ('NATURAL_RUSH',)), ('D2', 1, ('HESITATIO
                                     'ONSET_PROLONGATION', 'RHYME_PROLONGATION', 'LENGTHENED_WORD')),
                           ('D8', 1, ('RISING_ENDING', 'FLAT_FINAL_FALL'))]:
     for _name in _names:
-        EXPLAIN[(_dim, _sign, _name)] = (EXPLAIN[(_dim, _sign, None)][0], PATTERN_TEXT[_name])
+        EXPLAIN[(_dim, _sign, _name)] = EXPLAIN[(_dim, _sign, None)]
 
 
 # Measures over five-word windows: a finding marks the window at the peak, not the exact edges of the change.
@@ -265,7 +272,7 @@ def build(region, comp, B, P, regime: dict, mass: float, scored, fid: str, info=
     dim = comp.dims[region.dim]
     key, tr = region.dim, P.tr
     sign = 1 if dim.x[region.peak] > 0 else -1
-    i0, i1, pk = region.i0, region.i1, region.peak
+    i0, pk = region.i0, region.peak
     scale, h = get_scale(regime, key, sign), threshold(regime, key, sign)
     x, theta = float(dim.x[pk]), h * scale
     baseline, participant = dim.reference(pk), float(dim.p[pk])
@@ -279,7 +286,9 @@ def build(region, comp, B, P, regime: dict, mass: float, scored, fid: str, info=
     mult = abs(x) / theta  # every "x the threshold" in the text and `tolerance_multiple` is relative to the flag threshold
     whole = clip_flags(comp, regime)
     where = f"{p_span[0]:.2f}-{p_span[1]:.2f} s"
-    what, how, fix = EXPLAIN[(key, sign, info["pattern"])][0](**locals())
+    fields = dict(ftype=ftype, where=where, words=words, P=P, pk=pk, tr=tr, i0=i0, sign=sign, key=key, p_span=p_span,
+                  participant=participant, baseline=baseline, x=x, theta=theta, mult=mult, whole=whole)
+    what, how, fix = EXPLAIN[(key, sign, info["pattern"])](**fields)
     detail = pattern_text(info, tr.disp[pk])
     caveats = [WINDOW_CLAUSE if key in WINDOW_KEYS else '', alignment_caveat(P, w0, w1) if key in TIMING_KEYS else '']
     how = " ".join(t for t in (how, detail, *caveats) if t)
@@ -304,7 +313,8 @@ def clip_type(key: str, g: float) -> str:
 
 
 def build_clip(key: str, comp, B, P, regime: dict, scored) -> dict:
-    """Whole-clip entry for a flagged clip median: overall tempo (TEMPO_FAST / TEMPO_SLOW) or overall pitch range (RANGE_NARROW)."""
+    """Whole-clip entry for a flagged clip median: overall tempo (TEMPO_FAST / TEMPO_SLOW), overall pitch range (RANGE_NARROW)
+    or word-time unevenness (UNEVEN_TEMPO)."""
     if key not in C.CLIP_DIMS:
         raise KeyError(key)
     g, theta, mass = comp.dims[key].g, regime["clip"][key], scored.clip[key]
@@ -322,13 +332,11 @@ def build_clip(key: str, comp, B, P, regime: dict, scored) -> dict:
         what = (f"Overall pitch range: your typical five-word pitch range is {participant:.1f} st against {baseline:.1f} st in the reference "
                 f"rendition (compared as a ratio with {C.RANGE_REG_ST:.0f} st added to each: x{math.exp(g):.2f}, flagged below x{math.exp(-theta):.2f}).")
         fix = f"Widen your pitch movement across the whole passage; the reference moves about {baseline:.1f} st within a phrase."
-    elif key == 'D7':
+    else:
         baseline, participant, value_unit = None, g, 'ln'
         measure = 'word-time spread, 1.4826 MAD of median-centred ln occupancy ratios'
         what = f"Uneven word timing: your word times differ from the reference's by a typical factor of x{math.exp(g):.2f}."
         fix = 'Keep the relative word times more even across the passage; listen beside the reference.'
-    else:
-        raise KeyError(key)
     quote, source = WHY[ftype]
     return {
         "id": "", "type": ftype, "label": ftype + " (whole clip)", "dimension": key, "brief_word": C.DIM_BRIEF[key], "severity": _r(mass, 2),

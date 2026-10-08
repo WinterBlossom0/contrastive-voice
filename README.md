@@ -6,7 +6,17 @@ Contrastive Voice compares a spoken reading with a reference reading of the same
 
 The screenshot shows the local app on the gallery example **Level 3, Set A**: the Reagan passage with four injected level-3 edits, compared with the unedited recording (regime R1). The score is 86.11. Six flagged regions are listed on the right; the selected finding **#3 Rushed** gives the words, both time spans, the measurement (0.87 s against 1.62 s), the 4.89 points it costs and a fix. Below are the waveform, the pitch and level contours, and one row per dimension with its tolerance band.
 
-**Documents:** [technical report](docs/technical.md) ([PDF](docs/technical.pdf)) · [source of every number](docs/NUMBERS.md) · [grounding in prior work](docs/GROUNDING.md) · [papers used](docs/PAPERS.md) · [pre-registered evaluation plan](docs/FINAL_EVALUATION_PLAN.md)
+**Documents:** [technical report](docs/technical.md) ([PDF](docs/technical.pdf)) · [source of every number](docs/NUMBERS.md) · [grounding in prior work](docs/GROUNDING.md) · [papers used](docs/PAPERS.md) · [pre-registered evaluation plan](docs/FINAL_EVALUATION_PLAN.md) · [research reports](docs/research/)
+
+## Where each judging criterion is covered
+
+| Criterion (weight) | Technical report | Code and evidence |
+|---|---|---|
+| Data engineering and stress testing (30 %) | §2 Data engineering, §6.4 Stress matrix | `kaggle/data/fetch.py`, `src/cvoice/dataset.py`, `flaws.py`, `edits_extra.py`, `r2pool.py`, `stress.py`; [dataset card](docs/evidence_final_782d7df7/dataset_card.md); **Stress matrix** panel in the app |
+| Causal explainability and temporal grounding (25 %) | §5 Causal explainability and temporal grounding | `src/cvoice/patterns.py`, `explain.py`, `score.py`; every finding in the app (words, time spans, measured values, threshold, points, fix, A/B playback) |
+| Feature extraction (20 %) | §3 Feature extraction, §4 Detection and calibration | `src/cvoice/align.py`, `features.py`, `compare.py`, `detect.py`, `calibrate.py`; [grounding in prior work](docs/GROUNDING.md) |
+| Dashboard (15 %) | §7 Dashboard | [Quick start](#quick-start) below; `src/cvoice/app.py`, `src/cvoice/static/` |
+| Reproducibility and code quality (10 %) | §8 Reproducibility and code quality | [Reproduce from public origins](#reproduce-from-public-origins), [Tests](#tests); [source of every number](docs/NUMBERS.md); `uv.lock`, `Dockerfile`, `.github/workflows/ci.yml` |
 
 ## Three regimes
 
@@ -15,14 +25,14 @@ The numbers of one regime say nothing about another. They are never pooled.
 | Regime | What is compared | Where it occurs | What is flagged and scored |
 |---|---|---|---|
 | **R1, same recording** | A reading against an unedited copy of the same recording, with synthetic edits injected | All evaluation clips with known edits; the gallery examples marked R1 | Pace, pauses, pitch range, emphasis, volume, clarity proxy, speech tempo. Word time and ending are listed, not scored |
-| **R2, different speaker, one reference** | A reading against one reading of the same text by another person | Every upload (the bundled Reagan passage) | Pace, pauses, pitch range and volume, with wide thresholds (for example a local pace flag needs ×2.19 slower or ×0.45 faster speech). The other dimensions are listed, not scored |
+| **R2, different speaker, one reference** | A reading against one reading of the same text by another person | Every upload against the bundled Reagan passage or an own reference recording | Pace, pauses, pitch range and volume, with wide thresholds (for example a local pace flag needs ×2.19 slower or ×0.45 faster speech). Emphasis and clarity are shown, word time, ending and speech tempo are listed; none of them is scored |
 | **R2, different speaker, median of five** | A reading against the word-by-word median of five other readings of the same text | Uploads against the bundled Gettysburg Address bank (six LibriVox readings) | As R2 with one reference, with its own thresholds |
 
 The R1 F1 measures how well the tool finds edits inside one recording. It does not measure a comparison between two readers, which is what every upload is.
 
 ## Headline results
 
-Final evaluation, detector configuration `782d7df7…` (`models/detector.json`, sha256 `d5935d3f…`), run on Kaggle (2 × T4) on 2026-10-07 IST, test split evaluated once. Sources: `docs/NUMBERS.md`.
+Final evaluation, detector configuration `782d7df7…` (`models/detector.json`, sha256 `d5935d3f…`), run on Kaggle (2 × T4) on 2026-10-07 IST; the test split was evaluated once with this configuration. Evidence: [`docs/evidence_final_782d7df7/`](docs/evidence_final_782d7df7/); source of each number: [`docs/NUMBERS.md`](docs/NUMBERS.md).
 
 **R1, same recording.** Strict event F1 for the 8 core edit types at levels 2 and 3 (one-to-one matching; windowed regions need IoU ≥ 0.5). Validation and test have 2 speakers each, so per-speaker values are given, not confidence intervals.
 
@@ -52,16 +62,18 @@ Full results, the stress matrix, baselines and the cause-label accuracy are in t
 ### Prerequisites
 
 - Linux x86-64, macOS arm64 or Windows x86-64 (the platforms in `uv.lock`).
-- [uv](https://docs.astral.sh/uv/) 0.12.x (`pyproject.toml` requires `>=0.12.3,<0.13`). uv installs Python 3.12 if it is missing.
-- `ffmpeg` on `PATH` (decodes uploads).
+- [uv](https://docs.astral.sh/uv/) 0.12.x (`pyproject.toml` requires `>=0.12.3,<0.13`), for example `curl -LsSf https://astral.sh/uv/0.12.3/install.sh | sh` on Linux and macOS. uv installs Python 3.12 if it is missing.
+- `ffmpeg` on `PATH` (decodes uploads), for example `sudo apt-get install ffmpeg` or `brew install ffmpeg`.
 - Network access on the first analysis: torchaudio downloads the wav2vec2 alignment checkpoint (377,664,473 bytes; its size and SHA-256 are checked). Browsing the gallery needs no checkpoint.
 - Optional: Docker; a Kaggle account and the Kaggle CLI (full rebuild).
 
 ### Install
 
-Dependencies are declared in `pyproject.toml` and pinned in `uv.lock` (numpy, scipy, soundfile, soxr, praat-parselmouth, cmudict, FastAPI, uvicorn, python-multipart, torch and torchaudio 2.10.0). From the repository root:
+Dependencies are declared in `pyproject.toml` and pinned in `uv.lock` (numpy, scipy, soundfile, soxr, praat-parselmouth, cmudict, FastAPI, uvicorn, python-multipart, torch and torchaudio 2.10.0).
 
 ```bash
+git clone https://github.com/WinterBlossom0/contrastive-voice.git
+cd contrastive-voice
 uv sync --locked --extra cpu
 ```
 
@@ -163,13 +175,13 @@ uv run --extra cpu pytest -q -m slow tests/test_smoke.py
 uv run --extra cpu ruff check --select F,E9 src kaggle tests
 ```
 
-The first command runs 558 tests (all pass, about 75 s on a laptop CPU); two slow tests are deselected by default. The second runs the one-clip smoke test (it needs the alignment checkpoint; about 6 s once the checkpoint is cached). The other slow test (`tests/test_integration.py`, a mini dataset build through the gallery) did not finish on the laptop and was not run for the final checks. A few tests read the final-run outputs under `build/`, which is not part of the repository; in a fresh clone they are skipped. `.github/workflows/ci.yml` runs the first two commands.
+The second command runs 561 tests (all pass, about 85 s on a laptop CPU); two slow tests are deselected by default. The third runs the one-clip smoke test (it needs the alignment checkpoint; about 6 s once the checkpoint is cached). The other slow test (`tests/test_integration.py`, a mini dataset build through the gallery) did not finish on the laptop and was not run for the final checks. A few tests read the final-run outputs under `build/`, which is not part of the repository; in a fresh clone they are skipped. `.github/workflows/ci.yml` runs the first three commands.
 
 ## Repository layout
 
 | Path | Contents |
 |---|---|
-| `src/cvoice/` | Analysis: `audio`, `align`, `features`, `compare`, `detect`, `patterns`, `score`, `explain`, `pipeline`. Build and evaluation: `passages`, `flaws`, `edits_extra`, `dataset`, `r2pool`, `pool`, `calibrate`, `evaluate`, `events`, `stress`, `uncertainty`, `addendum`, `gallery`. Dashboard: `app.py`, `static/` |
+| `src/cvoice/` | Analysis: `config`, `audio`, `align`, `features`, `reference`, `compare`, `detect`, `patterns`, `score`, `explain`, `pipeline`. Build and evaluation: `passages`, `flaws`, `edits_extra`, `dataset`, `r2pool`, `pool`, `calibrate`, `protocol`, `evaluate`, `events`, `stress`, `uncertainty`, `addendum`, `gallery`, `lab/` (measurement lab). Dashboard: `app.py`, `static/` |
 | `models/detector.json` | The frozen detector: scales, thresholds and score constants for R1, R2 and R2 median of five |
 | `models/final_evaluations.json` | Record of test-split evaluations (configurations `32cdd86f…` and `782d7df7…`) |
 | `gallery/` | 17 precomputed examples (audio and result JSON), the evaluation panel and the stress matrix shown on the page; rebuilt on CPU after the final evaluation with the frozen detector (`gallery/index.json` `provenance`) |
@@ -177,10 +189,11 @@ The first command runs 558 tests (all pass, about 75 s on a laptop CPU); two slo
 | `data/dataset/` | An earlier public-domain-only dataset build (manifest `8db28b8b…`, 9 baselines, 10 readers, 110 edited clips). It is not the final-run dataset (manifest `d67c9cd9…`, 2410 files, 1109.2 minutes), which includes non-commercial reader corpora and is rebuilt on Kaggle |
 | `docs/technical.md`, `docs/technical.pdf` | Technical report |
 | `docs/NUMBERS.md`, `docs/GROUNDING.md`, `docs/PAPERS.md` | Source of every number; chain from the literature to each measure; papers used |
+| `docs/research/` | The research reports that record each cited paper as read, and the lab decisions |
 | `docs/FINAL_EVALUATION_PLAN.md` | Plan for the final evaluation, written before it ran |
 | `docs/evidence_final_782d7df7/`, `docs/evidence_final_32cdd86f3d6e/` | Evidence of the final evaluation and of the earlier look at the test split |
-| `docs/evidence/` | Evidence of a development run (configuration `3af96976…`), train and validation only |
-| `docs/DESIGN.md` | The original build contract (written for the 2026-10-02 detector) |
+| `docs/evidence/` | Superseded: a development run (configuration `3af96976…`, train and validation only), not the final evaluation; `scripts/import_run.sh` writes a newly imported run here |
+| `docs/DESIGN.md`, `docs/video_script.md` | The original build contract and a draft video script, both written for the 2026-10-02 detector; not the final numbers |
 | `kaggle/run.py`, `kaggle/data/fetch.py`, `kaggle/lab/` | Build kernel, corpus fetch kernel, measurement lab kernel |
 | `scripts/` | `stage_project.sh`, `import_run.sh`, `rebuild_after_final.sh`, `build_pdf.sh`, `make_pipeline_figure.py` |
 | `tests/` | Unit and regression tests |

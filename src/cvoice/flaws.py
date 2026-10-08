@@ -442,7 +442,8 @@ def apply_edit(x: np.ndarray, ed: Edit, chain: Chain, tone, chain_name: str = "A
         x, warps, info = deemphasis(x, a, b, 0.0 if p is None else p)
         chain.warps += warps
     elif t == "FADE":
-        x = gain_ramp(x, a, b, 0.0 if p is None else -p, tone) if p else x
+        if p is not None and p != 0:
+            x = gain_ramp(x, a, b, -p, tone)
     elif t == "MUMBLE":
         x = mumble(x, a, b, 0.0 if p is None else p)
     else:
@@ -454,7 +455,7 @@ def apply_edits(rec: Recording, edits: list[Edit], chain_name: str = "A") -> tup
     """Apply edits right to left (by parent start). Returns (clip on the int16 grid, chain, info per edit in input order)."""
     x = rec.wav.copy()
     chain = Chain()
-    need_tone = any(e.type in ("PAUSE_INTRUSIVE", "FADE") and e.param for e in edits)
+    need_tone = any(e.type in ("PAUSE_INTRUSIVE", "FADE") and e.param is not None and e.param != 0 for e in edits)
     tone = room_tone(rec) if need_tone else None
     infos: dict[int, dict] = {}
     for k in sorted(range(len(edits)), key=lambda k: (-edits[k].a, k)):
@@ -501,6 +502,25 @@ def stress_set(rec: Recording, sigma: np.ndarray | None = None) -> set[int]:
     return set(stress_words(stress_points(rec.ws.u, rec.m, rec.sigma if sigma is None else sigma)))
 
 
+# Types placed on a stressed word: shared stress first, then own stress, then any eligible content word.
+STRESS_FALLBACK_TYPES = ("SOUND_REPETITION", "ONSET_PROLONGATION", "BLOCK")
+
+
+def shared_stress(rec: Recording, ref: Recording | None) -> set[int]:
+    """Words stressed in both rec and ref (on the scales of ref); the own stress words of rec when there is no ref."""
+    if ref is None:
+        return stress_set(rec)
+    return stress_set(ref) & stress_set(rec, ref.sigma)
+
+
+def stress_selection(word: int, shared: set[int], rec: Recording) -> str:
+    if word in shared:
+        return "shared stress"
+    if word in stress_set(rec):
+        return "own stress fallback"
+    return "content fallback"
+
+
 def _span_samples(rec: Recording, i0: int, i1: int) -> tuple[int, int]:
     N = len(rec.wav)
     return max(int(round(rec.regions[i0, 0] * SR)), 0), min(int(round(rec.regions[i1, 1] * SR)), N)
@@ -512,7 +532,8 @@ def _candidates(rec: Recording, ref: Recording | None, typ: str, width: int, tak
     if typ in C.EXTRA_TYPES:
         return extra_candidates(rec, ref, typ, width, taken)
     n, g, tr = len(rec.tr), C.EDIT_GAP_WORDS, rec.tr
-    free = lambda i0, i1: all(i1 + g < t0 or i0 - g > t1 for t0, t1 in taken)
+    def free(i0, i1):
+        return all(i1 + g < t0 or i0 - g > t1 for t0, t1 in taken)
     out = []
     if typ in WINDOWED:
         for i0 in range(0, n - width + 1):
@@ -520,7 +541,7 @@ def _candidates(rec: Recording, ref: Recording | None, typ: str, width: int, tak
             if free(i0, i1) and (not same_sentence or tr.sentence[i0] == tr.sentence[i1]):
                 out.append((i0, i1))
     elif typ == "DEEMPHASIS":
-        s = stress_set(rec) if ref is None else stress_set(ref) & stress_set(rec, ref.sigma)
+        s = shared_stress(rec, ref)
         out = [(i, i) for i in sorted(s) if free(i, i)]
     else:
         for i in range(n - 1):
@@ -563,7 +584,8 @@ def plan_clip(rec: Recording, specs: list[tuple[str, int | None]], seed: int, *,
     rendition. Deterministic in `seed`; returns the attempt under the cap with the fewest skipped specs; when every attempt is
     over the cap, the first one with its last windowed edits dropped (recorded as skipped) until it is under."""
     n = len(rec.tr)
-    coverage = lambda edits: sum(e.words[1] - e.words[0] + 1 for e in edits if e.kind != "boundary") / n
+    def coverage(edits):
+        return sum(e.words[1] - e.words[0] + 1 for e in edits if e.kind != "boundary") / n
     best: Plan | None = None
     over: Plan | None = None
     for attempt in range(attempts):
@@ -580,9 +602,8 @@ def plan_clip(rec: Recording, specs: list[tuple[str, int | None]], seed: int, *,
             pos = cands[int(rng.integers(len(cands)))]
             taken.append(pos)
             ed = make_edit(rec, typ, level, pos)
-            if typ in ("SOUND_REPETITION", "ONSET_PROLONGATION", "BLOCK"):
-                shared = stress_set(rec) if ref is None else stress_set(ref) & stress_set(rec, ref.sigma)
-                ed.selection = "shared stress" if pos[0] in shared else "own stress fallback" if pos[0] in stress_set(rec) else "content fallback"
+            if typ in STRESS_FALLBACK_TYPES:
+                ed.selection = stress_selection(pos[0], shared_stress(rec, ref), rec)
             edits.append(ed)
         plan = Plan(edits, skipped)
         if cap is not None and coverage(edits) > cap:
@@ -690,9 +711,6 @@ def make_labels(clip_id: str, parent_id: str, rec: Recording, y: np.ndarray, cha
     type, dimension, level, physical magnitude, signed realised change, expected secondary dimensions, word index span,
     half-open sample spans in the clip and in the parent, and the edit support."""
     fy = frame_features(y)
-    N = len(rec.wav)
-    ws = np.round(rec.al.start * SR)
-    we = np.round(rec.al.end * SR)
     flaws = []
     supports = []
     skipped = list(plan.skipped)
@@ -741,23 +759,40 @@ def make_labels(clip_id: str, parent_id: str, rec: Recording, y: np.ndarray, cha
             "type": ed.type, "dimension": C.FLAW_DIM[ed.type], "level": ed.level, "placebo": ed.param is None,
             "magnitude": {"name": name, "value": ed.param, "unit": unit},
             "realised": realised(ed, info, rec, fy, span),
+            # Core labels keep the schema-3 values, so stored label bytes and GOLDEN_LABELS stay the same.
             "expected_secondary": list(C.as_dict(3)["EXPECTED_SECONDARY"][ed.type]),
             "event": ed.kind, "words": list(ed.words), "span": list(span), "parent_span": [ed.a, ed.b], "support": list(sup),
         })
-    outside = np.ones(N, dtype=bool)
-    for s_par, e_par in supports:
-        outside[max(s_par, 0):max(e_par, 0)] = False
-    mapped = np.rint(chain(np.arange(N), "right")).astype(np.int64)
-    ok = outside & (mapped >= 0) & (mapped < len(y))
+    words, parent_words = word_maps(rec, chain)
     return {
         "clip": clip_id, "parent": {"id": parent_id, "sha256": audio.sha256_pcm(rec.wav)}, "sha256": audio.sha256_pcm(y),
         "recipe": recipe, "seed": seed, "chain": chain_name, "sr": SR, "n_samples": len(y),
-        "words": {"start": [int(round(float(chain(v, "right")))) for v in ws], "end": [int(round(float(chain(v, "left")))) for v in we]},
-        "parent_words": {"start": [int(v) for v in ws], "end": [int(v) for v in we]},
+        "words": words, "parent_words": parent_words,
         "flaws": flaws, "skipped": skipped,
-        "outside_support_identical": bool(np.array_equal(rec.wav[ok], y[mapped[ok]])),
-        "chain_warps": [{"src": w.src.tolist(), "dst": w.dst.tolist()} for w in chain.warps],
+        "outside_support_identical": outside_support_identical(rec.wav, y, chain, supports),
+        "chain_warps": chain_warps(chain),
     }
+
+
+def outside_support_identical(parent: np.ndarray, y: np.ndarray, chain: Chain, supports) -> bool:
+    """True when every parent sample outside the supports reaches the clip unchanged through the time map."""
+    outside = np.ones(len(parent), dtype=bool)
+    for s_par, e_par in supports:
+        outside[max(s_par, 0):max(e_par, 0)] = False
+    mapped = np.rint(chain(np.arange(len(parent)), "right")).astype(np.int64)
+    ok = outside & (mapped >= 0) & (mapped < len(y))
+    return bool(np.array_equal(parent[ok], y[mapped[ok]]))
+
+
+def word_maps(rec: Recording, chain: Chain) -> tuple[dict, dict]:
+    """Word start and end samples in the clip (through the time map) and in the parent."""
+    starts, ends = np.round(rec.al.start * SR), np.round(rec.al.end * SR)
+    clip = {"start": [int(round(float(chain(v, "right")))) for v in starts], "end": [int(round(float(chain(v, "left")))) for v in ends]}
+    return clip, {"start": [int(v) for v in starts], "end": [int(v) for v in ends]}
+
+
+def chain_warps(chain: Chain) -> list[dict]:
+    return [{"src": w.src.tolist(), "dst": w.dst.tolist()} for w in chain.warps]
 
 
 def inject(rec: Recording, plan: Plan, clip_id: str, parent_id: str, *, recipe: str, seed: int, chain_name: str = "A") -> tuple[np.ndarray, dict]:
@@ -784,10 +819,16 @@ EXTRA_WINDOWED = ("NATURAL_RUSH", "WORD_BY_WORD", "UNEVEN_TEMPO", "LOW_EFFORT")
 def extra_candidates(rec, ref, typ, width, taken):
     from .edits_extra import FUNCTION_WORDS, continuant_span, gap_point, onset_burst
     tr, gap = rec.tr, C.EDIT_GAP_WORDS
-    free = lambda a, b: all(b + gap < c or a - gap > d for c, d in taken)
-    content = lambda i: tr.norm[i] not in FUNCTION_WORDS
-    voiced = lambda i: rec.fr.voiced[frame_slice(rec.al.start[i], rec.al.end[i], len(rec.fr))].sum() >= C.MIN_VOICED_WORD
-    stressed = stress_set(rec) if ref is None else stress_set(ref) & stress_set(rec, ref.sigma)
+    def free(a, b):
+        return all(b + gap < c or a - gap > d for c, d in taken)
+
+    def content(i):
+        return tr.norm[i] not in FUNCTION_WORDS
+
+    def voiced(i):
+        return rec.fr.voiced[frame_slice(rec.al.start[i], rec.al.end[i], len(rec.fr))].sum() >= C.MIN_VOICED_WORD
+
+    stressed = shared_stress(rec, ref)
     if typ in EXTRA_WINDOWED:
         out = [(i, i + width - 1) for i in range(len(tr) - width + 1)
                if free(i, i + width - 1) and tr.sentence[i] == tr.sentence[i + width - 1]
@@ -840,7 +881,7 @@ def extra_candidates(rec, ref, typ, width, taken):
         except EditError:
             continue
         out.append((i, i))
-    if typ in ("SOUND_REPETITION", "ONSET_PROLONGATION", "BLOCK"):
+    if typ in STRESS_FALLBACK_TYPES:
         shared = [pos for pos in out if pos[0] in stressed]
         own = [pos for pos in out if pos[0] in stress_set(rec)]
         return shared or own or out
@@ -882,7 +923,7 @@ def render_extra(rec, ed, measurements=None):
         f["approximation"] = {"method": "aligned content-word prior" if typ == "HESITATION" else "function-word prior; copied waveform"}
     if ed.selection is not None:
         f["approximation"]["stress_fallback"] = ed.selection
-    if typ in ("SOUND_REPETITION", "ONSET_PROLONGATION", "BLOCK"):
+    if typ in STRESS_FALLBACK_TYPES:
         f["approximation"]["selection"] = "shared stress preferred, own stress then eligible content fallback; signal eligibility"
         f["approximation"]["own_stressed"] = a in stress_set(rec)
     return y, chain, lab

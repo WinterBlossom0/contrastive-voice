@@ -3,8 +3,8 @@
 .github
 .pytest_cache
 .ruff_cache
-__pycache__
-*.pyc
+**/__pycache__
+**/*.pyc
 build
 tests
 docs
@@ -13,3 +13,13 @@ scripts
 data/dataset
 data/transcripts
 eval
+calibration
+.agents
+.aws
+.codex
+.claude
+.env
+.env.*
+kaggle.json
+.kaggle
+*.zip

@@ -127,8 +127,8 @@ def save_upload(file: UploadFile, dest: Path) -> None:
 
 # ============================================================================================ jobs
 class Jobs:
-    """In-memory job table with one worker thread. ponytail: lost on restart and wrong with several uvicorn workers; a
-    queue would fix both, this server is one process on purpose."""
+    """In-memory job table with one worker thread. Known limit: jobs are lost on restart and the table is wrong with more
+    than one uvicorn worker, so main() starts one worker."""
 
     def __init__(self, work: Path):
         self.work, self.table = work, {}
@@ -158,19 +158,19 @@ def run_job(job: dict, folder: Path, tr, baseline: dict | None, detector: Path) 
     plain message on the job."""
     try:
         job.update(state="running", stage="decode")
-        mine = audio.load_audio(folder / "your recording", C.MAX_UPLOAD_BYTES, C.MAX_UPLOAD_S)[0]
-        audio.write_wav(folder / "participant.wav", mine)
+        participant_wav = audio.load_audio(folder / "your recording", C.MAX_UPLOAD_BYTES, C.MAX_UPLOAD_S)[0]
+        audio.write_wav(folder / "participant.wav", participant_wav)
         references = None
         if baseline is None:
-            ref = audio.load_audio(folder / "baseline recording", C.MAX_UPLOAD_BYTES, C.MAX_UPLOAD_S)[0]
-            audio.write_wav(folder / "baseline.wav", ref)
-            b_meta = {"id": "uploaded_baseline", "title": "Your baseline recording", "audio": f"api/jobs/{folder.name}/baseline.wav"}
+            reference_wav = audio.load_audio(folder / "baseline recording", C.MAX_UPLOAD_BYTES, C.MAX_UPLOAD_S)[0]
+            audio.write_wav(folder / "baseline.wav", reference_wav)
+            baseline_meta = {"id": "uploaded_baseline", "title": "Your baseline recording", "audio": f"api/jobs/{folder.name}/baseline.wav"}
         else:
             if baseline.get("reference_wavs"):
                 references = [audio.read_wav(p) for p in baseline["reference_wavs"]]
-            ref = references[0] if references else audio.read_wav(baseline["wav"])
-            b_meta = {"id": baseline["id"], "title": baseline["title"], "audio": f"gallery/{baseline['audio']}"}
-        res = analyze(mine, tr, ref, regime=UPLOAD_REGIME, detector=load_detector(detector), baseline_meta=b_meta, refuse_mismatch=True,
+            reference_wav = references[0] if references else audio.read_wav(baseline["wav"])
+            baseline_meta = {"id": baseline["id"], "title": baseline["title"], "audio": f"gallery/{baseline['audio']}"}
+        res = analyze(participant_wav, tr, reference_wav, regime=UPLOAD_REGIME, detector=load_detector(detector), baseline_meta=baseline_meta, refuse_mismatch=True,
                       participant_meta={"id": folder.name, "title": "Your recording", "audio": f"api/jobs/{folder.name}/participant.wav"},
                       progress=lambda stage: job.update(stage=stage), references=references)
         (folder / "result.json").write_text(dumps(res) + "\n")
@@ -267,13 +267,13 @@ def create_app(gallery: Path = GALLERY, detector: Path = DEFAULT_DETECTOR, work:
 
 
 def main(argv: list[str] | None = None) -> None:
-    ap = argparse.ArgumentParser(prog="python -m cvoice.app", description=__doc__.splitlines()[0])
-    ap.add_argument("--host", default="127.0.0.1")
-    ap.add_argument("--port", type=int, default=7860)
-    ap.add_argument("--gallery", type=Path, default=GALLERY)
-    ap.add_argument("--detector", type=Path, default=DEFAULT_DETECTOR, help="detector.json used for uploads")
-    a = ap.parse_args(argv)
-    uvicorn.run(create_app(a.gallery, a.detector), host=a.host, port=a.port, workers=1)
+    parser = argparse.ArgumentParser(prog="python -m cvoice.app", description=__doc__.splitlines()[0])
+    parser.add_argument("--host", default="127.0.0.1")
+    parser.add_argument("--port", type=int, default=7860)
+    parser.add_argument("--gallery", type=Path, default=GALLERY)
+    parser.add_argument("--detector", type=Path, default=DEFAULT_DETECTOR, help="detector.json used for uploads")
+    args = parser.parse_args(argv)
+    uvicorn.run(create_app(args.gallery, args.detector), host=args.host, port=args.port, workers=1)
 
 
 if __name__ == "__main__":

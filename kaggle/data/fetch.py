@@ -21,6 +21,7 @@ import re
 import shutil
 import struct
 import subprocess
+import sys
 import tarfile
 import tempfile
 import time
@@ -210,7 +211,10 @@ def http(url, *, start=None, end=None, head=False, maximum=METADATA_LIMIT, targe
                 if target:
                     with target.open("wb") as f:
                         received = 0
-                        while chunk := r.read(min(1 << 20, maximum + 1 - received)):
+                        while True:
+                            chunk = r.read(min(1 << 20, maximum + 1 - received))
+                            if not chunk:
+                                break
                             f.write(chunk)
                             received += len(chunk)
                             if received > maximum:
@@ -902,15 +906,25 @@ def attach_annotations(source, audio, root):
         for x in audio:
             x["text"] = texts[Path(x["path"]).stem]
     elif source == "podcastfillers":
-        rows = list(csv.DictReader((root / "labels/PodcastFillers/metadata/PodcastFillers.csv").open()))
+        with (root / "labels/PodcastFillers/metadata/PodcastFillers.csv").open() as f:
+            rows = list(csv.DictReader(f))
         lookup = {int(r["pfID"]): r for r in rows}
-        licences = dict(csv.reader((root / "labels/PodcastFillers/LICENSE_AUDIO.csv").open()))
+        with (root / "labels/PodcastFillers/LICENSE_AUDIO.csv").open() as f:
+            licences = dict(csv.reader(f))
         for x in audio:
             episode = x["episode"] if x["style"] == "full_episode" else lookup[int(Path(x["path"]).stem)]["podcast_filename"]
             own = licences[episode]
             x.update(licence=own + " AND Adobe Research License", speaker=None, episode=episode)
             slug = {"CC BY 3.0": "by", "CC BY-SA 3.0": "by-sa", "CC BY-ND 3.0": "by-nd"}[own]
             x["licence_url"] = CC + "licenses/" + slug + "/3.0/"
+
+
+def expresso_style(row_id: str) -> str:
+    if "emphasis" in row_id:
+        return "emphasis"
+    if "_enunciated_" in row_id:
+        return "enunciated"
+    return "default"
 
 
 def parquet_audio(path, root, limit, source="disfluencyspeech", offset=0):
@@ -931,11 +945,17 @@ def parquet_audio(path, root, limit, source="disfluencyspeech", offset=0):
             transcript = row["text"] if source == "expresso" else row["transcript_annotated"]
             name = f"utterance-{i:05d}.json"
             (root / "labels" / name).write_text(json.dumps({k: v for k, v in row.items() if k != "audio"}, indent=1))
-            audio.append(direct(("https://huggingface.co/datasets/ylacombe/expresso/resolve/main/" + str(path.relative_to(root / "labels"))) if source == "expresso" else "https://huggingface.co/datasets/amaai-lab/DisfluencySpeech/resolve/main/data/test-00000-of-00001.parquet",
-                                row["id"] + ".wav" if source == "expresso" else record.get("path") or str(i), raw.stat().st_size, local=str(raw),
-                                speaker=row["speaker_id"] if source == "expresso" else "single_actor",
-                                style=("emphasis" if "emphasis" in row["id"] else "enunciated" if "_enunciated_" in row["id"]
-                                       else "default") if source == "expresso" else "acted_disfluent",
+            if source == "expresso":
+                url = "https://huggingface.co/datasets/ylacombe/expresso/resolve/main/" + str(path.relative_to(root / "labels"))
+                audio_path = row["id"] + ".wav"
+                speaker = row["speaker_id"]
+                style = expresso_style(row["id"])
+            else:
+                url = "https://huggingface.co/datasets/amaai-lab/DisfluencySpeech/resolve/main/data/test-00000-of-00001.parquet"
+                audio_path = record.get("path") or str(i)
+                speaker = "single_actor"
+                style = "acted_disfluent"
+            audio.append(direct(url, audio_path, raw.stat().st_size, local=str(raw), speaker=speaker, style=style,
                                 text=transcript, label_files=[name]))
     return audio
 
@@ -1125,18 +1145,16 @@ def main(argv=None):
 
 
 if __name__ == "__main__":
-    # Tee stdout to one small log for kernel runs; dry-run writes only to stdout.
-    # No exception escapes: failed kernels may lose their otherwise useful outputs.
+    # No exception escapes: a kernel that exits non-zero can lose its otherwise useful outputs.
     try:
         outcome = main()
         if outcome.get("dry_run") and any(p["error"] for p in outcome["plans"]):
             raise SystemExit(1)
     except Exception as exc:
         log(f"FAILED startup: {type(exc).__name__}: {exc}")
-        if "--dry-run" not in os.sys.argv:
+        if "--dry-run" not in sys.argv:
             try:
-                i = os.sys.argv.index("--out") if "--out" in os.sys.argv else None
-                out = Path(os.sys.argv[i + 1]) if i is not None else Path("/kaggle/working")
+                out = Path(sys.argv[sys.argv.index("--out") + 1]) if "--out" in sys.argv else Path("/kaggle/working")
                 out.mkdir(parents=True, exist_ok=True)
                 (out / "STATUS.json").write_text(json.dumps({"complete": False, "sources": [],
                     "failures": [{"source": "startup", "stage": "startup", "error": str(exc)}]}, indent=1))

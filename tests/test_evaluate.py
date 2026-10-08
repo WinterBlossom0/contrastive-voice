@@ -489,7 +489,7 @@ def test_cross_pairs_pair_a_check_clip_with_every_calibration_reader_and_any_oth
     P1 = dataclasses.replace(base, win_T=base.win_T * 0.5)
     pairs = evaluate.cross_pairs(BotchedStub(base, P1), pinned_detector(), BotchedStub._clips)
     assert [(c["id"], ref) for c, ref, *_ in pairs] == [("chk__G5", "cal1"), ("chk__G5", "cal2"), ("gm__G5", "ref0")]
-    for c, ref, edited, unedited, lab in pairs:
+    for _, _, edited, unedited, lab in pairs:
         assert edited.P is P1 and unedited.P is base and edited.B is base and lab["flaws"][0]["type"] == "FADE" and edited.regime == unedited.regime == "R2"
 
 

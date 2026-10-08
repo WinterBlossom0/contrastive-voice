@@ -89,7 +89,8 @@ def test_label_summary_counts_title_or_chip_matches_per_tier():
     assert out['synthetic_only|headline (L2+L3)|val+test']['confusion'] == {'HESITATION': {'PAUSE_INTRUSIVE (HESITATION chip)': 1}}
 
 
-@pytest.mark.skipif(not (RUN / 'eval/results.json').exists() or not FIRST_FINAL.exists(), reason='final-run outputs are not in this checkout')
+@pytest.mark.skipif(not (RUN / 'eval/results.json').exists() or not FIRST_FINAL.exists(),
+                    reason='the final-run folder (build/, git-ignored) is not distributed with the repository')
 def test_addendum_of_the_final_run():
     add = A.build(RUN, FIRST_FINAL, None)
     test = next(r for r in add['accounting']['rows'] if (r['tier'], r['levels'], r['split']) == ('core8', 'headline (L2+L3)', 'test'))
@@ -134,7 +135,7 @@ def test_fair_reference_free_fits_its_own_scales_and_chooses_h_by_the_detector_o
     from cvoice.compare import compare
     from cvoice.detect import fit_scales
     B = recording(30, pauses={7: 0.7, 19: 0.8})
-    nulls = [A.NullWithP(f'n{i}', compare(B, P), (), 1.0, 'train', 'r', P)
+    nulls = [A.NullWithP(id=f'n{i}', comp=compare(B, P), sentence=(), minutes=1.0, split='train', reader='r', P=P)
              for i, P in enumerate([B, recording(30, pauses={7: 0.5, 19: 0.9}), recording(30, word_s=0.33)])]
     seen = {}
 

@@ -1,9 +1,10 @@
-"""dev_v12 regressions: D9 pause rule and RUSH duplicates, consensus select weights, budget status, gallery truth markers."""
+"""D9 pause rule and RUSH duplicates, consensus select weights, budget status, gallery truth markers."""
 import math
 from types import SimpleNamespace
 
 import numpy as np
 import pytest
+from runs import r1_run
 from synth import label, local, recording, regime, with_x
 
 from cvoice import audio, calibrate, config as C, evaluate, gallery, patterns, r2pool, stress
@@ -11,9 +12,6 @@ from cvoice.calibrate import Null, null_check, select_r1
 from cvoice.compare import compare
 from cvoice.events import Run, eval_clip, run_pair
 from cvoice.score import score
-
-R1_ENABLED = tuple(C.REGIME_DIMS['R1'])
-
 
 def test_d9_reads_only_aligned_word_durations():
     # Same words; the pauses and gaps differ (a 0.3 s pause cut below PAUSE_MIN_S, longer gaps), the word durations do not.
@@ -26,18 +24,14 @@ def test_d9_reads_only_aligned_word_durations():
     assert abs(d9.g) < 1e-12
 
 
-def _rush_run(base, comp):
-    return Run(base, base, comp, [], None, 'R1', {}, regime('R1')['scales'], R1_ENABLED)
-
-
 def test_d9_region_on_a_rush_edit_is_a_duplicate_not_a_false_region(base):
     comp = compare(base, base)
-    run = _rush_run(base, comp).with_regions([local('D1', 10, 15, -5), local('D9', 10, 15, -9)])
+    run = r1_run(base, comp, scored=False).with_regions([local('D1', 10, 15, -5), local('D9', 10, 15, -9)])
     for strict in (False, True):
         ev = eval_clip(run, label(base, 'RUSH', (10, 15)), secondary_exempt=not strict)
         assert ev['false'] == [] and ev['duplicate'] == 1
     # Away from the RUSH words the same D9 region stays a false region.
-    far = _rush_run(base, comp).with_regions([local('D9', 30, 35, -9)])
+    far = r1_run(base, comp, scored=False).with_regions([local('D9', 30, 35, -9)])
     assert len(eval_clip(far, label(base, 'RUSH', (10, 15)), secondary_exempt=False)['false']) == 1
 
 
@@ -47,9 +41,9 @@ def test_natural_rush_h_is_not_set_by_d9_firing_on_rush_edits(base, monkeypatch)
     for _ in range(3):  # RUSH edits: D1 finds them and D9 fires far above the NATURAL_RUSH evidence
         comp = with_x(base, 'D9', [(10, 15, -0.6)])
         comp.dims['D1'].x[10:16] = -0.5
-        pairs.append((_rush_run(base, comp), label(base, 'RUSH', (10, 15))))
+        pairs.append((r1_run(base, comp, scored=False), label(base, 'RUSH', (10, 15))))
     comp = with_x(base, 'D9', [(25, 30, -0.15)])  # z about 3 at the D9 floor scale
-    pairs.append((_rush_run(base, comp), label(base, 'NATURAL_RUSH', (25, 30))))
+    pairs.append((r1_run(base, comp, scored=False), label(base, 'NATURAL_RUSH', (25, 30))))
     reg = regime('R1')
     select_r1(pairs, [], reg)
     assert reg['selected_operating_point']['per_type_recall']['NATURAL_RUSH'] == 1.0
@@ -147,7 +141,7 @@ def test_gallery_truth_marker_of_an_unscored_dimension_is_not_available(base, mo
 def test_fit_r2_records_which_rule_sets_each_whole_clip_threshold(base):
     reg, _ = calibrate.fit_r2([Null(f'n{i}', compare(base, base), base.tr.sentence, 1.0) for i in range(3)], full_curve=False)
     choice = reg['null']['clip_threshold_choice']
-    assert set(choice) == {'D1', 'D3'}  # K5: the fit clip-budget quantile, floored, sets each whole-clip threshold
+    assert set(choice) == {'D1', 'D3'}  # the fit clip-budget quantile, floored, sets each whole-clip threshold
     assert all(row['threshold'] == reg['clip'][k] == pytest.approx(max(row['clip_budget_quantile'], C.FLOORS[k]), abs=1e-6)
                and row['robust_start'] is not None for k, row in choice.items())
 
@@ -168,8 +162,7 @@ def test_headline_qualifies_recovered_families_and_fills_the_clip_column(base, p
     clips = [{"id": t, "split": "val", "level": 2, "parent": "s", "kind": "single", "spectrum": spectrum}
              for t, spectrum in (("FADE", "core8"), ("LOW_EFFORT", "extra"))]
     comp = compare(base, base)
-    run = Run(base, base, comp, [local('D5', 10, 15, -5)], score(comp, [], regime("R1"), C.PMAX_START), "R1", {},
-              regime('R1')['scales'], R1_ENABLED)
+    run = r1_run(base, comp, [local('D5', 10, 15, -5)])
     monkeypatch.setattr(evaluate, "clip_runs", lambda ds, det, cl: [(c, run, label(base, typ=c["id"])) for c in cl])
     out = evaluate.headline_section(SimpleNamespace(clips=lambda **kw: clips), pinned_detector(), ("val",))
     assert 'LOW_EFFORT' in out['recovered_types'] and out['recovered_label_off'] == ['LOW_EFFORT']

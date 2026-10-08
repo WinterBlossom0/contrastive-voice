@@ -9,7 +9,7 @@ import numpy as np
 from scipy.optimize import linear_sum_assignment
 from scipy.stats import rankdata, spearmanr
 
-from . import EVENT_TOLERANCE_S, FALSE_RATE, NORMAL_SOURCES, REFERENCE_COUNTS, SEEDS, SOURCE_ORDER
+from . import BREATH_S, EVENT_TOLERANCE_S, FALSE_RATE, NORMAL_SOURCES, REFERENCE_COUNTS, SEEDS, SOURCE_ORDER
 from .measures import MEASURES, FAMILIES, finite, mean, decode_edits
 from cvoice.reference import median_reference
 from cvoice.align import parse_transcript
@@ -100,8 +100,8 @@ def normal_reader(row):
 
 
 def case_reference(case, features, band_envelopes):
-    """Median reference of a normal case, kept on the case: it is the same for every measure test (Kaggle lab v1:
-    recomputing it took about 210 s per test)."""
+    """Median reference of a normal case, kept on the case: it is the same for every measure test (recomputing it
+    took about 210 s per test on Kaggle T4 x2)."""
     key = '_reference_band' if band_envelopes else '_reference'
     if key not in case:
         refs = [features[clip] for clip in case['references']]
@@ -135,7 +135,8 @@ def normal_plan(rows, features):
             for phase,targets in (('calibration',bank),('held',held)):
                 for row in targets:
                     refs=[r for r in bank if reader(r)!=reader(row)]
-                    if len(refs)<k:continue
+                    if len(refs)<k:
+                        continue
                     for seed in SEEDS:
                         rng=np.random.default_rng(seed+int(row['id'][:6],16))
                         chosen=[refs[i] for i in rng.choice(len(refs),k,replace=False)]
@@ -167,10 +168,12 @@ def pair_plan(rows,features):
             pairs.append({'source':source,'style':p['condition'] + '_vs_' + base,'speaker':speaker,
                           'participant':p['id'],'reference':ref['id'],'x':features[p['id']],'b':features[ref['id']]})
     for (source,speaker,text),group in groups.items():
-        if source != 'avid':continue
+        if source != 'avid':
+            continue
         import re
         for p in group:
-            if p['condition'] != 'soft':continue
+            if p['condition'] != 'soft':
+                continue
             session = re.search(r'_s([12])_',p['original_path'])
             refs = [r for r in group if r['condition'] == 'loud' and session and '_s'+session[1]+'_' in r['original_path']]
             if refs:
@@ -201,7 +204,9 @@ REFERENCE_MEASURES = frozenset(('latency_contour','production_contour','latency_
 
 
 def rank_scores(name,fn,rows,features,fixed):
-    by=defaultdict(list); scored_departures=defaultdict(list); references=defaultdict(list)
+    by=defaultdict(list)
+    scored_departures=defaultdict(list)
+    references=defaultdict(list)
     speech=[r for r in rows if r['source']=='speechocean' and eligible(name,r,features)]
     for r in speech:
         s=r['scores']
@@ -213,7 +218,8 @@ def rank_scores(name,fn,rows,features,fixed):
         refs=sorted((ref for ref in references[r['text_key']] if reader(ref)!=reader(r)),key=lambda v:v['id'])
         b=features[refs[0]['id']] if refs else None
         if b is None and name in REFERENCE_MEASURES:
-            missing_reference+=1; continue
+            missing_reference+=1
+            continue
         values=fn(x,b)
         value=mean(values)
         for key,score in r['scores'].items():
@@ -225,8 +231,10 @@ def rank_scores(name,fn,rows,features,fixed):
         if word:
             stress=[w['stress'] for w in word if 'stress' in w]
             phones=[phone for w in word for phone in w.get('phones-accuracy',w.get('phones_accuracy',[]))]
-            if stress:by['sentence_mean_word_stress'].append((value,mean(stress),r['id']))
-            if phones:by['sentence_mean_phone_accuracy'].append((value,mean(phones),r['id']))
+            if stress:
+                by['sentence_mean_word_stress'].append((value,mean(stress),r['id']))
+            if phones:
+                by['sentence_mean_phone_accuracy'].append((value,mean(phones),r['id']))
             if len(word)!=len(x['norm']):
                 missing_reference += 1
                 continue
@@ -241,7 +249,9 @@ def rank_scores(name,fn,rows,features,fixed):
                         by['word_mean_phone_accuracy'].append((vals[i],mean(phones),r['id']))
     output={}
     for key,vals in by.items():
-        a,z,_=zip(*vals); a,z=np.asarray(a),np.asarray(z);ok=np.isfinite(a)&np.isfinite(z)
+        a,z,_=zip(*vals)
+        a,z=np.asarray(a),np.asarray(z)
+        ok=np.isfinite(a)&np.isfinite(z)
         output[key]={'n':int(ok.sum()),'recordings':len({v[2] for v in vals}),
             'rho':float(spearmanr(a[ok],z[ok]).statistic) if ok.sum()>=3 and np.std(a[ok]) and np.std(z[ok]) else None,
             'missing_n':int((~ok).sum()),
@@ -262,30 +272,41 @@ def prominence_scores(name,rows,features):
         return {'available':False,'missing':'prominence annotations do not label misplaced/omitted emphasis; same-text normative reference absent'}
     if name not in ('prominence_agreement','stress_spread'):
         return {'available':False,'missing':'not a prominence predictor'}
-    values=[];labels=[];recordings=set()
+    values=[]
+    labels=[]
+    recordings=set()
     for r in rows:
-        if r['source']!='prominence' or r['id'] not in features:continue
+        if r['source']!='prominence' or r['id'] not in features:
+            continue
         x=features[r['id']]
         annotations=r.get('prominence_labels',[])
         if name=='stress_spread' and annotations:
             values.append(MEASURES[name](x))
             labels.append(mean([np.std(a['score']) for a in annotations]))
-            recordings.add(r['id']);continue
+            recordings.add(r['id'])
+            continue
         for a in annotations:
-            if len(a['words'])!=len(a['score']):raise ValueError('prominence word/score length mismatch')
+            if len(a['words'])!=len(a['score']):
+                raise ValueError('prominence word/score length mismatch')
             for (word,start,end),label in zip(a['words'],a['score']):
                 mid=(x['start']+x['end'])/2
                 ix=np.flatnonzero((mid>=start)&(mid<end))
                 if len(ix):
-                    values.append(mean(x['prominence'][ix]));labels.append(float(label));recordings.add(r['id'])
-    a,z=np.asarray(values),np.asarray(labels);ok=np.isfinite(a)&np.isfinite(z);a,z=a[ok],z[ok]
+                    values.append(mean(x['prominence'][ix]))
+                    labels.append(float(label))
+                    recordings.add(r['id'])
+    a,z=np.asarray(values),np.asarray(labels)
+    ok=np.isfinite(a)&np.isfinite(z)
+    a,z=a[ok],z[ok]
     result={'available':bool(len(a)),'recordings':len(recordings),'n':len(a),
             'rho':float(spearmanr(a,z).statistic) if len(a)>=3 and np.std(a) and np.std(z) else None,
             'target':'annotation spread per clip' if name=='stress_spread' else 'raw prominence component vs prominent-word annotation',
             'component_only':name=='prominence_agreement',
             'flaw_labels':False,'missing':None if len(a) else 'LibriTTS prominence-labelled audio absent'}
     if name=='prominence_agreement':
-        pred=a>=.75;truth=z>=.5;tp=int((pred&truth).sum())
+        pred=a>=.75
+        truth=z>=.5
+        tp=int((pred&truth).sum())
         result.update(auc=auc(a[~truth],a[truth]),tp=tp,fp=int((pred&~truth).sum()),fn=int((~pred&truth).sum()),
             precision=tp/int(pred.sum()) if pred.any() else None,recall=tp/int(truth.sum()) if truth.any() else None,
             prediction_threshold=.75,annotation_threshold=.5)
@@ -296,10 +317,7 @@ def candidate_spans(name,x):
     key=EVENT_KEYS[name]
     if key.endswith('spans'):
         return x[key]
-    if key=='word_silence':
-        ix=np.flatnonzero(x[key]>0)
-        return np.column_stack([x['start'][ix],x['end'][ix]])
-    ix=np.flatnonzero(x['sil']>=.25)
+    ix=np.flatnonzero(x['sil']>=BREATH_S)
     return x['sil_span'][ix]
 
 
@@ -318,7 +336,10 @@ def labelled_events(name,rows,features):
                 labels=[e for e in labels if e['kind'] in kinds]
             pred=candidate_spans(name,features[r['id']])
             score=event_metrics(pred,[(e['start'],e['end']) for e in labels])
-            tp+=score['tp']; fp+=score['fp']; fn+=score['fn']; clips+=1
+            tp+=score['tp']
+            fp+=score['fp']
+            fn+=score['fn']
+            clips+=1
         results.append({'source':source,'available':bool(clips),'recordings':clips,'tp':tp,'fp':fp,'fn':fn,
                         'precision':tp/(tp+fp) if tp+fp else None,'recall':tp/(tp+fn) if tp+fn else None,
                         'tolerance_seconds':EVENT_TOLERANCE_S,
@@ -330,7 +351,8 @@ def labelled_events(name,rows,features):
 
 def attach_product_deltas(name,case,reference):
     """The six product deltas share one compare call per contrast across all measure tests."""
-    if name not in PRODUCT_NAMES:return
+    if name not in PRODUCT_NAMES:
+        return
     if 'product_deltas' not in case:
         from cvoice.compare import compare
         from .extract import recording_view
@@ -339,38 +361,58 @@ def attach_product_deltas(name,case,reference):
     reference['_product_deltas'] = case['product_deltas']
 
 
+def own_baseline_measure(fn,x,refs):
+    return fn(x)-np.median([fn(ref) for ref in refs])
+
+
+def normal_measure(name,fn,case,reference):
+    attach_product_deltas(name,case,reference)
+    return fn(case['x'],reference)
+
+
+def paired_measure(name,fn,pair):
+    reference = dict(pair['b'])
+    attach_product_deltas(name,pair,reference)
+    return fn(pair['x'],reference)
+
+
 def measure_test(name,rows,features,normals,inventory,pairs):
     fn=MEASURES[name]
     usable=[r for r in rows if eligible(name,r,features)]
-    errors=[]; raw={}
+    errors=[]
+    raw={}
     for r in usable:
         test=isolated('recording:'+r['id'],fn,features[r['id']])
         if test['complete']:
             raw[r['id']]=test['result']
         else:
             errors.append(test)
-    normal={}; responses={}; fixed={}
+    normal={}
+    responses={}
+    fixed={}
     for source in NORMAL_SOURCES:
         normal[source]={}
         for k in REFERENCE_COUNTS:
             cases=[t for t in normals if t['source']==source and t['k']==k]
-            phases=defaultdict(list); values=[]; participant_scores=defaultdict(list); seed_scores=defaultdict(list)
+            phases=defaultdict(list)
+            values=[]
+            participant_scores=defaultdict(list)
+            seed_scores=defaultdict(list)
             for t in cases:
                 if bool(t['x'].get('prompt_proxy', False)) and name not in ACOUSTIC_ONLY:
                     continue
                 reference = case_reference(t, features, name == 'band_envelope_match')
                 if bool(t['x'].get('prompt_proxy', False)) and name == 'breath_candidates':
                     refs = [features[clip] for clip in t['references']]
-                    result=isolated('normal:'+t['participant'],lambda: fn(t['x'])-np.median([fn(ref) for ref in refs]))
+                    result=isolated('normal:'+t['participant'],own_baseline_measure,fn,t['x'],refs)
                 else:
-                    def normal_measure():
-                        attach_product_deltas(name,t,reference)
-                        return fn(t['x'],reference)
-                    result=isolated('normal:'+t['participant'],normal_measure)
+                    result=isolated('normal:'+t['participant'],normal_measure,name,fn,t,reference)
                 if not result['complete']:
-                    errors.append(result); continue
+                    errors.append(result)
+                    continue
                 score=severity(name,result['result'])
-                participant_scores[(t['phase'],t['reader'])].append(score); values.append(score)
+                participant_scores[(t['phase'],t['reader'])].append(score)
+                values.append(score)
                 seed_scores[t['seed']].append(score)
             for (phase,participant),scores_by_seed in participant_scores.items():
                 phases[phase].append(mean(scores_by_seed))
@@ -383,11 +425,7 @@ def measure_test(name,rows,features,normals,inventory,pairs):
             fixed[f'{source}:k{k}']={'cal':phases['calibration'],'held':phases['held']}
     by=defaultdict(list)
     for p in pairs:
-        def paired_measure():
-            reference = dict(p['b'])
-            attach_product_deltas(name,p,reference)
-            return fn(p['x'],reference)
-        result=isolated('pair:'+p['participant'],paired_measure)
+        result=isolated('pair:'+p['participant'],paired_measure,name,fn,p)
         if result['complete']:
             value = mean(result['result']) - (1 if name in RATIO else 0)
             by[p['source']+':'+p['style']].append((value,severity(name,result['result']),p['speaker']))
@@ -396,12 +434,14 @@ def measure_test(name,rows,features,normals,inventory,pairs):
     verdicts=[]
     for key,items in by.items():
         signed,departures,_=zip(*items)
-        signed=finite(signed); departures=finite(departures)
+        signed=finite(signed)
+        departures=finite(departures)
         sd=float(signed.std(ddof=1)) if len(signed)>1 else 0
         delta=mean(signed)
         dz=delta/sd if sd>0 else None
         grouped=defaultdict(list)
-        for v,_,speaker in items:grouped[speaker].append(v)
+        for v,_,speaker in items:
+            grouped[speaker].append(v)
         speaker_values=finite([mean(v) for v in grouped.values()])
         speaker_sd=float(speaker_values.std(ddof=1)) if len(speaker_values)>1 else 0
         responses[key]={'n':len(departures),'speakers':len({v[2] for v in items}),'signed_response':summary(signed),
@@ -442,7 +482,9 @@ def measure_test(name,rows,features,normals,inventory,pairs):
                     pred=candidate_spans(name,x) if severity(name,raw[r['id']],False)>detection['threshold'] else []
                     truth=[(e['start'],e['end']) for e in r['events'] if kind is None or e['kind']==kind]
                     score=event_metrics(pred,truth)
-                    tp+=score['tp'];fp+=score['fp'];fn_count+=score['fn']
+                    tp+=score['tp']
+                    fp+=score['fp']
+                    fn_count+=score['fn']
                 detection['localized_events']={'tp':tp,'fp':fp,'fn':fn_count,'recordings':len(target_rows),
                     'precision':tp/(tp+fp) if tp+fp else None,'recall':tp/(tp+fn_count) if tp+fn_count else None,
                     'tolerance_seconds':EVENT_TOLERANCE_S,
@@ -451,9 +493,12 @@ def measure_test(name,rows,features,normals,inventory,pairs):
     scores=isolated('scores',rank_scores,name,fn,rows,features,fixed)
     prominence=isolated('prominence',prominence_scores,name,rows,features)
     events=isolated('events',labelled_events,name,rows,features)
-    if not scores['complete']: errors.append(scores)
-    if not events['complete']: errors.append(events)
-    if not prominence['complete']: errors.append(prominence)
+    if not scores['complete']:
+        errors.append(scores)
+    if not events['complete']:
+        errors.append(events)
+    if not prominence['complete']:
+        errors.append(prominence)
     clinical={}
     for condition in ('HC','PD'):
         clinical[condition]=[mean(raw[r['id']]) for r in usable if r['source']=='mdvr'
@@ -474,7 +519,8 @@ def measure_test(name,rows,features,normals,inventory,pairs):
     transcript_test={'n':len(verbatim),'rho':None,'missing':'verbatim event counts only, no timestamps'}
     if len(verbatim)>=3:
         a,z=np.asarray(verbatim).T
-        if np.std(a) and np.std(z):transcript_test['rho']=float(spearmanr(a,z).statistic)
+        if np.std(a) and np.std(z):
+            transcript_test['rho']=float(spearmanr(a,z).statistic)
     if name in OWN_BASELINE:
         verdict='Anxiety labels missing'
     elif not usable:
@@ -517,11 +563,16 @@ def measure_test(name,rows,features,normals,inventory,pairs):
 
 
 def canon(value):
-    if isinstance(value,dict):return {str(k):canon(v) for k,v in value.items()}
-    if isinstance(value,np.ndarray):return [canon(v) for v in value] if value.ndim else canon(value.item())
-    if isinstance(value,(list,tuple)):return [canon(v) for v in value]
-    if isinstance(value,(float,np.floating)):return float(value) if np.isfinite(value) else None
-    if isinstance(value,(np.integer,np.bool_)):return value.item()
+    if isinstance(value,dict):
+        return {str(k):canon(v) for k,v in value.items()}
+    if isinstance(value,np.ndarray):
+        return [canon(v) for v in value] if value.ndim else canon(value.item())
+    if isinstance(value,(list,tuple)):
+        return [canon(v) for v in value]
+    if isinstance(value,(float,np.floating)):
+        return float(value) if np.isfinite(value) else None
+    if isinstance(value,(np.integer,np.bool_)):
+        return value.item()
     return value
 
 
@@ -539,12 +590,16 @@ def tables(results):
         for fn in fns:
             record=results['measures'][fn.__name__]
             if not record['complete']:
-                lines.append(f'| {fn.__name__} | error | — | — | — | Test execution failed |');continue
-            r=record['result']; normal=r['normal']['ears']['1']['held']
+                lines.append(f'| {fn.__name__} | error | — | — | — | Test execution failed |')
+                continue
+            r=record['result']
+            normal=r['normal']['ears']['1']['held']
             spread=f"IQR {normal['iqr']:.3g}; n={normal['n']}" if normal['n'] else 'insufficient readers'
-            responses=[];found=[]
+            responses=[]
+            found=[]
             for key,p in r['paired'].items():
-                dz=p['paired_dz']; a=p['auc_against_normal'].get('ears:k1')
+                dz=p['paired_dz']
+                a=p['auc_against_normal'].get('ears:k1')
                 responses.append(f"{key} n={p['n']}, dz={dz:.2g}, AUC={a:.2g}" if dz is not None and np.isfinite(a)
                                  else f"{key} n={p['n']}")
                 f=p['found_at_fixed_rate'].get('ears:k1',{})
@@ -553,7 +608,8 @@ def tables(results):
             score_result=r['scores'].get('result',{})
             for key,v in score_result.items():
                 if isinstance(v,dict) and 'rho' in v:
-                    rho=v['rho'];responses.append(f"{key} n={v['n']}, rho={rho:.2g}" if rho is not None else f"{key} n={v['n']}, rho undefined")
+                    rho=v['rho']
+                    responses.append(f"{key} n={v['n']}, rho={rho:.2g}" if rho is not None else f"{key} n={v['n']}, rho undefined")
             for v in r['events'].get('result',[]) if isinstance(r['events'].get('result'),list) else []:
                 if v.get('available'):
                     responses.append(f"{v['source']} events TP/FP/FN={v['tp']}/{v['fp']}/{v['fn']} ±{v['tolerance_seconds']}s")

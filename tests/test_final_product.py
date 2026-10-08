@@ -107,7 +107,8 @@ def test_preregistered_accounting_moves_same_change_detections_and_counts_every_
     assert gallery.preregistered_counts(row) == {'tp': 28, 'fp': 9, 'fn': 4, 'f1': 0.812}
 
 
-@pytest.mark.skipif(not (RUN / 'eval/results.json').exists() or not FIRST_FINAL.exists(), reason='final-run outputs are not in this checkout')
+@pytest.mark.skipif(not (RUN / 'eval/results.json').exists() or not FIRST_FINAL.exists(),
+                    reason='the final-run folder (build/, git-ignored) is not distributed with the repository')
 def test_evaluation_panel_equals_the_final_run_outputs():
     shipped = json.loads((GALLERY / gallery.EVALUATION).read_text())
     addendum = RUN / 'eval' / gallery.ADDENDUM

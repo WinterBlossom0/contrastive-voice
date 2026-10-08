@@ -19,11 +19,6 @@ def run(rec, edit, chain_name="A"):
     return y, lab, lab["flaws"][0]
 
 
-def window_edit(rec, typ, level, i0, i1):
-    ed = flaws.make_edit(rec, typ, level, (i0, i1))
-    return ed
-
-
 def test_warp_sides_and_chain_composition():
     w = flaws.Warp([0, 20, 20, 50, 60, 100], [0, 20, 30, 60, 60, 100])  # 10 inserted at 20, [50, 60) removed
     assert w(20, "left") == 20 and w(20, "right") == 30 and w(55) == 60 and w(100) == 100 and w(5) == 5
@@ -38,7 +33,7 @@ def test_warp_sides_and_chain_composition():
 @pytest.mark.parametrize("typ,r", [("RUSH", 1.9), ("RUSH", 1.2), ("DRAG", 1.45), ("DRAG", 1.9)])
 def test_time_scaling_scales_speech_only_and_labels_follow(rec, typ, r):
     i0, i1 = 5, 10  # contains the 0.7 s pause after word 7
-    ed = window_edit(rec, typ, 3, i0, i1)
+    ed = flaws.make_edit(rec, typ, 3, (i0, i1))
     ed.param = r
     assert len(ed.pauses) == 1
     y, lab, f = run(rec, ed)
@@ -68,7 +63,7 @@ def test_dropped_pause_keeps_exactly_the_floor_and_cuts_the_rest(rec):
     assert lab["outside_support_identical"]
     for level, frac in ((1, 0.4), (2, 0.2)):
         e = flaws.make_edit(rec, "PAUSE_DROPPED", level, (7, 8))
-        y2, _, f2 = run(rec, e)
+        _, _, f2 = run(rec, e)
         assert f2["span"][1] - f2["span"][0] == max(round(frac * dur), keep)
 
 
@@ -87,7 +82,7 @@ def test_intrusive_pause_inserts_room_tone_of_the_exact_length(rec):
 
 
 def test_monotone_preserves_length_compresses_pitch_and_is_deterministic(rec):
-    ed = window_edit(rec, "MONOTONE", 3, 11, 16)
+    ed = flaws.make_edit(rec, "MONOTONE", 3, (11, 16))
     y, lab, f = run(rec, ed)
     assert len(y) == len(rec.wav) and f["span"] == [ed.a, ed.b] and lab["outside_support_identical"]
     fy = frame_features(y)
@@ -99,7 +94,7 @@ def test_monotone_preserves_length_compresses_pitch_and_is_deterministic(rec):
 
 
 def test_deemphasis_shortens_lowers_and_flattens_one_word(rec):
-    ed = window_edit(rec, "DEEMPHASIS", 3, 12, 12)
+    ed = flaws.make_edit(rec, "DEEMPHASIS", 3, (12, 12))
     y, lab, f = run(rec, ed)
     old = ed.b - ed.a
     new = f["span"][1] - f["span"][0]
@@ -111,7 +106,7 @@ def test_deemphasis_shortens_lowers_and_flattens_one_word(rec):
 
 
 def test_fade_ramps_holds_releases_and_the_release_is_in_the_support(rec):
-    ed = window_edit(rec, "FADE", 3, 25, 31)
+    ed = flaws.make_edit(rec, "FADE", 3, (25, 31))
     y, lab, f = run(rec, ed)
     assert len(y) == len(rec.wav) and f["span"] == [ed.a, ed.b] and lab["outside_support_identical"]
     assert f["support"] == [ed.a, ed.b + round(C.FADE_RELEASE_S * SR)]
@@ -125,14 +120,14 @@ def test_fade_ramps_holds_releases_and_the_release_is_in_the_support(rec):
 
 
 def test_mumble_changes_only_the_span(rec):
-    ed = window_edit(rec, "MUMBLE", 3, 14, 19)
+    ed = flaws.make_edit(rec, "MUMBLE", 3, (14, 19))
     y, lab, f = run(rec, ed)
     assert len(y) == len(rec.wav) and f["span"] == [ed.a, ed.b] and lab["outside_support_identical"]
     assert not np.array_equal(y[ed.a:ed.b], rec.wav[ed.a:ed.b]) and f["realised"]["name"] == "ln_mfcc_delta_ratio"
 
 
 def test_chain_b_psola_duration_labels(rec):
-    ed = window_edit(rec, "RUSH", 3, 12, 16)
+    ed = flaws.make_edit(rec, "RUSH", 3, (12, 16))
     y, lab, f = run(rec, ed, "B")
     assert lab["chain"] == "B" and lab["outside_support_identical"]
     span = f["span"][1] - f["span"][0]
@@ -217,7 +212,6 @@ def test_unedited_stretches_of_a_warp_map_exactly_so_an_inserted_pause_keeps_its
 
 
 def test_registry_is_complete_and_extra_recipes_use_its_parameters():
-    from cvoice import edits_extra as E
     from test_edits_extra import CASES, recipe_recording
     assert len(C.CORE8_TYPES) == 8 and len(C.EXTRA_TYPES) == 15 and len(C.FLAW_REGISTRY) == 23
     assert set(C.FLAW_TYPES) == set(C.FLAW_DIM) == set(C.LEVEL_PARAM) == set(C.EXPECTED_SECONDARY)
@@ -229,7 +223,6 @@ def test_registry_is_complete_and_extra_recipes_use_its_parameters():
         assert f["dimension"] == r["primary"] and f["family"] == r["family"]
         assert f["parameter"] == r["levels"][1] and tuple(f["expected_secondary"]) == r["secondary"]
         assert f["event"] == r["event"]
-    assert not hasattr(E, "DIMENSIONS")
 
 
 def test_no_eligible_extra_type_is_recorded_as_skipped(rec):

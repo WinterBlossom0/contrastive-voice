@@ -133,8 +133,8 @@
    "download_url": "https://upload.wikimedia.org/wikipedia/commons/9/90/Eisenhower_farewell_address.ogg",
    "licence_basis": "Public domain on Commons file page; US federal recording/official duties; inspect item provenance independently of speech text.",
    "licence_url": "https://commons.wikimedia.org/wiki/File:Eisenhower_farewell_address.ogg",
-   "transcript": "transcripts/eisenhower_farewell_1961.html",
-   "transcript_root": "sources",
+   "transcript": "transcripts/eisenhower_farewell_1961.txt",
+   "transcript_root": "repo",
    "transcript_url": "https://millercenter.org/the-presidency/presidential-speeches/january-17-1961-farewell-address",
    "channel_note": "Check channels before mono conversion; use mono or mean only after polarity/level check."
   },
@@ -171,8 +171,8 @@
    "download_url": "https://upload.wikimedia.org/wikipedia/commons/9/92/Nixon_resignation_audio.ogg",
    "licence_basis": "Public domain on Commons file page; US federal recording/official duties; inspect item provenance independently of speech text.",
    "licence_url": "https://commons.wikimedia.org/wiki/File:Nixon_resignation_audio.ogg",
-   "transcript": "transcripts/nixon_resignation_1974.html",
-   "transcript_root": "sources",
+   "transcript": "transcripts/nixon_resignation_1974.txt",
+   "transcript_root": "repo",
    "transcript_url": "https://millercenter.org/the-presidency/presidential-speeches/august-8-1974-address-nation-announcing-decision-resign-office",
    "channel_note": "Check channels before mono conversion; use mono or mean only after polarity/level check."
   },

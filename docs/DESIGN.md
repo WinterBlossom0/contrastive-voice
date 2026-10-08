@@ -1,5 +1,7 @@
 # Contrastive Voice — build contract
 
+> Written for the detector of 2026-10-02. The final detector (configuration `782d7df7…`, with the speech-tempo key D9) and its evaluation are described in `docs/technical.md`; its numbers are in `docs/NUMBERS.md`. Where this contract differs, those documents hold.
+
 This contract describes the code after the detector rework of 2026-10-02.
 Code comments cite its numbered sections as `DESIGN <section>`.
 **[owner]** marks an owner decision.
@@ -24,7 +26,7 @@ Published measurements cite `docs/PAPERS.md`.
   still runs on CPU. **[owner]**
 - AI disclosure in README / Devpost "Built With": Claude Code. **[owner]**
 
-Decisions recorded in `build/work/HANDOFF.md` on 2026-10-02:
+Decisions recorded in the owner's handoff notes (not in the repository) on 2026-10-02:
 
 - 2026-10-02: "Continue now building the project. You might need to refactor the code a bit since the repository has started looking messy. Make sure you discard the code which is not being used don't keep unwanted stuff." **[owner]**
 - 2026-10-02: AI disclosure remains Claude Code only. HANDOFF records "settled, never ask or flag again". **[owner]**
@@ -33,7 +35,7 @@ Decisions recorded in `build/work/HANDOFF.md` on 2026-10-02:
 - 2026-10-02 ~15:40 UTC: HANDOFF records the owner's research chain: flaw -> its several reasons -> the pattern each reason leaves -> the method that captures that pattern, often in another paper under another name. The owner also said "now go do your research no code for today finish up your research once everything is done inform me I will compact you." **[owner]**
 - 2026-10-02 (late): "your first question should be can I get the required data. Do not have an answer like I will not pursue before you even questions yourself." Check data availability before ranking or dropping an approach. **[owner]**
 - 2026-10-02 (late): "non commercial is fine the comp doesn't forbid it". Non-commercial licences are acceptable for external research data. Each source's terms still apply. This broadens the earlier public-domain data restriction; the existing baseline set stays public domain. **[owner]**
-- 2026-10-02 (night): "broaden the scope"; "no self recorded flaws for now will tell if my mind changes"; "data should be in kaggle for now"; "do only the tasks which you can delegate to codex". **[owner]**
+- 2026-10-02 (night): "broaden the scope"; "no self recorded flaws for now will tell if my mind changes"; "data should be in kaggle for now". **[owner]**
 - 2026-10-02 (night): HANDOFF temporarily records "every dataset this project uses must be PUBLIC on Kaggle" so recipients need no access grant. The later private-data decision below supersedes this. **[owner]**
 - 2026-10-02 ~18:25 UTC: HANDOFF records "datasets stay PRIVATE". The owner said "build a method which will allow my friends to reconstruct that data" and chose "method 2 since they would be using kaggle as well". The build kernel reconstructs source data from origins without an owner access grant (§10). This supersedes the temporary public-data decision and the laptop-only download route. **[owner]**
 - 2026-10-02 ~18:45 UTC: Keep copies of the transcript pages in the repository. The owner's reply was "sure do that". The reconstruction route uses those snapshots (§10). **[owner]**
@@ -615,7 +617,7 @@ It writes converted WAVs in source tars, manifest, licences, log, and status.
 Source outcomes are independent; the exit code does not establish completeness.
 `CVOICE_PRIORITY2=0` omits second-priority sources.
 SEP-28k supplies labels only.
-Subset and licence choices are in `build/work/research/chain/data/PLAN.md`.
+Subset and licence choices are in `docs/research/chain/data/PLAN.md`.
 Outputs stay private with source-specific terms.
 HANDOFF records partial success and ongoing fixes.
 These corpora are separate from the detector dataset.

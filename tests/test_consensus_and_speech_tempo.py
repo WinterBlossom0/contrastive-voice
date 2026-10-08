@@ -1,26 +1,22 @@
-"""Owner decisions and review regressions; CPU fixtures, no corpus or lockbox."""
+"""Consensus references, speech tempo (D9), R2 reference modes and check-reader evaluation; CPU fixtures, no corpus or
+lockbox."""
 import dataclasses
 from collections import Counter
 
 import numpy as np
 import pytest
-from synth import label, local, regime, with_x
+from runs import check_reader_dataset, two_modes
+from synth import label, local, with_x
 
 from cvoice import calibrate, config as C, evaluate, pipeline, r2pool
 from cvoice.compare import compare
-from cvoice.detect import decode, make_detector
+from cvoice.detect import decode
 from cvoice.events import eval_clip, run_pair, truths
 from cvoice.features import speech_time_ratio
 from cvoice.lab.evaluate import median_reference as lab_median
 from cvoice.lab.measures import speech_time_ratio as lab_speech
 from cvoice.reference import consensus_reference, median_reference
 from cvoice.uncertainty import wilson
-
-
-def two_modes():
-    single, consensus = regime('R2'), regime('R2', 4.)
-    single['reference_mode'], consensus['reference_mode'] = 'single', 'consensus5'
-    return make_detector({'R1': regime('R1'), 'R2': single, 'R2_consensus': consensus}, C.PMAX_START, {'calibrated': False})
 
 
 def test_lab_imports_product_rules():
@@ -135,7 +131,7 @@ def test_d9_recovers_lab_scale_change_with_decomposition(base):
     det['regimes']['R1']['pattern_labels'] = {'natural_rush': True}
     result = pipeline.analyze(P,base.tr,base,regime='R1',detector=det)
     flags = [f for f in result['flaws'] if f['dimension']=='D9']
-    assert flags and all(f['type']=='RUSH' for f in flags)  # K1: faster words with kept pauses are the RUSH change
+    assert flags and all(f['type']=='RUSH' for f in flags)  # pause rule: faster words with kept pauses are the RUSH change
     assert 'The words themselves were spoken faster' in flags[0]['text'] and 'pauses are reported separately' not in flags[0]['text']
     assert {e['key'] for e in flags[0]['evidence']} == {'word_time_ln','word_time_p_s','word_time_b_s','pause_p_s','pause_b_s'}
     assert not decode(with_x(base,'D9',[]),det['regimes']['R1'],base.tr.sentence)
@@ -154,20 +150,9 @@ def test_check_away_edit_report_uses_both_calibrated_modes(base):
     P = dataclasses.replace(base,win_W=times)
     clip = dict(id='check__natural',baseline=ids[0],parent='check',split='check',regime='R2')
     lab = label(base,'NATURAL_RUSH',(10,15))
-    class DS:
-        manifest = {'readers':entries}
-        def clips(self,**kw): return [clip]
-        def entry(self,kind,id): return {'id':id}
-        def any_entry(self,id): return {'id':id}
-        def parent_entry(self,c): return {'id':c['parent']}
-        def rec(self,e): return base
-        def recs(self,entries): return [base for e in entries]
-        def clip_recs(self,clips): return [P for c in clips]
-        def load(self,**kw): pass
-        def labels(self,c): return lab
-    result = evaluate.cross_section(DS(),two_modes(),('val',))
+    result = evaluate.cross_section(check_reader_dataset(entries, clip, lab, base, P), two_modes(), ('val',))
     assert result['modes']['single']['summary']['check']['truth'] == 6
     assert result['modes']['consensus5']['summary']['check']['truth'] == 1
-    assert result['modes']['single']['summary']['check']['detected'] == 0  # D9 is listed, never flagged, in R2 (K4)
+    assert result['modes']['single']['summary']['check']['detected'] == 0  # D9 is listed, never flagged, in R2 (config.LISTED_DIMS)
     assert result['modes']['consensus5']['summary']['check']['detected'] == 0
     assert result['modes']['consensus5']['curve']['minutes'] == pytest.approx(base.duration/60)

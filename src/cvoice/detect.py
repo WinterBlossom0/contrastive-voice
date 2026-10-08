@@ -29,6 +29,16 @@ def key(dim: str, sign: int) -> str:
     return f"{dim}{'+' if sign > 0 else '-'}"
 
 
+def parse_key(flag_key: str) -> tuple[str, int]:
+    """Dimension and direction of a flag key: the inverse of key."""
+    return C.dim_of(flag_key), (1 if flag_key.endswith('+') else -1)
+
+
+def whole_clip_key(dim: str, sign: int) -> str:
+    """Flag key of a whole-clip flag, e.g. "D1- whole clip"."""
+    return key(dim, sign) + " whole clip"
+
+
 KEYS = tuple(key(k, s) for k in C.DIMS for s in C.FLAG_SIGNS[k])
 
 
@@ -259,11 +269,16 @@ def load_detector(path: Path) -> dict:
     if not path.exists():
         raise FileNotFoundError(f"{path} not found: run `python -m cvoice.calibrate` first")
     det = json.loads(path.read_text())
+    # Schema 3 is the detector of the eight core types; config.as_dict(3) keeps its constants.
     if det.get("schema") not in (3, SCHEMA):
         raise ValueError(f"{path}: detector schema {det.get('schema')} != {SCHEMA}")
+    if det['schema'] == SCHEMA:
+        expected_keys, expected_clip = KEYS, C.CLIP_DIMS
+    else:
+        released = C.as_dict(3)
+        expected_keys = tuple(key(d, s) for d in released['DIMS'] for s in released['FLAG_SIGNS'][d])
+        expected_clip = released['CLIP_DIMS']
     for r, v in det["regimes"].items():
-        expected_keys = KEYS if det['schema'] == SCHEMA else tuple(key(d, s) for d in C.as_dict(3)['DIMS'] for s in C.as_dict(3)['FLAG_SIGNS'][d])
-        expected_clip = C.CLIP_DIMS if det['schema'] == SCHEMA else C.as_dict(3)['CLIP_DIMS']
         if set(v["h"]) != set(expected_keys) or set(v["clip"]) != set(expected_clip):
             raise ValueError(f"{path}: {r} needs a threshold entry per flag key and per whole-clip dimension")
     if det['schema'] == SCHEMA:

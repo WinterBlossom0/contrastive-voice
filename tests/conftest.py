@@ -1,13 +1,10 @@
-import os
+# Importing cvoice sets every config.THREAD_ENV variable to "1"; it must happen before synth imports numpy.
+import cvoice  # noqa: F401
+import pytest
+from synth import recording, regime
 
-for k in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS"):
-    os.environ.setdefault(k, "1")
-
-import pytest  # noqa: E402
-from synth import recording, regime  # noqa: E402
-
-from cvoice import config as C  # noqa: E402
-from cvoice.detect import make_detector  # noqa: E402
+from cvoice import config as C
+from cvoice.detect import make_detector
 
 
 @pytest.fixture

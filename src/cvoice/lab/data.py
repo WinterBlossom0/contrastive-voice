@@ -97,14 +97,15 @@ def annotate(row, root):
         p = next((p for p in paths if p.suffix == '.csv'), None)
         if p:
             words = []
-            for r in csv.reader(p.open()):
-                if len(r) != 4:
-                    raise ValueError('expected LibriStutter token,start,end,type rows')
-                word, start, end, label = r
-                if int(label):
-                    row['events'].append({'start': float(start), 'end': float(end), 'kind': 'synthetic_stutter_' + label})
-                elif word.upper() != 'STUTTER':
-                    words.append(word)
+            with p.open() as f:
+                for r in csv.reader(f):
+                    if len(r) != 4:
+                        raise ValueError('expected LibriStutter token,start,end,type rows')
+                    word, start, end, label = r
+                    if int(label):
+                        row['events'].append({'start': float(start), 'end': float(end), 'kind': 'synthetic_stutter_' + label})
+                    elif word.upper() != 'STUTTER':
+                        words.append(word)
             row.update(text=' '.join(words), text_origin='retained type-0 labelled words; synthetic events excluded')
     elif source == 'speechocean':
         stem = Path(row['original_path']).stem
@@ -132,8 +133,8 @@ def annotate(row, root):
         row['text_origin'] = 'no independent prompt; acoustic event measures only'
     elif source == 'prominence':
         stem = Path(row['original_path']).stem
-        for _, d in json_labels(paths):
-            found = prominence_index(_).get(stem, [])
+        for label_path, _ in json_labels(paths):
+            found = prominence_index(label_path).get(stem, [])
             if found:
                 row['prominence_labels'] = found
     elif source == 'lombard' and not row.get('text'):
@@ -204,9 +205,9 @@ def group_key(row):
 def select(rows, local=False, available_seconds=None):
     """Keep entire same-speaker style/text units; fixed per-source quotas ensure every test family gets coverage.
 
-    Aggregate forecast duration*0.4 + 1 seconds/clip is unbenchmarked. No extra sources are added
-    after a quota is spent. Long podcast episodes are explicitly deferred because one-second clips
-    already retain event coordinates and no independent episode prompt is available.
+    Forecast wall seconds per clip: duration * EXPECTED_WALL_PER_AUDIO + EXPECTED_WALL_PER_CLIP, with 30 s for a
+    missing duration. No extra sources are added after a quota is spent. Long podcast episodes are deferred
+    because one-second clips already retain event coordinates and no independent episode prompt is available.
     """
     limits = {'gettysburg': 3, 'ears': 4, 'disfluencyspeech': 5}
     count, kept, skipped, seconds = Counter(), [], [], 0.
@@ -241,7 +242,10 @@ def select(rows, local=False, available_seconds=None):
             if reason:
                 skipped.extend({'id': r['audio_path'], 'source': source, 'reason': reason} for r in unit)
             else:
-                kept.extend(unit); count[source] += len(unit); seconds += estimate; spent += estimate
+                kept.extend(unit)
+                count[source] += len(unit)
+                seconds += estimate
+                spent += estimate
     return kept, skipped, seconds
 
 

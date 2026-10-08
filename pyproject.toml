@@ -3,6 +3,10 @@ name = "cvoice"
 version = "0.1.0"
 description = "Contrastive Voice: reference-relative speech delivery analysis with temporal flaw grounding"
 requires-python = ">=3.12,<3.13"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE", "src/cvoice/static/vendor/LICENSE-*.txt"]
+authors = [{ name = "WinterBlossom0" }]
 dependencies = [
     "numpy",
     "scipy",

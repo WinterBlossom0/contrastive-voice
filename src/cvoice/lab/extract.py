@@ -37,7 +37,8 @@ class Capture:
         else:
             parts, step, ctx = [], 6*C.SR, C.SR
             for a in range(0, len(wav), step):
-                z = min(a+step,len(wav)); a2,z2 = max(0,a-ctx),min(len(wav),z+ctx)
+                z = min(a+step,len(wav))
+                a2,z2 = max(0,a-ctx),min(len(wav),z+ctx)
                 lp = self.aligner.emissions(wav[a2:z2])
                 f = (a-a2)//C.CTC_STRIDE
                 keep = len(lp)-f if z==len(wav) else (z-a)//C.CTC_STRIDE

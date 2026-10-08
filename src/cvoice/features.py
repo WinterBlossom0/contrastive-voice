@@ -12,7 +12,11 @@ import scipy.fft
 from scipy import ndimage, signal
 
 from . import config as C
-from .align import Alignment, Transcript, acoustic_pauses, pause_threshold
+from .align import Alignment, Transcript, acoustic_pauses, frame_index, pause_threshold
+
+# Frames per batch: the batch size bounds the temporary arrays of the frame-level DSP.
+LEVEL_BATCH_FRAMES = 8192
+MFCC_BATCH_FRAMES = 4096
 
 
 # ============================================================================================ frame level
@@ -28,9 +32,9 @@ def frame_level_db(x: np.ndarray) -> np.ndarray:
     w = np.hanning(C.WIN)
     fr = frames(x)
     out = np.empty(len(fr))
-    for i in range(0, len(fr), 8192):
-        b = fr[i:i + 8192]
-        out[i:i + 8192] = (b * b * w).sum(1) / w.sum()
+    for i in range(0, len(fr), LEVEL_BATCH_FRAMES):
+        b = fr[i:i + LEVEL_BATCH_FRAMES]
+        out[i:i + LEVEL_BATCH_FRAMES] = (b * b * w).sum(1) / w.sum()
     return 10.0 * np.log10(out + C.LEVEL_EPS)
 
 
@@ -92,9 +96,9 @@ def mfcc_delta_magnitude(x: np.ndarray) -> np.ndarray:
     """Q = ||delta c1..c12||_2 per frame (c0..c12 from 40 mel filters 50-7600 Hz, orthonormal DCT-II; delta over +-2)."""
     fr, w = frames(x), np.hanning(C.WIN)
     ceps = np.empty((len(fr), C.N_CEPS))
-    for i in range(0, len(fr), 4096):
-        power = np.abs(np.fft.rfft(fr[i:i + 4096] * w, C.NFFT, axis=1)) ** 2
-        ceps[i:i + 4096] = scipy.fft.dct(np.log(power @ _MELFB.T + C.MEL_LOG_EPS), type=2, norm="ortho", axis=1)[:, :C.N_CEPS]
+    for i in range(0, len(fr), MFCC_BATCH_FRAMES):
+        power = np.abs(np.fft.rfft(fr[i:i + MFCC_BATCH_FRAMES] * w, C.NFFT, axis=1)) ** 2
+        ceps[i:i + MFCC_BATCH_FRAMES] = scipy.fft.dct(np.log(power @ _MELFB.T + C.MEL_LOG_EPS), type=2, norm="ortho", axis=1)[:, :C.N_CEPS]
     n = C.DELTA_HALF_WIDTH
     cp = np.pad(ceps, ((n, n), (0, 0)), mode="edge")
     num = sum(k * (cp[n + k:len(ceps) + n + k] - cp[n - k:len(ceps) + n - k]) for k in range(1, n + 1))
@@ -145,8 +149,8 @@ def word_regions(al: Alignment) -> np.ndarray:
 
 def frame_slice(a: float, b: float, n: int) -> slice:
     """Frames whose centres lie in [a, b); at least one frame (the nearest)."""
-    k0 = int(np.ceil(a / C.HOP_S - 1e-9))
-    k1 = int(np.ceil(b / C.HOP_S - 1e-9))
+    k0 = frame_index(a)
+    k1 = frame_index(b)
     if k1 <= k0:
         k0 = min(max(int(round(a / C.HOP_S)), 0), n - 1)
         k1 = k0 + 1
@@ -275,7 +279,7 @@ def make_recording(wav: np.ndarray, tr: Transcript, al: Alignment) -> Recording:
         if w is None:
             continue
         lo, hi = w
-        T[i] = speech_time_ratio({'start': al.start[lo:hi+1], 'end': al.end[lo:hi+1], 'sil': sil[lo:hi]})
+        T[i] = speech_time({'start': al.start[lo:hi+1], 'end': al.end[lo:hi+1], 'sil': sil[lo:hi]})
         sl = frame_slice(regions[lo, 0], regions[hi, 1], len(fr))
         v = fr.S[sl][fr.voiced[sl]]
         if v.size >= C.D3_MIN_VOICED_FRAMES:
@@ -283,9 +287,10 @@ def make_recording(wav: np.ndarray, tr: Transcript, al: Alignment) -> Recording:
         k = speech[sl] if speech[sl].any() else np.ones(len(fr.E[sl]), dtype=bool)
         E[i], Q[i] = fr.E[sl][k].mean(), fr.Q[sl][k].mean()
     rec = Recording(wav, tr, al, fr, regions, ws, sil, sil_span, sil_raw, m, sigma, win, T, R, E, Q, window_word_time(al.start, al.end, win))
-    x = compact_features(rec, al.decoded, np.diff(al.char_spans, axis=1).ravel(), [c for w in tr.norm for c in w])
+    edits = decode_edits(tr.norm, al.decoded)
+    x = compact_features(rec, al.decoded, np.diff(al.char_spans, axis=1).ravel(), [c for w in tr.norm for c in w], edits)
     rec.orphan_spans, rec.word_silence_spans, rec.stable_spans = x['orphan_spans'], x['word_silence_spans'], x['stable_spans']
-    rec.inserted = decode_edits(tr.norm, al.decoded)[0]
+    rec.inserted = edits[0]
     rec.alpha_word = x['alpha']
     rec.final_df0 = final_pitch_word(rec)
     rec.occ = word_occupancy(rec)
@@ -320,10 +325,16 @@ def window_word_time(start, end, win) -> np.ndarray:
     return np.array([duration[w[0]:w[1] + 1].sum() if w is not None else np.nan for w in win])
 
 
+def speech_time(x) -> float:
+    """Speech time in s: the aligned span minus the pauses, at least 1 ms."""
+    return max(x['end'][-1] - x['start'][0] - np.sum(x['sil']), 1e-3)
+
+
 def speech_time_ratio(x, b=None):
-    """pace_pauses/REPORT.md §4 #2: ln participant/reference speech time; aligned span minus pauses."""
-    v = max(x['end'][-1] - x['start'][0] - np.sum(x['sil']), 1e-3)
-    return v if b is None else np.log(v / speech_time_ratio(b))
+    """docs/research/chain/pace_pauses/REPORT.md §4 #2: ln participant/reference speech time. Without b, the speech time
+    of x in s."""
+    v = speech_time(x)
+    return v if b is None else np.log(v / speech_time(b))
 
 
 def finite(a):
@@ -350,7 +361,7 @@ def slope(t, v):
 
 
 def decode_edits(prompt, decoded):
-    """disfluency/REPORT.md §2.6 M2: minimum word edit alignment; choose match/substitution before deletion/insertion ties."""
+    """docs/research/chain/disfluency/REPORT.md §2.6 M2: minimum word edit alignment; choose match/substitution before deletion/insertion ties."""
     a, z = list(prompt), [w['norm'] for w in decoded]
     d = np.zeros((len(a) + 1, len(z) + 1), np.int32)
     d[:, 0], d[0, :] = np.arange(len(a) + 1), np.arange(len(z) + 1)
@@ -382,7 +393,7 @@ def recording_arrays(r):
 
 
 def spectral_arrays(rec):
-    """volume_clarity §§2.1/2.4: batched spectra; F0-driven Butterworth power response implements the stated filter."""
+    """docs/research/chain/volume_clarity/REPORT.md §§2.1/2.4: batched spectra; F0-driven Butterworth power response implements the stated filter."""
     fr = frames(rec.wav)
     freq = np.fft.rfftfreq(C.NFFT, 1 / C.SR)
     alpha, emph, share = (np.full(len(fr), np.nan) for _ in range(3))
@@ -424,8 +435,16 @@ def window_stability(values, width):
     return out
 
 
-def compact_features(rec, decoded, char_duration, chars):
-    """One Recording to reusable arrays; derived measures share DSP, all event coordinates retain clip origin."""
+def insertion_form(word: dict, prompt) -> str:
+    """'copy_or_prefix' when the inserted word is a prefix of a prompt word near its insertion point, else 'added_material'."""
+    index = word['prompt_index']
+    near = prompt[max(0, index - C.INSERTION_CONTEXT_WORDS):index + C.INSERTION_CONTEXT_WORDS]
+    return 'copy_or_prefix' if any(n.startswith(word['norm']) for n in near) else 'added_material'
+
+
+def compact_features(rec, decoded, char_duration, chars, edits=None):
+    """One Recording to reusable arrays; derived measures share DSP, all event coordinates retain clip origin.
+    edits: decode_edits(rec.tr.norm, decoded) when the caller has it already."""
     x = recording_arrays(rec)
     alpha, emph, share, bands, spectrum = spectral_arrays(rec)
     threshold = pause_threshold(rec.fr.L)
@@ -437,11 +456,10 @@ def compact_features(rec, decoded, char_duration, chars):
     x['production'] = rec.al.end - rec.al.start
     x['char_duration'], x['chars'] = np.asarray(char_duration), np.asarray(chars)
     x['prominence'] = stress_points(rec.ws.u, rec.m, rec.sigma)
-    ins, errors = decode_edits(rec.tr.norm, decoded)
+    ins, errors = edits if edits is not None else decode_edits(rec.tr.norm, decoded)
     x['decode_errors'], x['insertions_per100'] = errors, 100 * len(ins) / len(rec.tr)
     x['inserted_spans'] = np.array([[w['start'], w['end']] for w in ins]).reshape(-1, 2)
-    x['insertion_forms'] = [ ('copy_or_prefix' if any(n.startswith(w['norm']) or w['norm'] == n for n in rec.tr.norm[max(0,w['prompt_index']-C.INSERTION_CONTEXT_WORDS):w['prompt_index']+C.INSERTION_CONTEXT_WORDS])
-                            else 'added_material') for w in ins]
+    x['insertion_forms'] = [insertion_form(w, rec.tr.norm) for w in ins]
     x['orphan_spans'] = orphan_voiced_spans(rec)
     x['orphan_seconds'] = np.sum(np.diff(x['orphan_spans'], axis=1))
     # Goto's window lengths; amplitude envelope extraction/scales are not specified well enough to transfer P_fp constants.
@@ -476,6 +494,7 @@ def compact_features(rec, decoded, char_duration, chars):
         x['modulation_depth'] = np.nan
     final, decl, contours, slopes, drops = [], [], [], [], []
     ending = final_pitch_word(rec, min_voiced=1)
+    final_words = sentence_final(rec.tr)
     ends = np.flatnonzero(x['punct'])
     if not len(ends) or ends[-1] != len(rec.tr)-1:
         ends = np.r_[ends, len(rec.tr)-1]
@@ -500,22 +519,31 @@ def compact_features(rec, decoded, char_duration, chars):
             grid = np.linspace(tt[0], tt[-1], C.CONTOUR_POINTS)
             contour = np.interp(grid, tt[ok], v[ok], left=np.nan, right=np.nan)
         contours.append(contour)
-        if rec.tr.punct[z] == '.':
+        if final_words[z]:
             final.append(ending[z])
     x.update(final_pitch=np.array(final), declination=np.array(decl), contours=np.array(contours),
              level_slopes=np.array(slopes), last_drops=np.array(drops))
     return x
 
 
+def sentence_final(tr) -> np.ndarray:
+    """Per word: the word ends a sentence (it carries a full stop)."""
+    return np.array([punctuation == '.' for punctuation in tr.punct])
+
+
+def final_span(rec, i):
+    """The last FINAL_WINDOW_S of word i (s), or the whole word when it is shorter."""
+    a, b = rec.regions[i]
+    return float(max(a, b - C.FINAL_WINDOW_S)), float(b)
+
+
 def final_pitch_word(rec, min_voiced=C.MIN_FINAL_VOICED):
     out = np.full(len(rec.tr), np.nan)
     if rec.fr is None:
         return out
-    for i, punctuation in enumerate(rec.tr.punct):
-        if punctuation != '.':
-            continue
+    for i in np.flatnonzero(sentence_final(rec.tr)):
         a, b = rec.regions[i]
-        cut = max(a, b - C.FINAL_WINDOW_S)
+        cut = final_span(rec, i)[0]
         early = rec.fr.S[frame_slice(a, cut, len(rec.fr))] if cut > a else np.array([])
         late = rec.fr.S[frame_slice(cut, b, len(rec.fr))]
         if np.isfinite(early).sum() >= min_voiced and np.isfinite(late).sum() >= min_voiced:

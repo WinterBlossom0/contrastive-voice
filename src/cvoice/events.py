@@ -6,7 +6,7 @@ import numpy as np
 from scipy.optimize import linear_sum_assignment
 from . import config as C
 from .compare import Comparison, compare, event_span
-from .detect import Region, clip_flags, decode, key, scale
+from .detect import Region, clip_flags, decode, key, scale, whole_clip_key
 from .features import Recording
 from .patterns import change_anchors, count_once, within_half_window
 from .score import Scored, score
@@ -40,7 +40,7 @@ class Run:
 
 
 def clip_key(dim: str, g: float) -> str:
-    return key(dim, 1 if g > 0 else -1) + " whole clip"
+    return whole_clip_key(dim, 1 if g > 0 else -1)
 
 
 def run_pair(B: Recording, P: Recording, det: dict, regime: str) -> Run:
@@ -84,11 +84,13 @@ def truths(lab: dict, excluded=False, enabled=None) -> list[dict]:
         events = f.get('events', [])
         if f['type'] == 'WORD_BY_WORD':
             silences = sorted((v for v in events if v['kind'] == 'silence' and 'clip_span' in v), key=lambda v: v['clip_span'][0])
-            # Each inserted silence is one boundary truth; legacy labels retain one group truth.
+            # Each inserted silence is one boundary truth; a label without silence events stays one group truth.
             if silences:
                 starts = lab.get('words', {}).get('start')
-                spans = [(v['clip_span'], [i, i + 1]) for j, v in enumerate(silences)
-                         for i in [int(np.searchsorted(starts, .5 * sum(v['clip_span'])) - 1) if starts else words[0] + j]]
+                spans = []
+                for j, v in enumerate(silences):
+                    boundary = _boundary_before(starts, v['clip_span']) if starts else words[0] + j
+                    spans.append((v['clip_span'], [boundary, boundary + 1]))
         elif f['type'] == 'HESITATION':
             silence = next((v['clip_span'] for v in events if v['kind'] == 'silence' and 'clip_span' in v), f['span'])
             spans = [(silence, [max(0, words[0] - 1), words[0]])]
@@ -104,6 +106,11 @@ def truths(lab: dict, excluded=False, enabled=None) -> list[dict]:
                         'realised': f.get('realised', {}), 'exclusion_reasons': f.get('evaluation_excluded', []),
                         'mid': .5 * (s + e), 'words': unit_words, 'label_words': words})
     return out
+
+
+def _boundary_before(starts, span) -> int:
+    """Index of the word boundary that holds the span midpoint: the word that starts last before the midpoint."""
+    return int(np.searchsorted(starts, .5 * sum(span)) - 1)
 
 
 def match(truth: list[dict], run: Run, both_edges: bool = True) -> dict[int, int]:
@@ -156,23 +163,24 @@ def whole_passage(t: dict, n_words: int) -> bool:
     return t.get('event') == 'clip' or list(t.get('label_words', t['words'])) == [0, n_words - 1]
 
 
-def truth_changes(run: Run, tr: list[dict], matched: dict[int, int]) -> tuple[dict[int, int], list[dict]]:
-    """K2, one detection per change, by patterns.count_once (the rule of scoring and display): a truth of a linked key
+def truth_changes(run: Run, truth_rows: list[dict], matched: dict[int, int]) -> tuple[dict[int, int], list[dict]]:
+    """One detection per change, by patterns.count_once (the rule of scoring and display): a truth of a linked key
     (config.SAME_CHANGE) is detected by its own-key match, else by its strongest same-change region; every other region
     of the change is a duplicate. The own-key whole-clip flag is the match of a whole-passage edit. Truths with an own-key
     match go first, so a region is a duplicate only when another region already detects the change. Returns
     ({truth index: same-change detection, or the whole-clip flag key}, duplicate rows)."""
     claimed, found, rows = set(matched.values()), {}, []
-    linked = [i for i, t in enumerate(tr) if t['available'] and t.get('event') != 'clip' and t['sign'] and
+    linked = [i for i, t in enumerate(truth_rows) if t['available'] and t.get('event') != 'clip' and t['sign'] and
               key(t['dim'], t['sign']) in LINKED_KEYS]
     for i in sorted(linked, key=lambda i: (i not in matched, i)):
-        target = key(tr[i]['dim'], tr[i]['sign'])
+        truth = truth_rows[i]
+        target = key(truth['dim'], truth['sign'])
         own = matched.get(i)
-        whole = clip_key(tr[i]['dim'], tr[i]['sign'])
-        if own is None and whole_passage(tr[i], len(run.P.tr)) and whole not in claimed and \
-                tr[i]['dim'] in run.clip and np.sign(run.clip[tr[i]['dim']]) == tr[i]['sign']:
+        whole = clip_key(truth['dim'], truth['sign'])
+        clip_agrees = truth['dim'] in run.clip and np.sign(run.clip[truth['dim']]) == truth['sign']
+        if own is None and whole_passage(truth, len(run.P.tr)) and whole not in claimed and clip_agrees:
             own = whole  # the edit's own-key whole-clip flag detects a whole-passage change
-        detection, duplicates = count_once(run.comp, run.regions, run.clip, target, tr[i]['words'], own, tuple(claimed))
+        detection, duplicates = count_once(run.comp, run.regions, run.clip, target, truth['words'], own, tuple(claimed))
         if detection is not None and i not in matched:
             found[i] = detection
             claimed.add(detection)
@@ -183,7 +191,7 @@ def truth_changes(run: Run, tr: list[dict], matched: dict[int, int]) -> tuple[di
 
 
 def false_change_duplicates(comp, regions: list[Region], clip: dict[str, float], claimed=()) -> list[dict]:
-    """K2 among the regions no truth claims: each change of patterns.change_anchors (the order of patterns.groups) is one
+    """One detection per change among the regions that no truth claims: each change of patterns.change_anchors (the order of patterns.groups) is one
     false change, and its same-change regions (patterns.count_once) are its duplicates."""
     claimed, rows = set(claimed), []
     for target, anchor, span in change_anchors(comp, regions, clip):
@@ -202,39 +210,68 @@ def on_shortfall(r: Region, shortfalls: list[dict]) -> bool:
     return any(r.i0 <= t['words'][1] and r.i1 >= t['words'][0] for t in shortfalls)
 
 
+def _truth_group(t: dict) -> str:
+    """Flag key under which a truth is counted; a truth without a direction is counted under its dimension."""
+    if not t["sign"]:
+        return t["dim"] + "±"
+    if t.get('event') == 'clip':
+        return whole_clip_key(t["dim"], t["sign"])
+    return key(t["dim"], t["sign"])
+
+
+def _detected_by(run: Run, found, clip_hit: bool, own_match: bool) -> str | None:
+    if isinstance(found, int):
+        return 'same change: ' + key(run.regions[found].dim, run.regions[found].sign)
+    if clip_hit:
+        return 'whole clip'
+    if own_match:
+        return 'own key'
+    return None
+
+
+def _detected_region(t: dict, found, own_match, clip_hit: bool):
+    """Index of the detecting region, the whole-clip flag key of a whole-passage change, or the dimension of a whole-clip truth."""
+    if found is not None:
+        return found
+    if own_match is not None:
+        return own_match
+    if clip_hit:
+        return t['dim']
+    return None
+
+
 def eval_clip(run: Run, lab: dict, secondary_exempt: bool = True, both_edges: bool = True) -> dict:
     """Per-clip TP / FN / FP by (dimension, sign) group, onset / offset errors of matched windows, and the false regions
     (those not matched and not an expected secondary dimension of a nearby injected flaw). One detection counts per change
     (truth_changes, false_change_duplicates): the other regions of a change are duplicates, listed in `duplicates` with
     their own flag key and the flag key of the change, under the strict and the exempt counting alike."""
-    tr = truths(lab, enabled=run.enabled)
+    truth_rows = truths(lab, enabled=run.enabled)
     shortfalls = truths(lab, excluded=True)
-    m = match(tr, run, both_edges)
-    legacy = match(tr, run, False)
+    matches = match(truth_rows, run, both_edges)
+    overlap_matches = match(truth_rows, run, False)
     clip_matched = set()
     spans = [region_span(run, r) for r in run.regions]
-    found, duplicates = truth_changes(run, tr, m)
-    matched_r = set(m.values()) | set(found.values())
-    det = []
-    for i, t in enumerate(tr):
+    found, duplicates = truth_changes(run, truth_rows, matches)
+    matched_r = set(matches.values()) | set(found.values())
+    truth_report = []
+    for i, t in enumerate(truth_rows):
         clip_hit = (t.get('event') == 'clip' and t['dim'] in run.clip) or isinstance(found.get(i), str)
         if clip_hit:
             clip_matched.add(t['dim'])
-        row = {"type": t["type"], "level": t["level"], "group": key(t["dim"], t["sign"]) + (' whole clip' if t.get('event') == 'clip' else '') if t["sign"] else t["dim"] + "±", "detected": i in m or clip_hit or i in found,
-               'detected_index_or_overlap': i in legacy or clip_hit or i in found, 'event': t['event'], 'realised': t.get('realised', {}),
+        row = {"type": t["type"], "level": t["level"], "group": _truth_group(t), "detected": i in matches or clip_hit or i in found,
+               'detected_index_or_overlap': i in overlap_matches or clip_hit or i in found, 'event': t['event'], 'realised': t.get('realised', {}),
                "touched": i in found or any(on_flaw(r, t) for r in run.regions), "available": t["available"],
                "status": "measured" if t["available"] else "no detector",
-               'detected_by': 'same change: ' + key(run.regions[found[i]].dim, run.regions[found[i]].sign) if isinstance(found.get(i), int) else
-                              'whole clip' if clip_hit else 'own key' if i in m else None,
-               'detected_region': found[i] if i in found else m[i] if i in m else t['dim'] if clip_hit else None}
+               'detected_by': _detected_by(run, found.get(i), clip_hit, i in matches),
+               'detected_region': _detected_region(t, found.get(i), matches.get(i), clip_hit)}
         if not t["available"]:
             row.update(detected=None, touched=None, group=t["dim"])
-            det.append(row)
+            truth_report.append(row)
             continue
         if i in found:
             row['grounding_status'] = 'same-change detection; edges not compared'
-        if i in m and t["dim"] != "D4":
-            s, e = spans[m[i]]
+        if i in matches and t["dim"] != "D4":
+            s, e = spans[matches[i]]
             row['edge_error_above_tolerance'] = max(abs(s-t['span'][0]), abs(e-t['span'][1])) > C.EVENT_TOL_S
             row['grounding_status'] = 'true positive with coarse edges' if row['edge_error_above_tolerance'] else 'true positive within edge tolerance'
             prefix = "pause_" if t["dim"] == "D2" else ""
@@ -248,7 +285,7 @@ def eval_clip(run: Run, lab: dict, secondary_exempt: bool = True, both_edges: bo
             row["max_z"] = round(float(np.nanmax(zz)), 2) if zz.size and np.isfinite(zz).any() else None
             row["units"] = [w0, w1]
             row["same_dim_regions"] = [[r.i0, r.i1] for r in run.regions if r.dim == t["dim"] and t["sign"] in (0, r.sign)]
-        det.append(row)
+        truth_report.append(row)
     dropped = {j for j, r in enumerate(run.regions) if on_shortfall(r, shortfalls)}
     whole_false = {k: g for k, g in run.clip.items() if k not in clip_matched}
     duplicates += false_change_duplicates(run.comp, run.regions, whole_false,
@@ -258,26 +295,26 @@ def eval_clip(run: Run, lab: dict, secondary_exempt: bool = True, both_edges: bo
     for j, r in enumerate(run.regions):
         if j in matched_r or j in dropped or j in duplicated:
             continue
-        if secondary_exempt and any(r.dim in t["secondary"] and near(r, t) for t in tr):
+        if secondary_exempt and any(r.dim in t["secondary"] and near(r, t) for t in truth_rows):
             secondary += 1
         else:
             d = run.comp.dims[r.dim]
-            false.append({"group": key(r.dim, r.sign), "on_flaw": any(on_flaw(r, t) for t in tr),
+            false.append({"group": key(r.dim, r.sign), "on_flaw": any(on_flaw(r, t) for t in truth_rows),
                           "span": [round(spans[j][0], 3), round(spans[j][1], 3)], "units": [r.i0, r.i1], "z": round(float(r.z), 2),
                           "x": round(float(d.x[r.peak]), 3), "baseline": round(float(d.b[r.peak]), 3), "participant": round(float(d.p[r.peak]), 3)})
     counted = [j for j in range(len(run.regions)) if j not in duplicated]
-    return {"truth": det, "false": false, "secondary": secondary, "duplicate": len(duplicates), "duplicates": duplicates,
-            'same_change_detections': [{'type': tr[i]['type'], 'change': key(tr[i]['dim'], tr[i]['sign']),
+    return {"truth": truth_report, "false": false, "secondary": secondary, "duplicate": len(duplicates), "duplicates": duplicates,
+            'same_change_detections': [{'type': truth_rows[i]['type'], 'change': key(truth_rows[i]['dim'], truth_rows[i]['sign']),
                                         'group': key(run.regions[j].dim, run.regions[j].sign)} for i, j in found.items() if isinstance(j, int)],
             "n_regions": len(counted),
             'false_clip': [k for k in run.clip if k not in clip_matched and not any(t['event'] == 'clip' and t['dim'] == k for t in shortfalls)],
             'shortfalls': shortfalls,
-            'label_count': sum(not f.get('placebo', False) for f in lab['flaws']), 'event_count': len(tr),
+            'label_count': sum(not f.get('placebo', False) for f in lab['flaws']), 'event_count': len(truth_rows),
             'word_by_word': {'label_groups': sum(f['type'] == 'WORD_BY_WORD' and not f.get('placebo', False) for f in lab['flaws']),
-                             'eligible_clips': int(any(t['type'] == 'WORD_BY_WORD' for t in tr)),
-                             'detected_clips': int(any(t['type'] == 'WORD_BY_WORD' and t['detected'] for t in det)),
-                             'boundary_truths': sum(t['type'] == 'WORD_BY_WORD' for t in tr)},
-            "flags_on_flaw": sum(j in matched_r or any(on_flaw(run.regions[j], t) for t in tr) for j in counted)}
+                             'eligible_clips': int(any(t['type'] == 'WORD_BY_WORD' for t in truth_rows)),
+                             'detected_clips': int(any(t['type'] == 'WORD_BY_WORD' and t['detected'] for t in truth_report)),
+                             'boundary_truths': sum(t['type'] == 'WORD_BY_WORD' for t in truth_rows)},
+            "flags_on_flaw": sum(j in matched_r or any(on_flaw(run.regions[j], t) for t in truth_rows) for j in counted)}
 
 
 def cluster_f1(rows) -> float:

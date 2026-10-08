@@ -228,3 +228,21 @@ def test_site_builder_copies_page_and_gallery(tmp_path):
     assert (out / "gallery" / "results" / "x.json").exists() and (out / ".nojekyll").exists()
     with pytest.raises(FileNotFoundError):
         gallery.site(tmp_path / "again", tmp_path / "nothing")
+
+
+def test_dashboard_script_copies_of_python_strings():
+    """app.js matches finding texts and labels exactly, so its copies must equal the Python sources."""
+    import re
+    from pathlib import Path
+    from cvoice import explain
+    script = (Path(appmod.__file__).parent / "static" / "app.js").read_text()
+
+    def literal(name):
+        return re.search(rf'^const {name} = "([^"]*)";', script, re.M).group(1)
+
+    assert literal("CANDIDATE_TEXT") == explain.CANDIDATE_CLAUSE
+    assert literal("SYNTHETIC_TEXT") == explain.SYNTHETIC_ONLY_CLAUSE
+    modes = re.search(r"^const MODE_TEXT = (\{.*\});", script, re.M).group(1)
+    assert json.loads(re.sub(r"(\w+):", r'"\1":', modes)) == gallery.MODE_TEXT
+    stages = re.search(r"showStages\((\[[^\]]*\]), \"decode\"\)", script).group(1)
+    assert tuple(json.loads(stages)) == appmod.STAGES

@@ -12,8 +12,9 @@ from scipy import signal
 
 from . import audio, config as C
 from .features import Recording, frame_features, frame_slice
-from .flaws import (Chain, EditError, Warp, _ramp_window, deemphasis, insert_pause,
-                    parent_pauses, psola, remove_pause, room_tone, splice_whole, stretch_span, wsola)
+from .flaws import (Chain, EditError, Warp, _ramp_window, chain_warps, clip_seed, deemphasis, insert_pause,
+                    outside_support_identical, parent_pauses, psola, remove_pause, room_tone, splice_whole, stretch_span,
+                    word_maps, wsola)
 
 from .config import (
     RUSH_RATE, RUSH_PAUSE_KEEP, HESITATION_STRETCH, HESITATION_PAUSE_S, READING_PAUSE_S,
@@ -90,6 +91,15 @@ def gap_point(rec, left):
     return min((k0 + int(np.argmin(rec.fr.L[k0:k1]))) * C.HOP, len(rec.wav))
 
 
+def edge_continuant(spans, onset):
+    """Sample span of the stable continuant at the word onset (first span) or at the word end (last span)."""
+    if onset and spans and spans[0][1] - spans[0][0] >= C.CONTINUANT_ONSET_S * C.SR:
+        return spans[0][0], spans[0][0] + round(C.CONTINUANT_ONSET_S * C.SR)
+    if spans and not onset:
+        return spans[-1][1] - round(C.CONTINUANT_MIN_S * C.SR), spans[-1][1]
+    return None
+
+
 def continuant_span(rec, word, onset):
     cache = rec.__dict__.setdefault("_recipe_continuants", {})
     key = (word, onset)
@@ -111,9 +121,7 @@ def continuant_span(rec, word, onset):
                      if starts[j - 1] + frame - starts[i] >= C.CONTINUANT_MIN_S * C.SR]
             spans = [(lo, hi) for lo, hi in spans if
                      (lo - a if onset else b - hi) <= C.BURST_WINDOW_S * C.SR]
-            cache[key] = ((spans[0][0], spans[0][0] + round(C.CONTINUANT_ONSET_S * C.SR)) if onset and spans and
-                          spans[0][1] - spans[0][0] >= C.CONTINUANT_ONSET_S * C.SR else
-                          (spans[-1][1] - round(C.CONTINUANT_MIN_S * C.SR), spans[-1][1]) if spans and not onset else None)
+            cache[key] = edge_continuant(spans, onset)
         else:
             cache[key] = None
     if cache[key] is None:
@@ -213,7 +221,6 @@ class _Builder:
 
     def copies(self, a, b, count, factor, pause_s):
         s, e = self.chain.cur(a, b)
-        from .flaws import clip_seed
         rng = np.random.default_rng(clip_seed(f"copies:{audio.sha256_pcm(self.rec.wav)}:{a}:{b}"))
         edge = round(C.PAUSE_FADE_S * C.SR)
         tone = room_tone(self.rec)
@@ -279,12 +286,7 @@ def _finish(builder, typ, level, params, words, metric, *, approximation=None, d
     a, b = _words(rec, words) if parent_span is None else parent_span
     span = (round(float(chain(a, "left"))), round(float(chain(b, "right"))))
     supports = builder.supports or [(a, b)]
-    outside = np.ones(len(rec.wav), bool)
-    for lo, hi in supports:
-        outside[lo:hi] = False
-    mapped = np.rint(chain(np.arange(len(rec.wav)), "right")).astype(np.int64)
-    ok = outside & (mapped >= 0) & (mapped < len(y))
-    identical = bool(np.array_equal(rec.wav[ok], y[mapped[ok]]))
+    identical = outside_support_identical(rec.wav, y, chain, supports)
     if not identical:
         raise EditError("recipe changed samples outside its declared support")
     fy = frame_features(y) if params is not None else rec.fr
@@ -306,14 +308,11 @@ def _finish(builder, typ, level, params, words, metric, *, approximation=None, d
                 "WORD_REPETITION": "function-word prior; copied waveform"}.get(typ, "aligned word spans")},
             "details": details or {}, "events": builder.events, "source": RECIPE_EVIDENCE[typ][0]}
     flaw["approximation"].setdefault("omissions", RECIPE_EVIDENCE[typ][1])
-    starts, ends = np.rint(rec.al.start * C.SR), np.rint(rec.al.end * C.SR)
+    clip_words, parent_words = word_maps(rec, chain)
     labels = {"clip": typ.lower(), "parent": {"id": "recording", "sha256": audio.sha256_pcm(rec.wav)},
               "sha256": audio.sha256_pcm(y), "recipe": typ, "seed": seed, "chain": "A", "sr": C.SR,
-              "n_samples": len(y), "words": {"start": [round(float(chain(s, "right"))) for s in starts],
-                                              "end": [round(float(chain(e, "left"))) for e in ends]},
-              "parent_words": {"start": starts.astype(int).tolist(), "end": ends.astype(int).tolist()},
-              "flaws": [flaw], "skipped": [], "outside_support_identical": identical,
-              "chain_warps": [{"src": w.src.tolist(), "dst": w.dst.tolist()} for w in chain.warps]}
+              "n_samples": len(y), "words": clip_words, "parent_words": parent_words,
+              "flaws": [flaw], "skipped": [], "outside_support_identical": identical, "chain_warps": chain_warps(chain)}
     return y, chain, labels
 
 
@@ -515,8 +514,6 @@ def _effort_shape(build, a, b, attenuation, alpha_per_db, trailing=False):
     tone = room_tone(rec)(len(original))
     before_alpha = _alpha(rec.wav, a, b, rec.fr)
     target_level = _level(original[:b-a] * gain[:b-a], 0, b-a)
-    drop = max(0, _level(rec.wav, a, b) - target_level)
-    target_alpha = before_alpha - alpha_per_db * drop
     def render(tilt):
         changed = spec * 10 ** (-tilt * octaves[:, None] * spectral_weight[None, :] / 20)
         changed *= np.sqrt(np.sum(np.abs(spec) ** 2, axis=0) / np.maximum(np.sum(np.abs(changed) ** 2, axis=0), 1e-20))

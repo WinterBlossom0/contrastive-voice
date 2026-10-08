@@ -22,13 +22,21 @@ from . import __version__
 from . import audio, flaws
 from . import config as C
 from .align import Transcript, parse_transcript
+from .edits_extra import RECIPE_EVIDENCE
 from .features import Recording
 from .passages import Group, Passage, locate_many, page_text, select_passages
 from .pipeline import ROOT, device_class, make_job, map_calls, run_jobs
 from .pool import PreparePool
+from .uncertainty import wilson
 
 MANIFEST = ROOT / "data" / "sources_manifest.json"
 GETTYSBURG_REFERENCE = "gettysburg_amb"  # B for the cross-speaker flawed pairs (DESIGN 2.3)
+# Extra types whose realised measure falls when the edit works; every other extra type raises its measure.
+DECREASING_EXTRA_TYPES = ("NATURAL_RUSH", "LOW_EFFORT", "TRAILING_OFF", "FLAT_FINAL_FALL", "REPEATED_CONTOUR")
+
+
+def realised_sign(typ: str) -> int:
+    return -1 if typ in DECREASING_EXTRA_TYPES else 1
 
 
 def log(msg: str) -> None:
@@ -318,7 +326,7 @@ def extra_realisation_qa(lab):
         if value is None or not np.isfinite(value):
             issues.append({"type": typ, "level": f["level"], 'words': f['words'], 'parent_span': f['parent_span'], "reason": "missing realised measurement"})
             continue
-        sign = -1 if typ in ("NATURAL_RUSH", "LOW_EFFORT", "TRAILING_OFF", "FLAT_FINAL_FALL", "REPEATED_CONTOUR") else 1
+        sign = realised_sign(typ)
         starts, ends = lab["parent_words"]["start"], lab["parent_words"]["end"]
         wa, wb = f["words"]
         word_s = (ends[wa] - starts[wa]) / C.SR
@@ -388,7 +396,7 @@ def extra_ladder_qa(rows, root):
         if any(p != placements[0] for p in placements):
             issues.append({"parent": parent, "type": typ, "reason": "different ladder placements"})
             continue
-        sign = -1 if typ in ("NATURAL_RUSH", "LOW_EFFORT", "TRAILING_OFF", "FLAT_FINAL_FALL", "REPEATED_CONTOUR") else 1
+        sign = realised_sign(typ)
         fields = [("value", sign)]
         if typ in ("LOW_EFFORT", "TRAILING_OFF"):
             fields.append(("alpha_change_db", -1))
@@ -467,8 +475,11 @@ def label_qa(ds: Dataset, clip: dict, al) -> dict:
         inside |= (al.end * C.SR > s) & (al.start * C.SR < e)
     ei = np.concatenate([np.abs(al.start - s_an)[inside], np.abs(al.end - e_an)[inside]]) * 1000.0
     eo = np.concatenate([np.abs(al.start - s_an)[~inside], np.abs(al.end - e_an)[~inside]]) * 1000.0
-    st = lambda a: None if len(a) == 0 else {"median_ms": round(float(np.median(a)), 1), "p90_ms": round(float(np.percentile(a, 90)), 1),
-                                              "max_ms": round(float(a.max()), 1), "within_50ms": round(float((a <= 50).mean()), 3)}
+    def st(a):
+        if len(a) == 0:
+            return None
+        return {"median_ms": round(float(np.median(a)), 1), "p90_ms": round(float(np.percentile(a, 90)), 1),
+                "max_ms": round(float(a.max()), 1), "within_50ms": round(float((a <= 50).mean()), 3)}
     return {"clip": clip["id"], "mean_compat": round(al.mean_compat, 4), "all_words": st(err), "inside_support": st(ei),
             "outside_support": st(eo), "outside_support_identical": lab["outside_support_identical"],
             "inserted_copies": sum(e["kind"] == "copy" for f in lab["flaws"] for e in f.get("events", [])),
@@ -494,7 +505,6 @@ def write_card(manifest: dict, path: Path) -> None:
               "Recipe names label controlled acoustic departures from the reference rendition; Clarity (spectral-change proxy) does not measure intelligibility.",
               "Scores are a reference-relative delivery index.", "", "| clip | edit-support time share |", "|---|---|"]
     lines += [f"| {c['id']} | {c['edit_support_time_share']:.1%} |" for c in manifest["clips"] if not c.get("missing")]
-    from collections import Counter
     counts = Counter((c["split"], f["type"], f["level"]) for c in manifest["clips"]
                      if not c.get("missing") for f in json.loads((path.parent / c["labels"]).read_text())["flaws"] if not f["placebo"])
     lines += ["", "| type | family / primary | secondary | event |", "|---|---|---|---|"]
@@ -539,7 +549,6 @@ def write_card(manifest: dict, path: Path) -> None:
                         not r['reason'].startswith(('text not located:', 'located text failed alignment:'))]
             lines.append(f"| {source} | {count} | {len(excluded)} | {len(excluded)/count:.1%} | {dict(Counter(r['reason'] for r in excluded))} |")
         lines += ['', 'Missing independent prompts: ' + json.dumps(pool.get('missing', []), sort_keys=True)]
-    from .edits_extra import RECIPE_EVIDENCE
     lines += ["", "Sources: build/work/research/chain/{pace_pauses,disfluency,pitch_emphasis,volume_clarity}/REPORT.md §4; "
               "SYNTHESIS.md §4; alpha coupling from volume_clarity §2.1. Numeric signal gates, jitter, fit tolerances and release are engineering choices.",
               "", "| extra type | family / primary | L1 / L2 / L3 named parameters (s, dB, st, factors) | source / chosen values | approximation / omissions |",
@@ -576,7 +585,6 @@ def write_card(manifest: dict, path: Path) -> None:
     for cell in cells:
         n, k = planned[cell], placed[cell]
         if n:
-            from .uncertainty import wilson
             lo,hi = wilson(k,n)
             interval = f"{lo:.3f}–{hi:.3f}"
         else:
@@ -600,15 +608,6 @@ def write_card(manifest: dict, path: Path) -> None:
     lines += ["- " + json.dumps(q, sort_keys=True) for q in issues] or ["- none"]
     lines += ["", "Realised label approximations:"]
     lines += [f"- {t}: {approx}" for t, approx in sorted(approximations)]
-    if manifest.get("reader_placement_probe"):
-        lines += ["", "R2 planning-only probe; no reader audio rendered. Selection is not acoustic realisation.",
-                  "| reader | split | type | planned levels | selected levels | stress fallback / skip |",
-                  "|---|---|---|---|---|---|"]
-        for r in manifest["reader_placement_probe"]:
-            for typ, info in r.get("types", {}).items():
-                lines.append(f"| {r['reader']} | {r['split']} | {typ} | {info['requested_levels']} | {info['selected_levels']} | {info['selection'] or info['reason']} |")
-            if r.get("reason") or r.get("limitation"):
-                lines.append(f"{r['reader']}: {r.get('reason', r.get('limitation'))}")
     lines += ["", "Extra L1–L3 share a placement plan per parent and set; botched family clips use repeated L3 edits and longer windows.",
               "Wrong-sign, below-half-target, missing-measurement and non-monotone edits are excluded from evaluation truth and h selection; counts are reported in a separate shortfall stratum. Coupling warnings alone remain eligible for level-only evaluation.",
               "Burst/continuant signal gates are heuristic; skipped placements record missing acoustic eligibility.",
@@ -771,7 +770,7 @@ def finish(root: Path, baselines: list[dict], readers: list[dict], cache: Path |
             tasks.append(("extra_cross", ds.rec(r), r, root, ref, GETTYSBURG_REFERENCE))
         elif r.get("role") == "orator_reference":
             tasks.append(("cross", ds.rec(r), r, root, ds.rec(ds.entry("baselines", r["paired_baseline"])), r["paired_baseline"]))
-    log(f"clip generation: {len(tasks)} speeches; expected 5-7 min on T4 x2 (v9: 19 speeches in 294 s)")
+    log(f"clip generation: {len(tasks)} speeches; expected 5-7 min on T4 x2 (measured: 19 speeches in 294 s)")
     for rows in map_calls(dsp_task, tasks, pool):
         manifest["clips"] += rows
     manifest["extra_plans"] = [{k: c[k] for k in ("id", "parent", "regime", "split", "kind", "requested", "skipped")}
@@ -785,7 +784,7 @@ def finish(root: Path, baselines: list[dict], readers: list[dict], cache: Path |
                           "minutes": round(sum(e["duration_s"] for e in baselines + readers + manifest["clips"] if "duration_s" in e) / 60, 1)}
     (root / "manifest.json").write_text(json.dumps(manifest, indent=1, sort_keys=True) + "\n")
     write_card(manifest, root / "dataset_card.md")
-    log(f"label QA: re-aligning {len(manifest['clips'])} clips; expected {len(manifest['clips']) / 8.9:.0f} s on T4 x2 (v9 throughput)")
+    log(f"label QA: re-aligning {len(manifest['clips'])} clips; expected {len(manifest['clips']) / 8.9:.0f} s on T4 x2 (measured throughput)")
     als = run_jobs([make_job(ds.wav(c), ds.clip_transcript(c), "align") for c in manifest["clips"]], pool, aligner, cache)
     qa = [label_qa(ds, c, al) for c, al in zip(manifest["clips"], als)]
     (root / "label_qa.json").write_text(json.dumps({"clips": qa, "all_outside_support_identical": all(q["outside_support_identical"] for q in qa)},

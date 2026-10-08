@@ -1,10 +1,11 @@
 import numpy as np
 import pytest
-from synth import recording
+from synth import recording, synth
 
 from cvoice import audio, config as C
-from cvoice.align import (LABELS, TranscriptError, TranscriptMismatch, VOCAB, align_emissions, build_targets, ctc_viterbi, parse_transcript,
-                          pause_threshold, require_match, spell_number)
+from cvoice.align import (Alignment, LABELS, TranscriptError, TranscriptMismatch, VOCAB, align_emissions, build_targets, ctc_viterbi, parse_transcript,
+                          acoustic_pauses, pause_threshold, require_match, spell_number)
+from cvoice.features import frame_features
 
 
 def planted_logp(norm, frames_per_char=3, gap=2, T_extra=4):
@@ -14,8 +15,8 @@ def planted_logp(norm, frames_per_char=3, gap=2, T_extra=4):
     logp = np.full((T, len(LABELS)), np.log(0.01 / (len(LABELS) - 1)))
     pos = {}
     t = 2
-    for l, tok in enumerate(targets):
-        pos[l] = (t, t + frames_per_char - 1)
+    for position, tok in enumerate(targets):
+        pos[position] = (t, t + frames_per_char - 1)
         logp[t:t + frames_per_char, :] = np.log(0.01 / (len(LABELS) - 1))
         logp[t:t + frames_per_char, tok] = np.log(0.99)
         t += frames_per_char + gap
@@ -100,9 +101,7 @@ def test_pause_threshold_uses_the_peak_rule_on_a_digital_silence_floor_and_the_f
 
 def test_pause_needs_silence_not_just_a_raw_gap():
     """A long raw gap that holds voiced sound (alignment gap over speech) is not a pause."""
-    from cvoice.align import Alignment, acoustic_pauses
-    from cvoice.features import frame_features
-    wav, st, en = __import__("synth").synth(8, pauses={})
+    wav, st, en = synth(8, pauses={})
     fr = frame_features(wav)
     al = Alignment(np.array([st[0], en[0] + 0.5]), np.array([st[0] + 0.05, en[0] + 0.55]), np.ones(2), 1.0)
     sil, _, _ = acoustic_pauses(al, fr.L, fr.voiced)

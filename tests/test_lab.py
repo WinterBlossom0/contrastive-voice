@@ -78,7 +78,8 @@ def test_existing_product_deltas_reused():
 
 def test_failure_isolated_and_traceback():
     def fail():raise ValueError('planted failure')
-    a=isolated('bad',fail); b=isolated('good',lambda:3)
+    a=isolated('bad',fail)
+    b=isolated('good',lambda:3)
     assert not a['complete'] and 'ValueError: planted failure' in a['error'] and 'Traceback' in a['error']
     assert b['complete'] and b['result']==3
 
@@ -95,10 +96,12 @@ def test_auc_fixed_rate_and_one_to_one_events():
 
 
 def test_reference_bank_excludes_held_and_repeated_speakers():
-    rows=[];features={}
+    rows=[]
+    features={}
     for i in range(16):
         r={'id':f'{i:016x}','source':'gettysburg','text_key':'ONE TWO','speaker_id':str(i),'condition':'volunteer_reading'}
-        rows.append(r);features[r['id']]={'norm':np.array(['ONE','TWO']),'compat':np.array([i,i+1.])}
+        rows.append(r)
+        features[r['id']]={'norm':np.array(['ONE','TWO']),'compat':np.array([i,i+1.])}
     rows.append(rows[0])
     tasks,inventory=normal_plan(rows,features)
     assert inventory[0]['readers']==16
@@ -112,15 +115,18 @@ def test_reference_bank_excludes_held_and_repeated_speakers():
 
 
 def test_label_origin_and_npz_roundtrip(tmp_path):
-    dest=tmp_path/'source.tar'/'labels'; dest.mkdir(parents=True)
+    dest=tmp_path/'source.tar'/'labels'
+    dest.mkdir(parents=True)
     (dest/'utterance.json').write_text(json.dumps({'transcript_a':'We we go.','transcript_b':'We go.'}))
     row={'source':'disfluencyspeech','text':'{D We } we go.','archive':'source.tar','audio_path':'a.wav',
          'label_files':[{'archive':'source.tar','path':'labels/utterance.json'}],'condition':'acted_disfluent'}
     a=annotate(row,tmp_path)
     assert a['text']=='We go.' and a['verbatim']=='We we go.'
-    f=tmp_path/'features.npz';save_features(f,{'clip':{'array':np.array([1,2])}},[a])
+    f=tmp_path/'features.npz'
+    save_features(f,{'clip':{'array':np.array([1,2])}},[a])
     with np.load(f,allow_pickle=False) as z:
-        np.testing.assert_array_equal(z['clip__array'],[1,2]);assert 'disfluencyspeech' in z['index_json'].item()
+        np.testing.assert_array_equal(z['clip__array'],[1,2])
+        assert 'disfluencyspeech' in z['index_json'].item()
 
 
 def test_budget_keeps_higher_priority():
@@ -139,7 +145,8 @@ def test_kernel_metadata_contract():
 
 
 def test_real_podcast_schema_and_negative_clip(tmp_path):
-    labels=tmp_path/'podcast-001.tar'/'labels';labels.mkdir(parents=True)
+    labels=tmp_path/'podcast-001.tar'/'labels'
+    labels.mkdir(parents=True)
     (labels/'PodcastFillers.csv').write_text('pfID,label_full_vocab,event_start_inclip,event_end_inclip\n2,Uh,0.275,0.725\n')
     row={'source':'podcastfillers','condition':'Uh','text':None,'archive':'podcast-001.tar','audio_path':'audio/00000.wav',
          'original_path':'PodcastFillers/audio/clip_wav/validation/00002.wav',
@@ -190,7 +197,8 @@ def test_event_precision_includes_other_labelled_clips():
 
 
 def test_phone_scores_can_be_correlated_without_phone_timing():
-    rows=[];features={}
+    rows=[]
+    features={}
     for i in range(3):
         clip=str(i)
         rows.append({'id':clip,'source':'speechocean','missing_text':False,'speaker_id':clip,'text_key':'ONE TWO',
@@ -223,3 +231,19 @@ def test_merge_data_joins_kernel_outputs(tmp_path, monkeypatch):
     assert [r['source'] for r in json.loads((merged / 'manifest.json').read_text())] == ['ears', 'vctk']
     assert json.loads((merged / 'STATUS.json').read_text())['complete']
     assert (merged / 'vctk-001.tar').read_bytes() == b'tar'
+
+
+def test_kaggle_lab_runner_helpers_equal_build_runner():
+    """A Kaggle script kernel uploads one file, so the lab runner keeps a copy of these build-runner helpers."""
+    import importlib.util
+    import inspect
+    modules = []
+    for name, path in (('build_run', ('kaggle', 'run.py')), ('lab_run', ('kaggle', 'lab', 'run.py'))):
+        spec = importlib.util.spec_from_file_location(name, Path(__file__).parents[1].joinpath(*path))
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        modules.append(module)
+    shared = ('log', 'write_status', 'sha256_file', 'find_mount', 'unpack_project_zips', 'find_project_root', 'verify_project',
+              'child_env', 'sh', 'nvidia_smi', 'detect_gpus', 'device_plan', 'load_config')
+    for name in shared:
+        assert inspect.getsource(getattr(modules[0], name)) == inspect.getsource(getattr(modules[1], name)), name

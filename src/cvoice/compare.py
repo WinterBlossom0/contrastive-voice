@@ -13,15 +13,16 @@ from dataclasses import dataclass
 import numpy as np
 
 from . import config as C
-from .features import Recording, final_pitch_word, stress_points, stress_words, word_occupancy
+from .features import Recording, final_pitch_word, final_span, sentence_final, stress_points, stress_words, word_occupancy
 
 
 @dataclass
 class Dim:
     """x: delta per unit in physical units (D1/D6 ln ratio, D2 s, D3 st, D4 p-units, D5 dB); b, p: the underlying
     baseline / participant measures; countable: unit may be flagged under the sign rules (D2, D4); w: unit weight
-    (share of baseline duration, or 1/N events); g: whole-clip measure of D1 (ln speech-time ratio) and D3 (ln pitch-range
-    ratio), the median that was removed from x; D9 (ln word-time ratio over all words) keeps x uncentred."""
+    (share of baseline duration, or 1/N events); g: whole-clip measure. D1 (ln speech-time ratio) and D3 (ln pitch-range
+    ratio): the median that was removed from x. D9: the ln word-time ratio over all words; x is not centred. D7: the
+    robust spread of x, MAD_SCALE * median |x| (uneven tempo). NaN for the other dimensions."""
     key: str
     x: np.ndarray
     b: np.ndarray
@@ -59,10 +60,22 @@ class Comparison:
     syllables: tuple[int, ...] = ()
 
 
-def _centred(v: np.ndarray) -> np.ndarray:
-    """v - median(v) over finite entries (all NaN if there is none)."""
+def _centred_with_median(v: np.ndarray) -> tuple[np.ndarray, float]:
+    """(v - g, g) with g the median of the finite entries of v (all NaN if there is none)."""
     ok = np.isfinite(v)
-    return v - np.median(v[ok]) if ok.any() else np.full(len(v), np.nan)
+    if not ok.any():
+        return np.full(len(v), np.nan), float("nan")
+    g = float(np.median(v[ok]))
+    return v - g, g
+
+
+def _centred(v: np.ndarray) -> np.ndarray:
+    return _centred_with_median(v)[0]
+
+
+def _pause_eligible(B: Recording, P: Recording) -> np.ndarray:
+    """Boundaries where either recording has an acoustic pause."""
+    return (B.sil >= C.PAUSE_MIN_S) | (P.sil >= C.PAUSE_MIN_S)
 
 
 def _duration_share(B: Recording) -> np.ndarray:
@@ -78,22 +91,20 @@ def _speech_time(X: Recording, elig: np.ndarray) -> np.ndarray:
 
 
 def paired_speech_time(B: Recording, P: Recording) -> tuple[np.ndarray, np.ndarray]:
-    elig = (B.sil >= C.PAUSE_MIN_S) | (P.sil >= C.PAUSE_MIN_S)
+    elig = _pause_eligible(B, P)
     return _speech_time(B, elig), _speech_time(P, elig)
 
 
 def d1_pace(B: Recording, P: Recording) -> Dim:
     tb, tp = paired_speech_time(B, P)
-    r = np.log(tp / tb)
-    ok = np.isfinite(r)
-    g = float(np.median(r[ok])) if ok.any() else float("nan")
-    return Dim("D1", r - g, tb, tp, np.ones(len(r), bool), _duration_share(B), g)
+    x, g = _centred_with_median(np.log(tp / tb))
+    return Dim("D1", x, tb, tp, np.ones(len(x), bool), _duration_share(B), g)
 
 
 def d2_pauses(B: Recording, P: Recording) -> Dim:
     n = len(B.tr)
-    sb, sp = B.sil, P.sil
-    elig = (sb >= C.PAUSE_MIN_S) | (sp >= C.PAUSE_MIN_S)
+    sb = B.sil
+    elig = _pause_eligible(B, P)
     rb, rp = B.sil_raw, P.sil_raw  # the difference is taken on the uncut gap lengths: continuous across PAUSE_MIN_S
     x = np.where(elig, rp - rb, np.nan)
     punct = np.array([B.tr.punct[i] != "" for i in range(n - 1)])
@@ -105,10 +116,8 @@ def d2_pauses(B: Recording, P: Recording) -> Dim:
 def d3_pitch(B: Recording, P: Recording) -> Dim:
     """ln ratio of the window pitch ranges, relative to the clip's overall ratio: speakers differ in overall liveliness by a
     factor, so the local question is where this speaker is flatter than their own usual range while the reference is not."""
-    r = np.log((P.win_R + C.RANGE_REG_ST) / (B.win_R + C.RANGE_REG_ST))
-    ok = np.isfinite(r)
-    g = float(np.median(r[ok])) if ok.any() else float("nan")
-    return Dim("D3", r - g, B.win_R, P.win_R, np.ones(len(r), bool), _duration_share(B), g)
+    x, g = _centred_with_median(np.log((P.win_R + C.RANGE_REG_ST) / (B.win_R + C.RANGE_REG_ST)))
+    return Dim("D3", x, B.win_R, P.win_R, np.ones(len(x), bool), _duration_share(B), g)
 
 
 def d4_emphasis(B: Recording, P: Recording) -> tuple[Dim, list[int], list[int], np.ndarray, np.ndarray]:
@@ -135,7 +144,7 @@ def d6_clarity(B: Recording, P: Recording) -> Dim:
 
 
 def d9_speech_tempo(B: Recording, P: Recording) -> Dim:
-    """Owner decision O1: D9 compares the aligned word durations only, ln participant/reference per five-word window, so
+    """D9 compares the aligned word durations only, ln participant/reference per five-word window, so
     the words themselves are measured and every pause is left to D2. It is not centred, and it is not the lab measure
     speech_time_ratio (aligned span minus pauses). g is the same ratio over all words."""
     x = np.log(P.win_W / B.win_W)
@@ -157,15 +166,10 @@ def d7_word_time(B: Recording, P: Recording) -> Dim:
 def d8_ending(B: Recording, P: Recording) -> Dim:
     b = B.final_df0 if B.final_df0 is not None else final_pitch_word(B)
     p = P.final_df0 if P.final_df0 is not None else final_pitch_word(P)
-    eligible = np.array([v == '.' for v in B.tr.punct])
+    eligible = sentence_final(B.tr)
     ok = eligible & np.isfinite(b) & np.isfinite(p)
     x = np.where(ok, p - b, np.nan)
     return Dim('D8', x, b, p, ok, np.full(len(x), 1 / max(1, eligible.sum())))
-
-
-def final_span(rec, i):
-    a, b = rec.regions[i]
-    return float(max(a, b - C.FINAL_WINDOW_S)), float(b)
 
 
 def event_span(comp: Comparison, dim: str, i: int, B: Recording, P: Recording) -> tuple[float, float]:
@@ -231,6 +235,6 @@ def compare(B: Recording, P: Recording) -> Comparison:
     coverage = {k: float(w[ok].sum()) for k, ok in valid.items() if k != "D2"}
     boundary_w = w[:-1]
     coverage["D2"] = float(boundary_w[valid["D2"]].sum() / boundary_w.sum()) if boundary_w.sum() else 0.0
-    finals = np.array([v == '.' for v in B.tr.punct])
+    finals = sentence_final(B.tr)
     coverage['D8'] = float(valid['D8'][finals].mean()) if finals.any() else 0.0
     return Comparison(dims, mp, mb, sb, sp, pb, pp, coverage, B.tr.sentence, B.tr.syll)

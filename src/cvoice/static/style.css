@@ -162,7 +162,6 @@ button.plain, .transport button, #clear-filter, .ab, #submit {
 .facts dd { margin: 0; }
 .measure { color: var(--ink2); font-size: 12.5px; margin-top: 8px; }
 .why { font: italic 15.5px/1.5 var(--serif); margin: 12px 0 0; padding-left: 12px; border-left: 3px solid var(--rule); }
-.why cite { display: block; font: 12.5px var(--sans); font-style: normal; color: var(--ink2); margin-top: 2px; }
 .fix { margin-top: 12px; }
 .fix b { font-weight: 600; }
 .measure-details { margin-top: 12px; padding-top: 8px; font-size: 13px; }

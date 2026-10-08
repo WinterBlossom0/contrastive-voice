@@ -1,4 +1,4 @@
-"""Rules added after the final evaluation: tables rendered from a saved results.json, stress rows with speakers as clusters,
+"""Reporting of saved results: tables rendered from a saved results.json, stress rows with speakers as clusters,
 the evaluation panel texts, off-truth findings in a gallery description, and the window and aligner caveats of a finding."""
 import dataclasses
 import json
@@ -16,7 +16,8 @@ ROOT = Path(__file__).resolve().parents[1]
 RUN = ROOT / 'build/work/kaggle_runs/last_run/x'
 FIRST_FINAL = ROOT / 'docs/evidence_final_32cdd86f3d6e/results.json'
 GALLERY = ROOT / 'gallery'
-needs_run = pytest.mark.skipif(not (RUN / 'eval/results.json').exists(), reason='final-run outputs are not in this checkout')
+needs_run = pytest.mark.skipif(not (RUN / 'eval/results.json').exists(),
+                               reason='the final-run folder (build/, git-ignored) is not distributed with the repository')
 ROW = {'split': 'test', 'levels': 'headline (L2+L3)', 'group': 'all', 'tp': 29, 'fp': 5, 'fn': 3, 'f1': 0.879, 'same_change_duplicates': 3,
        'accounting': 'one detection per change', 'f1_ci95': [None, None], 'f1_per_speaker': {'a': 0.848, 'b': 0.909}, 'f1_range': [0.848, 0.909],
        'every_prediction': {'false_by_key': {'D1-': 2, 'D3-': 2, 'D9-': 5}, 'same_change_detections': 1}}
@@ -131,7 +132,8 @@ def test_level_one_text_gives_the_preregistered_count_first():
 
 
 @needs_run
-@pytest.mark.skipif(not (RUN / 'eval/addendum.json').exists(), reason='the addendum is not computed in this checkout')
+@pytest.mark.skipif(not (RUN / 'eval/addendum.json').exists(),
+                    reason='the final-run folder (build/, git-ignored) is not distributed with the repository')
 def test_panel_shows_the_own_scales_baseline_from_the_addendum():
     shipped = json.loads((GALLERY / gallery.EVALUATION).read_text())
     own = {r['split']: r['f1'] for r in shipped['reference_free'] if r['method'] == gallery.OWN_SCALES}

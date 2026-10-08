@@ -163,7 +163,7 @@ def test_runtime_gates_and_pmax_share_coverage_mask(base, pinned_detector, monke
     assert calibrate.overall(rows_[0]["P"], C.PMAX_START, rows_[0]["scored_dims"]) == sc.overall
 
 
-def test_owner_objective_always_includes_natural_rush_and_excludes_unvalidated_families(base, pinned_detector, monkeypatch):
+def test_r1_objective_always_includes_natural_rush_and_excludes_unvalidated_families(base, pinned_detector, monkeypatch):
     from copy import deepcopy
     monkeypatch.setattr(C, "H_GRID", (1, 1.5, 2))
     comp = with_x(base, "D5", [(10, 15, -4)])

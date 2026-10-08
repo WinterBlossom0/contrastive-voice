@@ -230,13 +230,13 @@ class Aligner:
                 b = min(a + step, n)
                 if n - b < C.CTC_STRIDE:  # do not leave a sliver for a last chunk
                     b = n
-                a2, b2 = max(0, a - ctx), min(n, b + ctx)
-                x = torch.from_numpy(np.ascontiguousarray(wav[a2:b2], dtype=np.float32))[None].to(self.device)
+                context_start, context_end = max(0, a - ctx), min(n, b + ctx)
+                x = torch.from_numpy(np.ascontiguousarray(wav[context_start:context_end], dtype=np.float32))[None].to(self.device)
                 em, _ = self.model(x)
                 em = em[0]
-                f0 = (a - a2) // C.CTC_STRIDE
-                keep = em.shape[0] - f0 if b == n else (b - a) // C.CTC_STRIDE
-                parts.append(em[f0:f0 + keep])
+                first_frame = (a - context_start) // C.CTC_STRIDE
+                keep = em.shape[0] - first_frame if b == n else (b - a) // C.CTC_STRIDE
+                parts.append(em[first_frame:first_frame + keep])
                 a = b
             lp = torch.log_softmax(torch.cat(parts, 0), -1)
         return lp.cpu().numpy().astype(np.float32)
@@ -392,7 +392,7 @@ def align_emissions(logp: np.ndarray, norm: tuple[str, ...]) -> Alignment:
     end = np.array([(last[p[-1]] + 1) * C.CTC_FRAME_S for p in idx])
     compat = np.empty(len(idx))
     for w, pos in enumerate(idx):
-        peaks = [float(logp[first[l]:last[l] + 1, ext[2 * l + 1]].max()) for l in pos]
+        peaks = [float(logp[first[token]:last[token] + 1, ext[2 * token + 1]].max()) for token in pos]
         compat[w] = float(np.exp(np.mean(peaks)))
     chars = np.flatnonzero(targets != VOCAB["|"])
     spans = np.column_stack((first[chars], last[chars] + 1)) * C.CTC_FRAME_S
@@ -412,6 +412,11 @@ def align_audio(aligner: Aligner, wav: np.ndarray, tr: Transcript) -> Alignment:
 
 
 # ============================================================================================ pauses
+def frame_index(t: float) -> int:
+    """First frame whose centre is at or after time t (s); the 1e-9 margin keeps a time on a frame centre on that frame."""
+    return int(np.ceil(t / C.HOP_S - 1e-9))
+
+
 def pause_threshold(L: np.ndarray) -> float:
     """theta = max(Q5(L) + clip(0.3 * (Q95(L) - Q5(L)), 6, 15), Q99(L) - 35) dB: a margin above the noise floor, but never
     more than 35 dB below the speech peaks (the floor of a gated recording says nothing about the breath noise in its pauses)."""
@@ -438,14 +443,15 @@ def acoustic_pauses(al: Alignment, L: np.ndarray, voiced: np.ndarray) -> tuple[n
     eps = 1e-9
     mid = 0.5 * (al.start + al.end)
     for i in range(n - 1):
-        k0 = int(np.ceil(mid[i] / C.HOP_S - eps))
-        k1 = int(np.ceil(mid[i + 1] / C.HOP_S - eps))  # frames k0 .. k1-1 have centres between the two word centres
+        k0 = frame_index(mid[i])
+        k1 = frame_index(mid[i + 1])  # frames k0 .. k1-1 have centres between the two word centres
         run = best = best_end = 0
         for k in range(k0, min(k1, len(silent))):
-            run = run + 1 if silent[k] else 0
+            run = (run + 1) if silent[k] else 0
             if run > best:
                 best, best_end = run, k + 1
-        dur = raw[i] = best * C.HOP_S
+        raw[i] = best * C.HOP_S
+        dur = raw[i]
         if dur >= C.PAUSE_MIN_S - eps:
             sil[i] = dur
             span[i] = ((best_end - best) * C.HOP_S, best_end * C.HOP_S)

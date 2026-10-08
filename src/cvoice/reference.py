@@ -9,25 +9,25 @@ from .align import Alignment
 from .features import WordStats
 
 
+# Text fields and per-reading event spans have no median: the first reading gives them.
+PASS_THROUGH_KEYS = frozenset({'norm', 'disp', 'punct', 'punctuation', 'sentence', 'syll', 'chars', 'win', 'insertion_forms',
+                               'inserted_spans', 'orphan_spans', 'stable_spans', 'word_silence_spans', 'sil_span'})
+
+
 def median_reference(items):
     first = items[0]
     result = {}
-    categorical = {'norm','disp','punct','punctuation','sentence','syll','chars','win','insertion_forms'}
-    variable = {'inserted_spans','orphan_spans','stable_spans','word_silence_spans','sil_span'}
-    for key,value in first.items():
-        if key in categorical or key in variable:
+    for key, value in first.items():
+        if key in PASS_THROUGH_KEYS or value is None:
             result[key] = value
-        else:
-            if value is None:
-                result[key] = None
-                continue
-            vals = [np.asarray(v[key]) for v in items if key in v]
-            if any(v.shape!=np.asarray(value).shape for v in vals):
-                result[key] = np.full(np.asarray(value).shape, np.nan)
-                continue
-            with warnings.catch_warnings():
-                warnings.simplefilter('ignore',RuntimeWarning)
-                result[key] = np.nanmedian(np.stack(vals),axis=0)
+            continue
+        vals = [np.asarray(v[key]) for v in items if key in v]
+        if any(v.shape != np.asarray(value).shape for v in vals):
+            result[key] = np.full(np.asarray(value).shape, np.nan)
+            continue
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore', RuntimeWarning)
+            result[key] = np.nanmedian(np.stack(vals), axis=0)
     return result
 
 

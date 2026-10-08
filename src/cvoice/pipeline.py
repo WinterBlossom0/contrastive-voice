@@ -17,14 +17,14 @@ from pathlib import Path
 import numpy as np
 
 from . import __version__
-from . import config as C
-from .detect import scale
 from . import audio, explain, patterns
+from . import config as C
 from .align import (Alignment, Transcript, TranscriptMismatch, align_audio, emissions, load_aligner, parse_transcript,
                     require_match)
 from .compare import Comparison, compare, time_map, warp
-from .detect import clip_flags, decode, decode_dim, flagged_dims, key as flag_key, load_detector, threshold
+from .detect import clip_flags, decode, decode_dim, flagged_dims, key as flag_key, load_detector, scale, threshold
 from .features import Recording, make_recording
+from .reference import select_reference
 from .score import Scored, score
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -164,7 +164,7 @@ def rows(comp: Comparison, B: Recording, P: Recording, regime: dict) -> list[dic
         key, label = _ROWS[dim]
         hs = [threshold(regime, dim, sign) if dim in regime["enabled"] else None for sign in (-1, 1)]
         out.append({"key": key, "label": label, "unit": C.DIM_UNIT[dim], "kind": "boundary" if dim == "D2" else "word",
-                    "status": "scored" if dim in regime["enabled"] else "listed" if dim in listed_dims(regime) else "displayed",
+                    "status": ROW_STATUS[detector_status(dim, regime)],
                     "coverage": round(comp.coverage[dim], 4), "b": [], "p": _arr(comp.dims[dim].x, 2),  # D2: every eligible boundary
                     "tol": [None if h is None else round(float(h * scale(regime, dim, sign)), 6) for sign, h in zip((-1, 1), hs)]})
     return out
@@ -173,6 +173,14 @@ def rows(comp: Comparison, B: Recording, P: Recording, regime: dict) -> list[dic
 _DIFF_LABEL = {"D9": ("Slower speech", "Faster speech"), "D1": ("Slower", "Faster"), "D2": ("Longer pause", "Shorter pause"), "D3": ("Wider pitch range", "Narrower pitch range"),
                "D4": ("Higher stress points", "Lower stress points"), "D6": ("Higher spectral change", "Lower spectral change"),
                "D5": ("Higher level", "Lower level"), "D7": ("Longer word time",), "D8": ("Higher ending",)}
+# The status word of a chart row for each detector_status value.
+ROW_STATUS = {'enabled': 'scored', 'unscored': 'listed', 'no detector': 'displayed'}
+
+
+def direction_label(k: str, sign: float) -> str:
+    """Label of a departure of dimension k in the direction of sign; a one-direction dimension has one label."""
+    labels = _DIFF_LABEL[k]
+    return labels[min(0 if sign > 0 else 1, len(labels) - 1)]
 
 
 def listed_dims(reg):
@@ -252,16 +260,14 @@ def threshold_text(reg: dict, k: str, sign: int, status: str) -> str:
         flagged = [s for s in C.FLAG_SIGNS[k] if threshold(reg, k, s) is not None]
         if not flagged:
             return 'Flags are disabled for this dimension.'
-        return f"Only the other direction ({_DIFF_LABEL[k][min(0 if flagged[0] > 0 else 1, len(_DIFF_LABEL[k]) - 1)].lower()}) is flagged."
+        return f"Only the other direction ({direction_label(k, flagged[0]).lower()}) is flagged."
     thr = h * scale(reg, k, sign)
     side = 'below' if sign < 0 else 'above'
     return f"Flagged {side} ×{np.exp(sign * thr):.2f}." if C.DIM_UNIT[k] == 'ln' else f"Flagged {side} {_signed(sign * thr, C.DIM_UNIT[k])}."
 
 
-# Reader-facing reasons of the owner decisions in config.OWNER_LISTED (that text is inside the detector hash, so the page
-# maps it here). The R2 speech-tempo numbers: build/work/kaggle_runs/last_run/x/eval/results.json
-# cross_speaker.modes.single.by_type, check readers, NATURAL_RUSH levels 2 and 3, column "flagged or among the 5 listed
-# differences" (4 of 10 and 6 of 10); dev v13: 0 of 68 R2 rush edits when the key was scored.
+# Reader-facing reasons for the config.OWNER_LISTED entries; that text is inside the detector hash, so it cannot change.
+# Sources of the R2 speech-tempo numbers: config.OWNER_LISTED['R2']['D9'] (0 of 68) and gallery/evaluation.json r2_speech_tempo (10 of 20).
 LISTED_REASON = {
     ('R1', 'D7'): 'on unedited copies of the training speeches its measured word times changed too much to set a threshold, '
                   'so no word-time detector is available for these edits',
@@ -274,7 +280,7 @@ LISTED_REASON = {
 
 
 def listed_reason(regime: str, k: str) -> str | None:
-    """Why a listed dimension is unscored; None for an R2 listing without an owner decision (not yet calibrated)."""
+    """Why a listed dimension is unscored; None for an R2 listed dimension without a stated reason (not yet calibrated)."""
     reason = LISTED_REASON.get((regime, k)) or C.OWNER_LISTED[regime].get(k)
     return reason or ('its validation gate failed' if regime == 'R1' else None)
 
@@ -291,7 +297,7 @@ def differences(comp: Comparison, B: Recording, P: Recording, reg: dict, flagged
             info = shown_info(info, patterns.describe(r, shown_comp, shown_ref, P, reg.get('pattern_labels')), shown_ref)
             if r.dim == 'D9' and r.sign < 0 and patterns.rush_type(comp, [*flagged, r], clip_flags(comp, reg), len(flagged)) == 'RUSH':
                 info = {**info, 'pattern': None}
-            label = _DIFF_LABEL[k][min(0 if r.sign > 0 else 1, len(_DIFF_LABEL[k])-1)] + (' here relative to your own overall tempo' if k == 'D1' else ' here than the reference')
+            label = direction_label(k, r.sign) + (' here relative to your own overall tempo' if k == 'D1' else ' here than the reference')
             baseline, participant, delta = d.reference(pk), float(d.p[pk]), float(d.x[pk])
             h = threshold(reg, k, r.sign)
             text = f"{label}: reference {baseline:.3g}, participant {participant:.3g}, delta {delta:.3g} {C.DIM_UNIT[k]}."
@@ -314,11 +320,16 @@ def differences(comp: Comparison, B: Recording, P: Recording, reg: dict, flagged
             g, thr = comp.dims[k].g, reg['clip'].get(k)
             if k not in dims or thr is None or not np.isfinite(g) or (status == 'difference' and k in clip_flags(comp, reg)) or abs(g) < C.DIFFERENCE_H * thr / C.CLIP_H:
                 continue
-            label = 'More uneven word timing than the reference' if k == 'D7' else _DIFF_LABEL[k][0 if g > 0 else 1] + ' overall than the reference'
-            text = (f"{label}: word-time spread {g:.3g} ln, typical factor x{np.exp(g):.2f}." if k == 'D7' else
-                    f"{label}: median ratio {np.exp(g):.3g}, ln difference {g:.3g}.")
-            text += (f" Flagged above ×{np.exp(thr):.2f}." if k == 'D7' else f" Flagged outside ×{np.exp(-thr):.2f} to ×{np.exp(thr):.2f}."
-                     if 1 in C.FLAG_SIGNS[k] else f" Flagged below ×{np.exp(-thr):.2f}.")
+            if k == 'D7':
+                label = 'More uneven word timing than the reference'
+                text = f"{label}: word-time spread {g:.3g} ln, typical factor x{np.exp(g):.2f}. Flagged above ×{np.exp(thr):.2f}."
+            else:
+                label = direction_label(k, g) + ' overall than the reference'
+                text = f"{label}: median ratio {np.exp(g):.3g}, ln difference {g:.3g}."
+                if 1 in C.FLAG_SIGNS[k]:
+                    text += f" Flagged outside ×{np.exp(-thr):.2f} to ×{np.exp(thr):.2f}."
+                else:
+                    text += f" Flagged below ×{np.exp(-thr):.2f}."
             out.append({'status': status, 'dimension': k, 'brief_word': C.DIM_BRIEF[k], 'label': label,
                         'words': None, 'p': None, 'b': None, 'baseline': None if k == 'D7' else 1.0,
                         'participant': round(float(g if k == 'D7' else np.exp(g)), 3), 'delta': round(float(g), 3),
@@ -367,7 +378,6 @@ def analyze(participant, transcript, baseline, *, regime: str, detector: dict | 
             raise TranscriptMismatch(f"{name} recording: {e}") from e
     progress("features")
     B, P = (x if isinstance(x, Recording) else make_recording(x[0], tr, x[1]) for x in parts)
-    from .reference import select_reference
     refs = [B] if references is None else [x if isinstance(x, Recording) else prepare(_load(x), tr, aligner, cache_dir) for x in references]
     B, reg, mode, reference_count = select_reference(refs, det, regime)
     progress("compare")
@@ -383,9 +393,8 @@ def analyze(participant, transcript, baseline, *, regime: str, detector: dict | 
     counted = patterns.counted(comp, regions, scored.masses, whole)
     local_flaws = [explain.build(r, comp, B, P, reg, scored.masses[i], scored, '', info[i], i in counted)
                    for i, r in enumerate(regions)]
-    flaws = list(local_flaws)
     clip_entries = {k: explain.build_clip(k, comp, shown_ref, P, reg, scored) for k in scored.clip}
-    flaws += list(clip_entries.values())
+    flaws = [*local_flaws, *clip_entries.values()]
     flaws.sort(key=lambda f: (f["p"][0], f["dimension"], f["type"]))
     for i, f in enumerate(flaws):
         f["id"] = f"{f['dimension'].lower()}-{i + 1:03d}"
@@ -397,12 +406,11 @@ def analyze(participant, transcript, baseline, *, regime: str, detector: dict | 
             f['group_pattern'] = g.pattern
     difference_list = differences(comp,B,P,reg,regions,view) if regime == 'R2' else []
     detection = detection_block(det, reg)
+    listed_count = sum(d['status'] == 'listed' for d in difference_list)
     detection.update(reference_mode=mode, reference_count=reference_count, references_available=len(refs),
-                     listed_entries=sum(d['status'] == 'listed' for d in difference_list),
-                     show_listed=False)
-    detection['show_listed'] = detection['listed_entries'] > 0
-    truth = [{**t, 'available': t.get('dim', t.get('dimension')) in reg['enabled'],
-              'detector_status': detector_status(t.get('dim', t.get('dimension')), reg)} for t in truth or []]
+                     listed_entries=listed_count, show_listed=listed_count > 0)
+    truth_rows = [{**t, 'available': t.get('dim', t.get('dimension')) in reg['enabled'],
+                   'detector_status': detector_status(t.get('dim', t.get('dimension')), reg)} for t in truth or []]
     scores = scores_block(scored, reg, regime)
     mode_note = f"Reference mode: {mode}; {reference_count} reference reading(s)."
     if mode == "consensus5":
@@ -424,24 +432,37 @@ def analyze(participant, transcript, baseline, *, regime: str, detector: dict | 
         "stress": {"b": comp.stress_b, "p": comp.stress_p},
         "flaws": flaws,
         "differences": difference_list,
-        "truth": truth or [],
+        "truth": truth_rows,
         "scores": scores,
         "notices": [mode_note] + notices(det, regime, reg, B, P, flaws, tr),
     }
+
+
+def dimension_note(k: str, s: float | None, scored: Scored, reg: dict, regime: str) -> str:
+    """The note of dimension k in the score table; s is its score, None when it is not scored."""
+    partial = scored.coverage[k] < C.MIN_MEASUREMENT_COVERAGE
+    if s is not None:
+        return f"scored on partial coverage ({100 * scored.coverage[k]:.0f} %)" if partial else ""
+    if k in reg["enabled"] and k not in flagged_dims(reg):
+        return "flags disabled for this dimension: no calibrated threshold"
+    if k in reg["enabled"] and partial:
+        return "not scored: too little measurable speech"
+    if k in listed_dims(reg) and listed_reason(regime, k):
+        return f"listed, unscored: {listed_reason(regime, k)}"
+    if k in listed_dims(reg):
+        return "listed for a different performance: shown in the 'Listed, not scored' panel, not yet calibrated for scoring"
+    if regime == "R1":
+        return "not calibrated in this detector"
+    if k == "D4":
+        return "not scored for a different performance: emphasis depends on reference stress"
+    return "not scored for a different performance: the clarity proxy is not comparable across speakers"
 
 
 def scores_block(scored: Scored, reg: dict, regime: str = "R1") -> dict:
     dims = []
     for k in C.DIMS:
         s = scored.S[k]
-        note = ((f"scored on partial coverage ({100 * scored.coverage[k]:.0f} %)" if scored.coverage[k] < C.MIN_MEASUREMENT_COVERAGE else "") if s is not None else
-                "flags disabled for this dimension: no calibrated threshold" if k in reg["enabled"] and k not in flagged_dims(reg) else
-                "not scored: too little measurable speech" if k in reg["enabled"] and scored.coverage[k] < C.MIN_MEASUREMENT_COVERAGE else
-                f"listed, unscored: {listed_reason(regime, k)}" if k in listed_dims(reg) and listed_reason(regime, k) else
-                "listed for a different performance: shown in the 'Listed, not scored' panel, not yet calibrated for scoring" if k in listed_dims(reg) else
-                "not calibrated in this detector" if regime == "R1" else
-                "not scored for a different performance: emphasis depends on reference stress" if k == "D4" else
-                "not scored for a different performance: the clarity proxy is not comparable across speakers")
+        note = dimension_note(k, s, scored, reg, regime)
         dims.append({"key": k, "label": C.DIM_LABEL[k], "brief_word": C.DIM_BRIEF[k], "score": None if s is None else round(s, 2),
                      "scored": s is not None, "note": note, "coverage": round(scored.coverage[k], 4)})
     out = {"overall": None if scored.overall is None else round(scored.overall, 2), "dims": dims, "label": "Reference-relative delivery index"}
@@ -466,7 +487,8 @@ def scores_block(scored: Scored, reg: dict, regime: str = "R1") -> dict:
 
 def notices(det: dict, regime: str, reg: dict, B: Recording, P: Recording, flaws: list, tr: Transcript) -> list[str]:
     detection = detection_block(det, reg)
-    name = lambda k: 'clarity' if k == 'D6' else C.DIM_LABEL[k].lower()
+    def name(k):
+        return 'clarity' if k == 'D6' else C.DIM_LABEL[k].lower()
     enabled = ', '.join(name(k) for k in detection['enabled'])
     displayed = ', '.join(name(k) for k in C.DIMS if k not in reg['enabled'] and k not in listed_dims(reg))
     clip_names = {'D1': 'tempo', 'D3': 'pitch range', 'D7': 'word-time evenness'}
@@ -508,20 +530,20 @@ def notices(det: dict, regime: str, reg: dict, B: Recording, P: Recording, flaws
 
 # ============================================================================================ CLI
 def main(argv: list[str] | None = None) -> None:
-    ap = argparse.ArgumentParser(prog="python -m cvoice.pipeline", description=__doc__.splitlines()[0])
-    ap.add_argument("--participant", required=True, type=Path)
-    ap.add_argument("--baseline", required=True, type=Path)
-    ap.add_argument("--transcript", required=True, type=Path, help="text file with the words both recordings read")
-    ap.add_argument("--regime", required=True, choices=C.REGIMES)
-    ap.add_argument("--detector", type=Path, default=DEFAULT_DETECTOR)
-    ap.add_argument("--out", type=Path, required=True)
-    a = ap.parse_args(argv)
-    res = analyze(a.participant, a.transcript.read_text(), a.baseline, regime=a.regime, detector=load_detector(a.detector),
-                  baseline_meta={"id": a.baseline.stem, "audio": a.baseline.name},
-                  participant_meta={"id": a.participant.stem, "audio": a.participant.name})
-    a.out.parent.mkdir(parents=True, exist_ok=True)
-    a.out.write_text(dumps(res) + "\n")
-    print(f"{a.out}: reference-relative delivery index {res['scores']['overall']}, {len(res['flaws'])} acoustic departure(s)")
+    parser = argparse.ArgumentParser(prog="python -m cvoice.pipeline", description=__doc__.splitlines()[0])
+    parser.add_argument("--participant", required=True, type=Path)
+    parser.add_argument("--baseline", required=True, type=Path)
+    parser.add_argument("--transcript", required=True, type=Path, help="text file with the words both recordings read")
+    parser.add_argument("--regime", required=True, choices=C.REGIMES)
+    parser.add_argument("--detector", type=Path, default=DEFAULT_DETECTOR)
+    parser.add_argument("--out", type=Path, required=True)
+    args = parser.parse_args(argv)
+    res = analyze(args.participant, args.transcript.read_text(), args.baseline, regime=args.regime, detector=load_detector(args.detector),
+                  baseline_meta={"id": args.baseline.stem, "audio": args.baseline.name},
+                  participant_meta={"id": args.participant.stem, "audio": args.participant.name})
+    args.out.parent.mkdir(parents=True, exist_ok=True)
+    args.out.write_text(dumps(res) + "\n")
+    print(f"{args.out}: reference-relative delivery index {res['scores']['overall']}, {len(res['flaws'])} acoustic departure(s)")
 
 
 if __name__ == "__main__":

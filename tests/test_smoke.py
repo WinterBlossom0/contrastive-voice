@@ -41,9 +41,9 @@ def test_reagan_clip_identity_and_one_rush_l3_span(pinned_detector):
                   participant_meta={"id": "rush_l3", "audio": "reagan_open_rush_l3.wav"})
     rush = [x for x in res["flaws"] if x["type"] == "RUSH"]
     best = max([iou(tuple(x["p"]), tuple(truth[0]["p"])) for x in rush], default=0.0)
-    print(f"RUSH L3 span {truth[0]['p']} words {i0}-{i0 + 5}: flagged {[x['p'] for x in rush]}, IoU {best:.2f}, overall {res['scores']['overall']}, "
-          f"P compat {[round(float(c), 2) for c in P.al.compat[i0:i0 + 6]]}")
-    assert best >= C.IOU_MIN and res["scores"]["overall"] < 100.0  # flagged and localised (half-maximum rule, DESIGN 5.2)
+    diagnostic = (f"RUSH L3 span {truth[0]['p']} words {i0}-{i0 + 5}: flagged {[x['p'] for x in rush]}, IoU {best:.2f}, overall {res['scores']['overall']}, "
+                  f"P compat {[round(float(c), 2) for c in P.al.compat[i0:i0 + 6]]}")
+    assert best >= C.IOU_MIN and res["scores"]["overall"] < 100.0, diagnostic  # flagged and localised (half-maximum rule, DESIGN 5.2)
 
     again = analyze(P, tr, B, regime="R1", detector=det, truth=truth, baseline_meta=meta_b,
                     participant_meta={"id": "rush_l3", "audio": "reagan_open_rush_l3.wav"})

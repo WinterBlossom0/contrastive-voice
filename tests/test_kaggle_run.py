@@ -91,7 +91,8 @@ def test_project_root_discovery_and_integrity_check(tmp_path, monkeypatch):
     stage = tmp_path / "upload" / "project"
     assert (stage / "pyproject.toml").exists() and (stage / "uv.lock").exists() and (stage / "data" / "sources_manifest.json").exists()
     hashes = json.loads((ROOT / "data" / "transcripts" / "sha256.json").read_text())
-    assert len(hashes) == 11  # ten owner snapshots plus the existing Clinton plain text
+    manifest = json.loads((ROOT / "data" / "sources_manifest.json").read_text())["entries"]
+    assert sorted(hashes) == sorted({Path(e["transcript"]).name for e in manifest})  # one snapshot for each transcript that the build reads
     assert json.loads((stage / "data" / "transcripts" / "sha256.json").read_text()) == hashes
     for name, expected in hashes.items():
         assert run.sha256_file(ROOT / "data" / "transcripts" / name) == expected

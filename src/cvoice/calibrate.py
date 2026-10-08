@@ -27,10 +27,10 @@ from . import audio, flaws, stress
 from .compare import Comparison, compare
 from .dataset import Dataset, load_dataset, prepare_null_readers, sha256_file
 from .detect import scale, KEYS, decode_dim, choose_h, clip_flags, decode, fit_clip, fit_scales, key, make_detector, save_detector, wquantile
-from .events import Run, clip_key, eval_clip, run_pair
+from .events import Run, clip_key, eval_clip, run_pair, truths
 from .pipeline import ROOT, device_class, map_calls
 from .pool import PreparePool
-from .protocol import LAB_VALIDATION, STRICT_ACCOUNTING
+from .protocol import LAB_VALIDATION, STRICT_ACCOUNTING, exemption_policy
 from .score import score, overall
 
 
@@ -148,8 +148,22 @@ def reader_ids(ds: Dataset, role: str) -> list[str]:
 
 
 # ============================================================================================ regime fit
+def null_source(n: Null) -> str:
+    """The text source of a null; a group id has the form '<source>:<text>'."""
+    return n.source or n.group.split(':')[0]
+
+
+def group_source(group: dict) -> str:
+    return group.get('source') or group['id'].split(':')[0]
+
+
+def null_reader(n: Null) -> str:
+    """The participant reader of a null. R1 ids have the form '<baseline>__<variant>', R2 ids '<reference>><participant>'."""
+    return n.reader or n.id.split('>')[-1].split('__')[0]
+
+
 def source_weights(nulls):
-    sources = sorted({n.source or n.group.split(':')[0] for n in nulls})
+    sources = sorted({null_source(n) for n in nulls})
     return dict.fromkeys(sources, 1 / len(sources)) if sources else {}
 
 
@@ -158,7 +172,7 @@ def group_weights(nulls, fixed=None):
     exposure, sources = Counter(), {}
     for n in nulls:
         exposure[n.group] += n.minutes
-        sources[n.group] = n.source or n.group.split(':')[0]
+        sources[n.group] = null_source(n)
     totals = Counter()
     for g, minutes in exposure.items():
         totals[sources[g]] += minutes
@@ -229,8 +243,8 @@ def rate_report(nulls: list[Null], counts, clip=False, fixed=None, flag=None, r1
     group_clusters = defaultdict(lambda: defaultdict(lambda: np.zeros(3)))
     independent, valid = {}, 0
     for n, count in zip(nulls, counts):
-        reader = n.reader or n.id.split('>')[-1].split('__')[0]
-        source = n.source or n.group.split(':')[0]
+        reader = null_reader(n)
+        source = null_source(n)
         units = measured_units(n.comp,flag) if flag else 1
         valid += units
         exposure = 1 if clip else n.minutes
@@ -254,9 +268,9 @@ def rate_report(nulls: list[Null], counts, clip=False, fixed=None, flag=None, r1
         for reader, values in readers.items():
             arrays[names.index(g), index[reader]] = values
     for n,count in zip(nulls,counts):
-        reader = n.reader or n.id.split('>')[-1].split('__')[0]
+        reader = null_reader(n)
         raw_arrays[names.index(n.group),index[reader]] += (count, 1 if clip else n.minutes)
-    group_sources = {n.group: n.source or n.group.split(':')[0] for n in nulls}
+    group_sources = {n.group: null_source(n) for n in nulls}
     source_indices = {source: np.array([i for i,g in enumerate(names) if group_sources[g] == source]) for source in clusters}
     for _ in range(C.R2_BOOTSTRAPS if sum(counts) else 0):
         # Person-origin strata preserve shared LibriVox readers across text sources.
@@ -279,7 +293,7 @@ def rate_report(nulls: list[Null], counts, clip=False, fixed=None, flag=None, r1
             total = np.einsum('gri,r->i', raw_arrays, multiplicity)
             pooled.append(total[0] / total[1])
     exposure = sum(1 if clip else n.minutes for n in nulls)
-    represented = {n.source or n.group.split(':')[0] for n in nulls}
+    represented = {null_source(n) for n in nulls}
     complete = set(fixed) <= represented
     measured = bool(nulls) and (not r1 or valid > 0)
     weights = group_weights(nulls, fixed)
@@ -298,7 +312,7 @@ def rate_report(nulls: list[Null], counts, clip=False, fixed=None, flag=None, r1
             'missing_fit_sources': sorted(set(fixed) - represented), 'sources': sorted(represented),
             'groups': {g: {'flags': int(v[0]), 'exposure': float(v[1]), 'weight': weights[g],
                            'comparison_minutes': float(arrays[names.index(g), :, 2].sum()),
-                           'readers': len({n.reader or n.id.split('>')[-1].split('__')[0] for n in nulls if n.group == g})} for g, v in groups.items()},
+                           'readers': len({null_reader(n) for n in nulls if n.group == g})} for g, v in groups.items()},
             'by_L1': language_rates(nulls,counts),
             'by_source': {source: {'flags': int(sum(v[0] for v in readers.values())),
                           'exposure': float(sum(v[1] for v in readers.values())),
@@ -344,8 +358,7 @@ def fit_r2(nulls: list[Null], full_curve: bool = True, enabled=None, labels=None
             return int(sum(counts)), rate(counts)
         reg['h'][key(k, sign)], tables[key(k, sign)] = choose_h(
             [n.comp.dims[k] for n in nulls], sentences, s, sign, minutes, budget, full_curve, counting)
-    # Owner decision: the whole-clip threshold is the fit quantile at the clip share (equal sources, comparison-minutes within
-    # a source, as for local), floored like the local scale; the CLIP_H robust start is reported beside it.
+    # The whole-clip quantile uses the source weights of the local keys, so both budgets describe the same fit mixture.
     starts = fit_clip([n.comp for n in nulls], pair_weights(nulls))
     clip_dims = [k for k in C.CLIP_DIMS if k in reg['enabled'] and (k != 'D7' or reg['pattern_labels'].get('uneven_tempo', False))]
     reg['clip'] = dict.fromkeys(C.CLIP_DIMS)
@@ -445,7 +458,7 @@ def consensus_availability(pool: dict, phase: str) -> dict:
         most[group] = max(most[group], len(refs))
     out = {}
     for group in pool['groups']:
-        row = out.setdefault(group.get('source') or group['id'].split(':')[0], {'texts': 0, 'readers_per_text': [], 'max_distinct_references': 0,
+        row = out.setdefault(group_source(group), {'texts': 0, 'readers_per_text': [], 'max_distinct_references': 0,
                                                                               'references_per_participant': pool['references_per_participant']})
         row['texts'] += 1
         row['readers_per_text'] = sorted(row['readers_per_text'] + [len(group['sets'][phase])])
@@ -533,7 +546,7 @@ def lockbox_null_report(ds: Dataset, det: dict, *, final: bool) -> dict:
         consensus = grouped_nulls(ds, 'lockbox', consensus=True, pool=pool)
     readers = Counter()
     for g in pool['groups']:
-        readers[g.get('source') or g['id'].split(':')[0]] += len(g['sets']['lockbox'])
+        readers[group_source(g)] += len(g['sets']['lockbox'])
     availability = consensus_availability(pool, 'lockbox')
 
     def gap(source):
@@ -554,8 +567,17 @@ def lockbox_null_report(ds: Dataset, det: dict, *, final: bool) -> dict:
             'modes': modes, 'seconds': round(time.monotonic() - started, 1)}
 
 
+def r1_common_grid() -> list[float]:
+    return [h for h in C.H_GRID if C.R1_H_RANGE[0] <= h <= C.R1_H_RANGE[1]]
+
+
+def best_by_f1(curve: list[dict], f1_field: str) -> dict:
+    """The row of largest F1; an F1 tie takes the smaller h."""
+    return max(curve, key=lambda row: (row[f1_field], -row['h']))
+
+
 def choose_r1_row(curve):
-    return max(curve, key=lambda r: (r['F1'], -r['h'])), 'in-sample strict F1 maximum; ties use smaller h'
+    return best_by_f1(curve, 'F1'), 'in-sample strict F1 maximum; ties use smaller h'
 
 
 def select_r1(pairs: list[tuple[Run, dict]], controls: list[Null], regime: dict, d9_floor: float = 0.0) -> list[dict]:
@@ -565,7 +587,7 @@ def select_r1(pairs: list[tuple[Run, dict]], controls: list[Null], regime: dict,
     allowed = calibration_types()
     pairs = [(run, {**lab, 'flaws': [f if f['type'] in allowed else {**f, 'evaluation_excluded': ['outside h-selection types']} for f in lab['flaws']]})
              for run, lab in pairs if any(f.get('type') in allowed for f in lab['flaws'])]
-    common_grid = [h for h in C.H_GRID if C.R1_H_RANGE[0] <= h <= C.R1_H_RANGE[1]]
+    common_grid = r1_common_grid()
     natural_grid = [h for h in C.H_GRID if h * scale(regime, 'D9', -1) > d9_floor] or [None]
     components = []
     for natural, grid in ((False, common_grid), (True, natural_grid)):
@@ -603,7 +625,7 @@ def select_r1(pairs: list[tuple[Run, dict]], controls: list[Null], regime: dict,
         denom = 2*counts[:,:,0]+counts[:,:,1]+counts[:,:,2]
         scores = np.divide(2*counts[:,:,0],denom,out=np.zeros_like(denom,dtype=float),where=denom>0)
         return scores, np.unravel_index(np.argmax(scores),scores.shape)
-    scores, (best_i,best_j) = optimum(arrays[0].sum(axis=1),arrays[1].sum(axis=1))
+    scores, (_, best_j) = optimum(arrays[0].sum(axis=1),arrays[1].sum(axis=1))
     curve = []
     for i, common in enumerate(components[0]):
         j = int(np.argmax(scores[i]))
@@ -642,7 +664,7 @@ def select_r1(pairs: list[tuple[Run, dict]], controls: list[Null], regime: dict,
 
 
 def r2_stability(nulls: list[Null], readers: list[str] | None = None) -> dict:
-    """Leave one source/text group out; legacy datasets can still request reader removal."""
+    """Leave one source/text group out; a dataset without an R2 pool (the integration-test dataset) leaves one reader out."""
     rows = []
     groups = sorted({n.group for n in nulls if n.group})
     for removed in groups or readers or []:
@@ -666,6 +688,13 @@ def noisy_identity(wav, baseline_id: str):
     return audio.quantize(stress.noise(wav, flaws.clip_seed(baseline_id)))
 
 
+def r1_noise_items(ds: Dataset, identities: list[dict]) -> list[dict]:
+    """Work items of the 20 dB noise controls of train identity clips, each {id, split, B, tr, wav} as r1_items gives."""
+    noisy = map_calls(noisy_identity, [(ds.wav(c), c["id"]) for c in identities], ds.pool)
+    return [{"id": c["id"] + "__noise20", "split": "train", "B": ds.rec(ds.entry("baselines", c["parent"])),
+             "tr": ds.clip_transcript(c), "wav": wav} for c, wav in zip(identities, noisy)]
+
+
 # ============================================================================================ score gates
 def clip_penalties(ds: Dataset, clips: list[dict], recs: list, regime: dict) -> list[dict]:
     """Penalty P_k per dimension of every clip (`recs`: its analysed recording) under the R1 detector (independent of Pmax)."""
@@ -682,6 +711,21 @@ def clip_penalties(ds: Dataset, clips: list[dict], recs: list, regime: dict) -> 
     return rows
 
 
+IDENTITY_GATE_TOLERANCE = 0.005  # score points: rounding margin below the identity gate of 100
+
+
+def identity_gate_fails(overall_score: float) -> bool:
+    return overall_score < C.GATE_IDENTITY - IDENTITY_GATE_TOLERANCE
+
+
+def l1_gate_fails(overall_score: float) -> bool:
+    return overall_score < C.GATE_L1_MIN
+
+
+def g5_gate_fails(overall_score: float) -> bool:
+    return overall_score > C.GATE_G5_MAX
+
+
 def gate_violations(rows: list[dict], pmax: dict[str, float]) -> list[str]:
     """Gates of DESIGN 6: identity = 100; every L1-only clip >= 90; G5 <= 50; each speech's ladder non-increasing."""
     bad = []
@@ -692,11 +736,11 @@ def gate_violations(rows: list[dict], pmax: dict[str, float]) -> list[str]:
             bad.append(f"{r['id']}: no scored dimensions")
             continue
         by.setdefault(r["baseline"], {})[r["recipe"]] = o
-        if r["recipe"] == "identity" and o < C.GATE_IDENTITY - 0.005:
+        if r["recipe"] == "identity" and identity_gate_fails(o):
             bad.append(f"{r['id']}: identity scores {o:.2f}")
-        if (r["recipe"] == "G1" or r.get("levels") == [1] or r["recipe"] in ("single_L1A", "single_L1B")) and o < C.GATE_L1_MIN:
+        if (r["recipe"] == "G1" or r.get("levels") == [1] or r["recipe"] in ("single_L1A", "single_L1B")) and l1_gate_fails(o):
             bad.append(f"{r['id']}: L1-only clip scores {o:.2f} < {C.GATE_L1_MIN}")
-        if r["recipe"] == "G5" and o > C.GATE_G5_MAX:
+        if r["recipe"] == "G5" and g5_gate_fails(o):
             bad.append(f"{r['id']}: G5 scores {o:.2f} > {C.GATE_G5_MAX}")
     for b, d in by.items():
         if all(k in d for k in ("G1", "G3", "G5")) and not d["G1"] >= d["G3"] >= d["G5"]:
@@ -708,12 +752,12 @@ def fit_pmax(rows: list[dict]) -> tuple[dict[str, float], float, list[str]]:
     """Uniform factor on the starting Pmax meeting the gates on `rows` (closest to 1); if none does, the factor with the
     fewest violations. Returns (Pmax, factor, remaining violations)."""
     best = None
-    for f in C.PMAX_FACTOR_GRID:
-        pmax = {k: v * f for k, v in C.PMAX_START.items()}
+    for factor in C.PMAX_FACTOR_GRID:
+        pmax = {k: v * factor for k, v in C.PMAX_START.items()}
         bad = gate_violations(rows, pmax)
-        key = (len(bad), abs(np.log(f)))
-        if best is None or key < best[0]:
-            best = (key, pmax, f, bad)
+        rank = (len(bad), abs(np.log(factor)))
+        if best is None or rank < best[0]:
+            best = (rank, pmax, factor, bad)
     assert best is not None
     return best[1], best[2], best[3]
 
@@ -798,8 +842,7 @@ def select_edit_pairs(ds, nulls, sample=None, report=None):
 
 
 def _away_outcomes(pairs, regimes):
-    from .events import truths
-    from .evaluate import cross_matches, edit_direction
+    from .evaluate import cross_matches, edit_direction  # evaluate imports this module at load time
     outcomes = {token: (Counter(), Counter()) for token in regimes}
     for B, clean, edited, lab in pairs:
         before, after = compare(B, clean), compare(B, edited)
@@ -817,10 +860,6 @@ def _away_outcomes(pairs, regimes):
                 total[k] += 1
                 found[k] += i in hits
     return outcomes
-
-
-def _away_hits(pairs, reg):
-    return _away_outcomes(pairs, {'current': reg})['current']
 
 
 def real_gate(gate):
@@ -967,12 +1006,27 @@ def d7_null_gate(regime, nulls):
             'rows': rows, 'reason': 'identity and placebo gates passed' if passed else 'identity deltas or placebo flags fail the gate; D7 listed and unscored in R1'}
 
 
+def calibration_types():
+    return (*C.CORE8_TYPES, 'NATURAL_RUSH')
+
+
+def calibration_clip(clip):
+    return clip.get("spectrum") != "extra" or (bool(clip.get('types')) and
+           all(t in calibration_types() for t in clip['types']))
+
+
+def calibration_policy():
+    return {"new_types_in_R1": ['NATURAL_RUSH'],
+            "R1": "joint in-sample strict F1 maximum on core8 + NATURAL_RUSH (" + STRICT_ACCOUNTING + "); independent speech-tempo h; synthetic-only families evaluated separately",
+            "R2": "single and median-of-five same-text references; equal-source comparison-minute point rate; separate clip budget"}
+
+
 def run(dataset: Path, cache: Path | None, out: Path, pool=None, aligner=None, validation=None) -> dict:
     started = time.monotonic()
     if validation is None:
         validation = json.loads(LAB_VALIDATION.read_text())
     ds = load_dataset(dataset, cache, pool, aligner)
-    from .evaluate import STAGE_FORECAST_SECONDS
+    from .evaluate import STAGE_FORECAST_SECONDS  # evaluate imports this module at load time
     log("forecast T4 x2 from v13: " + "; ".join(f"{stage} {low / 60:.0f}-{high / 60:.0f} min" for stage, (low, high) in STAGE_FORECAST_SECONDS.items()))
     cal = reader_ids(ds, "reader_calibration")
     gate_clips = {sp: [c for c in ds.clips(kind="single") + ds.clips(kind="identity") + ds.clips(kind="ladder")
@@ -981,10 +1035,7 @@ def run(dataset: Path, cache: Path | None, out: Path, pool=None, aligner=None, v
     ds.recs([b for b in ds.manifest["baselines"] if b["split"] in ("train", "val")] + [ds.entry("readers", i) for i in cal])
     log("R1 train nulls (identity + placebo seeds): placebo clips")
     items = r1_items(ds, ("train",))
-    identities = [c for c in gate_clips["train"] if c["kind"] == "identity"]
-    noisy = map_calls(noisy_identity, [(ds.wav(c), c["id"]) for c in identities], ds.pool)
-    noise_items = [{"id": c["id"] + "__noise20", "split": "train", "B": ds.rec(ds.entry("baselines", c["parent"])),
-                    "tr": ds.clip_transcript(c), "wav": w} for c, w in zip(identities, noisy)]
+    noise_items = r1_noise_items(ds, [c for c in gate_clips["train"] if c["kind"] == "identity"])
     log(f"R1 preparation: {len(items)} null clips and {len(gate_clips['train']) + len(gate_clips['val'])} score-gate clips; expected 1-2 min on T4 x2")
     clips = gate_clips["train"] + gate_clips["val"]
     n_gate = len(clips)
@@ -996,14 +1047,15 @@ def run(dataset: Path, cache: Path | None, out: Path, pool=None, aligner=None, v
     nuisance = n1 + null_list(noise_items, recs[len(items) + len(clips):])
     log("R2 train nulls (calibration reader pairs)")
     log(f"R2 fit: {sum(len(g['sets']['fit']) for g in ds.manifest.get('r2_pool', {}).get('groups', []))} readings, five references each; expected 4-6 min including group refits")
-    n2 = grouped_nulls(ds, 'fit') if ds.manifest.get('r2_pool') else r2_nulls(ds, cal, cal)
+    has_pool = bool(ds.manifest.get('r2_pool'))
+    n2 = grouped_nulls(ds, 'fit') if has_pool else r2_nulls(ds, cal, cal)
     r1 = base_regime("R1", n1)
     d7_gate = d7_null_gate(r1, n1)
-    r1['pattern_labels'] = validated_labels(validation or {})
+    r1['pattern_labels'] = validated_labels(validation)
     if not r1['pattern_labels'].get('uneven_tempo', False):
         r1['clip']['D7'] = None
     r2, t2 = fit_r2(n2)
-    consensus_fit = grouped_nulls(ds, "fit", consensus=True) if ds.manifest.get("r2_pool") else []
+    consensus_fit = grouped_nulls(ds, "fit", consensus=True) if has_pool else []
     r2c, t2c = fit_r2(consensus_fit)
     r2c["pattern_labels"] = {**validated_labels(validation), "uneven_tempo": False}
     r2c["reference_mode"] = "consensus5"
@@ -1020,13 +1072,12 @@ def run(dataset: Path, cache: Path | None, out: Path, pool=None, aligner=None, v
     log(f"R2 stability: {len({n.group for n in n2 if n.group})} group refits over {len(n2)} fit comparisons; expected 2-4 min")
     stability = r2_stability(n2, cal)
     log(f"R2 select: {sum(len(g['sets']['select']) for g in ds.manifest.get('r2_pool', {}).get('groups', []))} readings, five references each; expected 2-3 min")
-    select = grouped_nulls(ds, 'select') if ds.manifest.get('r2_pool') else []
-    consensus_select = grouped_nulls(ds, "select", consensus=True) if ds.manifest.get("r2_pool") else []
-    availability = consensus_availability(ds.manifest['r2_pool'], 'select') if ds.manifest.get('r2_pool') else {}
+    select = grouped_nulls(ds, 'select') if has_pool else []
+    consensus_select = grouped_nulls(ds, "select", consensus=True) if has_pool else []
+    availability = consensus_availability(ds.manifest['r2_pool'], 'select') if has_pool else {}
     consensus_report = consensus_select_report(r2c, consensus_select, availability)
     log('R2 consensus select: ' + consensus_report['null']['budget_statement'] + '; weighted=' +
         str(consensus_report['null']['total_local']['rate']) + '/min; pooled=' + str(consensus_report['null']['total_local']['pooled_rate']) + '/min')
-    validation = validation or {}
     open_gates = any(real_gate(validation.get(key(d, 1), {})) for d in C.LISTED_DIMS['R2'] if d not in C.OWNER_LISTED['R2'])
     sample, sample_report = select_edit_sample(ds, select) if open_gates else ([], {'selected_edits': 0, 'expected_seconds': 0, 'reason': 'lab/Real gates closed'})
     log(f"select positives: {len(sample)} edits, {sum(len(r['references']) for r in sample)} comparisons, batch {C.R2_SELECT_EDIT_BATCH}, seed {C.SEED}; expected {sample_report['expected_seconds'] / 60:.1f} min on T4 x2")
@@ -1051,15 +1102,15 @@ def run(dataset: Path, cache: Path | None, out: Path, pool=None, aligner=None, v
     pmax, factor, bad_train = fit_pmax(train_rows)
     bad_val = gate_violations(val_rows, pmax)  # val only reports; it never feeds the fit
     log(f"Pmax factor {factor:.3f}; train gate violations {len(bad_train)}; val gate violations {len(bad_val)}")
+    modes = {'single': mode_report(r2, select_report['null']), 'consensus5': mode_report(r2c, consensus_report['null'])}
     report = {"manifest_sha256": sha256_file(ds.root / "manifest.json"), "calibrated": True, "pipeline_version": __version__, "alignment_device": device_class(pool), "pmax_factor": round(float(factor), 4), "extra_calibration": calibration_policy(),
               "gates_train": {"violations": bad_train, "n_clips": len(train_rows)}, "gates_val": {"violations": bad_val, "n_clips": len(val_rows)},
-              "R1": r1["null"], "R2": r2["null"], 'promotion': promotion, 'real_validation': validation or {}, 'D7_R1_gate': d7_gate, 'alignment_noise_floor': alignment_noise(items,recs[:len(items)],n1), 'R2_modes': {'single': mode_report(r2,select_report['null']), 'consensus5': mode_report(r2c,consensus_report['null'])}}
-    from .protocol import exemption_policy
+              "R1": r1["null"], "R2": r2["null"], 'promotion': promotion, 'real_validation': validation, 'D7_R1_gate': d7_gate, 'alignment_noise_floor': alignment_noise(items,recs[:len(items)],n1), 'R2_modes': modes}
     report['exemptions'] = exemption_policy()
     det = make_detector(regimes, pmax, report)
     save_detector(det, out / "models" / "detector.json")
     full = {"r2_partition": {k: ds.manifest.get('r2_pool', {}).get(k) for k in ('split_sha256', 'references_per_participant', 'reference_sampling', 'lab_readers')},
-            "detector_config_sha256": det["config_sha256"], "alignment_device": device_class(pool), "R2_h_table": t2, "R2_consensus_h_table": t2c, "R2_consensus_select": consensus_report["null"], "R2_modes": {'single': mode_report(r2,select_report['null']), 'consensus5': mode_report(r2c,consensus_report['null'])},
+            "detector_config_sha256": det["config_sha256"], "alignment_device": device_class(pool), "R2_h_table": t2, "R2_consensus_h_table": t2c, "R2_consensus_select": consensus_report["null"], "R2_modes": modes,
             "R1_selection": t1, "R1_selected": r1["selected_operating_point"], 'R1_speaker_bootstrap': r1['selection_bootstrap'], "R2_stability": stability, "R2_select": select_report["null"], 'promotion': promotion, "nuisance_controls": [n.id for n in nuisance],
             "train_penalties": train_rows, "val_penalties": val_rows, "nulls": {"R1": [n.id for n in n1], "R2": [n.id for n in n2]}, "report": report}
     (out / "calibration").mkdir(parents=True, exist_ok=True)
@@ -1078,22 +1129,6 @@ def main(argv: list[str] | None = None) -> None:
     a = ap.parse_args(argv)
     with PreparePool(cache_dir=a.cache) as pool:
         run(a.dataset, a.cache, a.out, pool, validation=json.loads(a.validation.read_text()) if a.validation else None)
-
-
-
-def calibration_types():
-    return (*C.CORE8_TYPES, 'NATURAL_RUSH')
-
-
-def calibration_clip(clip):
-    return clip.get("spectrum") != "extra" or (bool(clip.get('types')) and
-           all(t in calibration_types() for t in clip['types']))
-
-
-def calibration_policy():
-    return {"new_types_in_R1": ['NATURAL_RUSH'],
-            "R1": "joint in-sample strict F1 maximum on core8 + NATURAL_RUSH (" + STRICT_ACCOUNTING + "); independent speech-tempo h; synthetic-only families evaluated separately",
-            "R2": "single and median-of-five same-text references; equal-source comparison-minute point rate; separate clip budget"}
 
 
 if __name__ == "__main__":

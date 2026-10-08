@@ -41,7 +41,7 @@ def test_hand_computed_vector_for_six_dimensions():
     # sev D1 = (0.4 - 0.2) / (ln 1.9 - 0.2) = 0.452638; mass = 2 * 0.05 * sev; P / 0.40
     # D2: (0.9 - 0.4) / 0.6 = 5/6, w 0.5 -> 5/12; D3: (1.2 - 0.8) / (ln 5 - 0.8) = 0.49417, 3 * 0.1; D4: (1.2 - 1) / 0.5 = 0.4, w 1/3
     # D5: (5 - 4) / (12 - 4) = 0.125, w 0.1; D6: (0.7 - 0.4) / 0.6 = 0.5, 2 * 0.1
-    # K1 secondary registry: the D2 region is an expected secondary of the DRAG (D1+) region and the D4 region of the
+    # Secondary registry: the D2 region is an expected secondary of the DRAG (D1+) region and the D4 region of the
     # MONOTONE (D3-) region within half a window, so each group carries one penalty: D2 and D4 lose nothing.
     expect = {"D1": 88.68404204, "D2": 100.0, "D3": 62.93724381, "D4": 100.0, "D5": 96.875, "D6": 75.0}
     assert {k: round(v, 8) for k, v in sc.S.items() if v is not None} == pytest.approx(expect, abs=1e-6)

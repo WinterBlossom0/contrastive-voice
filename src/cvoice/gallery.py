@@ -115,7 +115,14 @@ def truth_markers(lab: dict, B, P, det: dict, regime: str, res: dict, clean=None
     out = []
     for i, t in enumerate(tr):
         by_clip = isinstance(same_change.get(i), str)
-        finding = ids.get(pairs[i]) if i in pairs else whole_clip.get(t["dim"]) if by_clip else ids.get(same_change[i]) if i in same_change else None
+        if i in pairs:
+            finding = ids.get(pairs[i])
+        elif by_clip:
+            finding = whole_clip.get(t["dim"])
+        elif i in same_change:
+            finding = ids.get(same_change[i])
+        else:
+            finding = None
         target = key(t["dim"], t["sign"]) if t["sign"] else None
         shared = sorted({ids[d["index"]] for d in duplicates if d["change"] == target and d["index"] in ids
                          and patterns.within_half_window(regions[d["index"]], t["words"])})
@@ -285,6 +292,10 @@ def items() -> list[dict]:
     return out
 
 
+# Points are shown at 2 decimals, so a loss below half a hundredth would show as 0.00.
+MIN_SHOWN_POINTS = 0.005
+
+
 def marker_outcome(t: dict, differences: dict[str, dict]) -> str:
     """What the result shows for one evaluated truth marker."""
     if t["finding"]:
@@ -316,12 +327,12 @@ def edits_text(lab: dict, res: dict) -> str:
     for t in res["truth"]:
         on = [flaws[i] for i in t.get("on_edit", []) if i in flaws]
         lost = sum(f["points_lost"] or 0 for f in on)
-        if lost >= 0.005:
+        if lost >= MIN_SHOWN_POINTS:
             text += (f" {len(on)} {'finding lies' if len(on) == 1 else 'findings lie'} on the excluded {t['type'].replace('_', ' ').lower()} "
                      f"edit and cost {lost:.2f} points of the delivery index; the evaluation does not count them as false.")
     off = off_truth(res)
     lost = sum(f["points_lost"] or 0 for f in off)
-    if lost >= 0.005:
+    if lost >= MIN_SHOWN_POINTS:
         whole = sum(f["context"] == "whole passage" for f in off)
         text += (f" {len(off)} {'finding matches' if len(off) == 1 else 'findings match'} no injected edit"
                  + (f" ({whole} of them over the whole passage)" if whole and len(off) > 1 else " (over the whole passage)" if whole else "")
@@ -371,65 +382,65 @@ def build(dataset: Path, models: Path, cache: Path | None, eval_dir: Path, out: 
     det = load_detector(models)
     device = device_class(pool)
     base = ds.entry("baselines", GALLERY_BASELINE)
-    g = out / "gallery"
-    (g / "results").mkdir(parents=True, exist_ok=True)
-    (g / "audio").mkdir(parents=True, exist_ok=True)
+    gallery_dir = out / "gallery"
+    (gallery_dir / "results").mkdir(parents=True, exist_ok=True)
+    (gallery_dir / "audio").mkdir(parents=True, exist_ok=True)
     index = {"schema": 1, "default": "L3A", "baseline": {"id": base["id"], "title": baseline_meta(base)["title"], "audio": f"audio/{base['id']}.wav",
                                                        "text": base["text"]}, "items": []}
-    sm = eval_dir / "results.json"
+    results_path = eval_dir / "results.json"
     index["provenance"] = {**(provenance or {}), "alignment_device": device, "detector_sha256": sha256_file(models),
                            "dataset_manifest_sha256": sha256_file(ds.root / "manifest.json"),
-                           "eval_results_sha256": sha256_file(sm) if sm.exists() else None}
+                           "eval_results_sha256": sha256_file(results_path) if results_path.exists() else None}
     written_baselines = set()
 
-    def analyse(it: dict, P, tr_p, clip: dict | None, refs: list | None = None) -> dict:
+    def analyse(item: dict, P, tr_p, clip: dict | None, refs: list | None = None) -> dict:
         """refs: the analysed bank readings (exemplar first); the truth markers then use the reference and regime of the
         mode that the pipeline selects for the bank."""
         b = ds.any_entry(clip["baseline"]) if clip else base
-        res = analyze(P, tr_p, ds.rec(b), regime=it["regime"], detector=det, alignment_device=device, baseline_meta=baseline_meta(b),
-                      participant_meta={"id": it["id"], "title": it["title"], "audio": f"audio/{it['id']}.wav"}, references=refs)
+        res = analyze(P, tr_p, ds.rec(b), regime=item["regime"], detector=det, alignment_device=device, baseline_meta=baseline_meta(b),
+                      participant_meta={"id": item["id"], "title": item["title"], "audio": f"audio/{item['id']}.wav"}, references=refs)
         if clip:
-            clean = ds.rec(ds.parent_entry(clip)) if it["regime"] == "R2" else None
+            clean = ds.rec(ds.parent_entry(clip)) if item["regime"] == "R2" else None
             B, mode_det = mode_detector(refs, det) if refs else (ds.rec(b), det)
             lab = ds.labels(clip)
-            res["truth"] = truth_markers(lab, B, P, mode_det, it["regime"], res, clean, with_excluded=True)
+            res["truth"] = truth_markers(lab, B, P, mode_det, item["regime"], res, clean, with_excluded=True)
         return res
 
-    def write(it: dict, wav, res: dict) -> None:
+    def write(item: dict, wav, res: dict) -> None:
         b = res["baseline"]["id"]
         if b not in written_baselines:
-            audio.write_wav(g / "audio" / f"{b}.wav", ds.wav(ds.any_entry(b)))
+            audio.write_wav(gallery_dir / "audio" / f"{b}.wav", ds.wav(ds.any_entry(b)))
             written_baselines.add(b)
-        audio.write_wav(g / "audio" / f"{it['id']}.wav", wav)
-        res = {**res, "participant": {**res["participant"], "id": it["id"], "title": it["title"], "audio": f"audio/{it['id']}.wav"}}
-        (g / "results" / f"{it['id']}.json").write_text(dumps(res) + "\n")
-        index["items"].append({"id": it["id"], "group": it["group"], "label": it["label"], "title": it["title"], "description": it["description"],
-                               "regime": it["regime"], "baseline": b, "result": f"results/{it['id']}.json", "audio": f"audio/{it['id']}.wav",
+        audio.write_wav(gallery_dir / "audio" / f"{item['id']}.wav", wav)
+        res = {**res, "participant": {**res["participant"], "id": item["id"], "title": item["title"], "audio": f"audio/{item['id']}.wav"}}
+        (gallery_dir / "results" / f"{item['id']}.json").write_text(dumps(res) + "\n")
+        index["items"].append({"id": item["id"], "group": item["group"], "label": item["label"], "title": item["title"], "description": item["description"],
+                               "regime": item["regime"], "baseline": b, "result": f"results/{item['id']}.json", "audio": f"audio/{item['id']}.wav",
                                "overall": res["scores"]["overall"], "n_flaws": len(res["flaws"]), "truth": len(res["truth"]),
-                               **({"focus": it["focus"]} if it.get("focus") else {})})
+                               **({"focus": item["focus"]} if item.get("focus") else {})})
 
     todo = []  # (item, wav, transcript, clip of the labels)
-    for it in items():
+    for item in items():
         clip = None
-        if it["clip"]:
-            clip = next(c for c in ds.manifest["clips"] if c["id"] == it["clip"])
+        if item["clip"]:
+            clip = next(c for c in ds.manifest["clips"] if c["id"] == item["clip"])
             wav, tr_p = upload_samples(ds.wav(clip)), ds.clip_transcript(clip)
-        elif it["wav"][0] == "readers":
-            e = ds.entry("readers", it["wav"][1])
+        elif item["wav"][0] == "readers":
+            e = ds.entry("readers", item["wav"][1])
             wav, tr_p = upload_samples(ds.wav(e)), ds.transcript(e)
         else:
-            source = next(c for c in ds.manifest["clips"] if c["id"] == it["wav"][1])
+            source = next(c for c in ds.manifest["clips"] if c["id"] == item["wav"][1])
             wav, tr_p = upload_samples(stress.apply(stress.mp3, ds.wav(source), 1)), ds.clip_transcript(source)  # the stress matrix's MP3 round trip
-        todo.append((it, wav, tr_p, clip))
+        todo.append((item, wav, tr_p, clip))
     r1_pool = [c for c in showcase_clips(ds.manifest, "R1") if c["baseline"] == base["id"]]
     r2_pool = [c for c in showcase_clips(ds.manifest, "R2") if c["baseline"] == base["id"]]
-    parents = [ds.parent_entry(c) for c in [*(clip for it, _, _, clip in todo if clip and it["regime"] == "R2"), *r2_pool]]
+    parents = [ds.parent_entry(c) for c in [*(clip for item, _, _, clip in todo if clip and item["regime"] == "R2"), *r2_pool]]
     log(f"analysing {len(todo)} examples and {len(r1_pool) + len(r2_pool)} showcase candidates")
     ds.load(entries=[base, *parents])
     recs = ds.prepare_many([(w, tr) for _, w, tr, _ in todo])
-    for (it, wav, tr_p, clip), P in zip(todo, recs):
-        log(f"{it['id']} ({it['regime']})")
-        write(it, wav, analyse(it, P, tr_p, clip))
+    for (item, wav, tr_p, clip), P in zip(todo, recs):
+        log(f"{item['id']} ({item['regime']})")
+        write(item, wav, analyse(item, P, tr_p, clip))
 
     def prepared(clips: list[dict]) -> list:
         return ds.prepare_many([(upload_samples(ds.wav(c)), ds.clip_transcript(c)) for c in clips])
@@ -468,16 +479,16 @@ def build(dataset: Path, models: Path, cache: Path | None, eval_dir: Path, out: 
     bank = bank_readers(ds.manifest)
     for r in bank:
         if r["id"] not in written_baselines:
-            audio.write_wav(g / "audio" / f"{r['id']}.wav", ds.wav(r))
+            audio.write_wav(gallery_dir / "audio" / f"{r['id']}.wav", ds.wav(r))
             written_baselines.add(r["id"])
     index["baselines"] = [{**index["baseline"], "mode": "single"}, bank_meta(bank)]
-    pool_c = consensus_clips(ds.manifest, bank)
-    log(f"r2_consensus: bank {[r['id'] for r in bank]}; analysing {len(pool_c)} check-reader clips")
-    ds.load(entries=[*bank, *(ds.parent_entry(c) for c in pool_c)])
+    consensus_candidates = consensus_clips(ds.manifest, bank)
+    log(f"r2_consensus: bank {[r['id'] for r in bank]}; analysing {len(consensus_candidates)} check-reader clips")
+    ds.load(entries=[*bank, *(ds.parent_entry(c) for c in consensus_candidates)])
     refs = ds.recs(bank)
     spec = CONSENSUS_SHOWCASE
     hit = pick_showcase([(c, analyse({"id": c["id"], "title": c["id"], "regime": "R2"}, P, ds.clip_transcript(c), c, refs))
-                         for c, P in zip(pool_c, prepared(pool_c))], [spec]).get(spec["id"])
+                         for c, P in zip(consensus_candidates, prepared(consensus_candidates))], [spec]).get(spec["id"])
     if hit:
         clip, res = hit
         note = (f"Compared with the word-by-word median of {res['detection']['reference_count']} of the "
@@ -490,23 +501,23 @@ def build(dataset: Path, models: Path, cache: Path | None, eval_dir: Path, out: 
         log(f"r2_consensus: {reason} with this detector; example left out")
         left_out.append({"id": spec["id"], "label": spec["label"], "reason": reason})
     index["left_out"] = left_out
-    if sm.exists():
-        matrix = json.loads(sm.read_text()).get("stress")
+    if results_path.exists():
+        matrix = json.loads(results_path.read_text()).get("stress")
         if matrix:
             rows = dashboard_stress(matrix)
-            (g / "stress_matrix.json").write_text(json.dumps(rows, indent=1, sort_keys=True) + "\n")
-            (g / "stress_matrix.md").write_text(stress_tables(rows, matrix["babble_sources"], matrix["reference"]) + "\n")
+            (gallery_dir / "stress_matrix.json").write_text(json.dumps(rows, indent=1, sort_keys=True) + "\n")
+            (gallery_dir / "stress_matrix.md").write_text(stress_tables(rows, matrix["babble_sources"], matrix["reference"]) + "\n")
             index["stress_matrix"] = "stress_matrix.json"
-    (g / "index.json").write_text(json.dumps(index, indent=1, sort_keys=True) + "\n")
+    (gallery_dir / "index.json").write_text(json.dumps(index, indent=1, sort_keys=True) + "\n")
     record = models.parent / "final_evaluations.json"
-    if sm.exists() and record.exists() and json.loads(sm.read_text()).get("final"):
+    if results_path.exists() and record.exists() and json.loads(results_path.read_text()).get("final"):
         addendum = eval_dir / ADDENDUM
-        write_evaluation(g, sm, record, first_final, addendum if addendum.exists() else None)
+        write_evaluation(gallery_dir, results_path, record, first_final, addendum if addendum.exists() else None)
         index["evaluation"] = EVALUATION
     card = ds.root / "dataset_card.md"
     if card.exists():
-        shutil.copy(card, g / "dataset_card.md")
-    log(f"wrote {len(index['items'])} examples to {g}")
+        shutil.copy(card, gallery_dir / "dataset_card.md")
+    log(f"wrote {len(index['items'])} examples to {gallery_dir}")
     return index
 
 
@@ -763,33 +774,33 @@ def site(out: Path, gallery: Path) -> None:
 def main(argv: list[str] | None = None) -> None:
     argv = list(sys.argv[1:] if argv is None else argv)
     if argv[:1] == ["site"]:
-        ap = argparse.ArgumentParser(prog="python -m cvoice.gallery site")
-        ap.add_argument("out_dir", type=Path)
-        ap.add_argument("--gallery", type=Path, default=ROOT / "gallery")
-        a = ap.parse_args(argv[1:])
-        return site(a.out_dir, a.gallery)
+        parser = argparse.ArgumentParser(prog="python -m cvoice.gallery site")
+        parser.add_argument("out_dir", type=Path)
+        parser.add_argument("--gallery", type=Path, default=ROOT / "gallery")
+        args = parser.parse_args(argv[1:])
+        return site(args.out_dir, args.gallery)
     if argv[:1] == ["evaluation"]:
-        ap = argparse.ArgumentParser(prog="python -m cvoice.gallery evaluation")
-        ap.add_argument("results", type=Path, help="eval/results.json of the final run")
-        ap.add_argument("--record", type=Path, default=ROOT / "models" / "final_evaluations.json")
-        ap.add_argument("--first-final", type=Path, default=None, help="results.json of an earlier final evaluation of the test split")
-        ap.add_argument("--addendum", type=Path, default=None, help="addendum.json of python -m cvoice.addendum for the same run")
-        ap.add_argument("--gallery", type=Path, default=ROOT / "gallery")
-        a = ap.parse_args(argv[1:])
-        write_evaluation(a.gallery, a.results, a.record, a.first_final, a.addendum)
+        parser = argparse.ArgumentParser(prog="python -m cvoice.gallery evaluation")
+        parser.add_argument("results", type=Path, help="eval/results.json of the final run")
+        parser.add_argument("--record", type=Path, default=ROOT / "models" / "final_evaluations.json")
+        parser.add_argument("--first-final", type=Path, default=None, help="results.json of an earlier final evaluation of the test split")
+        parser.add_argument("--addendum", type=Path, default=None, help="addendum.json of python -m cvoice.addendum for the same run")
+        parser.add_argument("--gallery", type=Path, default=ROOT / "gallery")
+        args = parser.parse_args(argv[1:])
+        write_evaluation(args.gallery, args.results, args.record, args.first_final, args.addendum)
         return None
-    ap = argparse.ArgumentParser(prog="python -m cvoice.gallery")
-    ap.add_argument("--dataset", type=Path, default=ROOT / "data")
-    ap.add_argument("--models", type=Path, default=ROOT / "models" / "detector.json")
-    ap.add_argument("--cache", type=Path, default=None)
-    ap.add_argument("--eval", type=Path, default=ROOT / "eval")
-    ap.add_argument("--out", type=Path, default=ROOT)
-    ap.add_argument("--first-final", type=Path, default=None, help="results.json of an earlier final evaluation of the test split")
-    ap.add_argument("--note", default=None, help="provenance note for index.json, e.g. when the gallery is rebuilt after the final evaluation")
-    a = ap.parse_args(argv)
-    provenance = {"command": "python -m cvoice.gallery " + shlex.join(argv), **({"note": a.note} if a.note else {})}
-    with PreparePool(cache_dir=a.cache) as pool:
-        build(a.dataset, a.models, a.cache, a.eval, a.out, pool, first_final=a.first_final, provenance=provenance)
+    parser = argparse.ArgumentParser(prog="python -m cvoice.gallery")
+    parser.add_argument("--dataset", type=Path, default=ROOT / "data")
+    parser.add_argument("--models", type=Path, default=ROOT / "models" / "detector.json")
+    parser.add_argument("--cache", type=Path, default=None)
+    parser.add_argument("--eval", type=Path, default=ROOT / "eval")
+    parser.add_argument("--out", type=Path, default=ROOT)
+    parser.add_argument("--first-final", type=Path, default=None, help="results.json of an earlier final evaluation of the test split")
+    parser.add_argument("--note", default=None, help="provenance note for index.json, e.g. when the gallery is rebuilt after the final evaluation")
+    args = parser.parse_args(argv)
+    provenance = {"command": "python -m cvoice.gallery " + shlex.join(argv), **({"note": args.note} if args.note else {})}
+    with PreparePool(cache_dir=args.cache) as pool:
+        build(args.dataset, args.models, args.cache, args.eval, args.out, pool, first_final=args.first_final, provenance=provenance)
 
 
 if __name__ == "__main__":

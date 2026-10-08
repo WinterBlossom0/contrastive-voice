@@ -24,10 +24,20 @@ def find_mount(name: str, root=Path('/kaggle/input')) -> Path:
     raise FileNotFoundError(f'{name} not mounted under {root}')
 
 
+def _initials(name: str) -> str:
+    """Last ':' field of a reader or speaker name, without its trailing digits, in lower case."""
+    return re.sub(r'\d+$', '', name.rsplit(':', 1)[-1]).lower()
+
+
+def _alignment_cost(row) -> float:
+    """Forecast wall time (s) to align one reading."""
+    return row['duration_s'] * C.R2_ALIGNMENT_SECONDS_PER_AUDIO + C.R2_ALIGNMENT_SECONDS_PER_CLIP
+
+
 def reader_id(row) -> str:
     source, speaker = row['source'], row['speaker_id']
     if source == 'poetry':
-        return 'librivox:' + re.sub(r'\d+$', '', speaker.rsplit(':', 1)[-1]).lower()
+        return 'librivox:' + _initials(speaker)
     if source == 'gettysburg':
         if speaker.startswith('lv_gettysburg150_'):
             speaker = speaker.removeprefix('lv_gettysburg150_')
@@ -38,7 +48,7 @@ def reader_id(row) -> str:
 
 
 def first_language(reader):
-    return re.sub(r'\d+$', '', reader.rsplit(':', 1)[-1]).lower()
+    return _initials(reader)
 
 
 def partition_hash(groups):
@@ -108,19 +118,19 @@ def inventory(rows: list[dict], seen: set[str] = frozenset()) -> dict:
                     splits[rid] = phase
                     break
     result = []
-    forecast = sum(r["duration_s"] * C.R2_ALIGNMENT_SECONDS_PER_AUDIO + C.R2_ALIGNMENT_SECONDS_PER_CLIP
-                   for members in groups.values() for r in members.values())
+    forecast = sum(_alignment_cost(r) for members in groups.values() for r in members.values())
     for gid, members in sorted(groups.items()):
         chosen = sorted(members.values(), key=lambda r: digest([C.SEED, gid, r['id']]))
         # Cap evenly by text only if its share of the total forecast exceeds the build reserve.
-        total = sum(r['duration_s'] * C.R2_ALIGNMENT_SECONDS_PER_AUDIO + C.R2_ALIGNMENT_SECONDS_PER_CLIP for r in chosen)
+        total = sum(_alignment_cost(r) for r in chosen)
         share = C.R2_ALIGNMENT_BUDGET_S / len(groups)
         if forecast > C.R2_ALIGNMENT_BUDGET_S and total > share and chosen[0]['source'] != 'accent':
             selected, spent = [], 0.
             for r in chosen:
-                cost = r['duration_s'] * C.R2_ALIGNMENT_SECONDS_PER_AUDIO + C.R2_ALIGNMENT_SECONDS_PER_CLIP
+                cost = _alignment_cost(r)
                 if spent + cost <= share:
-                    selected.append(r); spent += cost
+                    selected.append(r)
+                    spent += cost
                 else:
                     excluded.append({'id': r['id'], 'group': gid, 'reason': 'seeded per-group alignment budget'})
             chosen = selected
@@ -136,8 +146,7 @@ def inventory(rows: list[dict], seen: set[str] = frozenset()) -> dict:
             'inventoried_by_source': inventoried,
             'reference_sampling': 'five distinct references when available; seeded repeats in smaller sets; singleton sets have no pairs',
             'split_sha256': partition_hash(result), 'forced_select_readers': sorted(forced), 'reader_identity': 'LibriVox initials shared across poetry and anniversary/project Gettysburg', 'lab_readers': sorted(seen), 'groups': result, 'excluded': excluded,
-            'expected_alignment_seconds': sum(r['duration_s'] * C.R2_ALIGNMENT_SECONDS_PER_AUDIO + C.R2_ALIGNMENT_SECONDS_PER_CLIP
-                                              for g in result for r in g['entries'])}
+            'expected_alignment_seconds': sum(_alignment_cost(r) for g in result for r in g['entries'])}
 
 
 def pair_ids(pool: dict, phase: str) -> list[tuple[str, str, str]]:

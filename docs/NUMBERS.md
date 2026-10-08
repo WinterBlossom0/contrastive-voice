@@ -1,129 +1,240 @@
-# Where every number comes from
+# Source of every number
 
-Every run-derived number in `docs/technical.md`, `README.md` and `docs/video_script.md`, one line each: where it appears, its value, and its source. All sources are files of the final run (detector configuration `32cdd86f3d6e`, splits train, val, test; `docs/evidence/results.json` has `final: true`). A selector such as `[split=test, group=all]` means the row with those field values. Each line was checked against its source file when this ledger was written.
+This file gives the source of each number in `docs/technical.md` and in the headline sections of `README.md`. Each row names a file and a JSON path, a table section or a code constant. It describes the frozen detector (`models/detector.json`, sha256 `d5935d3f8eeaf928a143b9b04db0c4250604a6c17f5336af87ef124c090758b6`, configuration `782d7df7589164fa7d06e10571369a28aaee6149834a346cfbe4d90e3832f092`) and its final evaluation (Kaggle kernel cvoice-build version 19, 2026-10-07 IST).
 
-Not listed here, because they are design constants rather than measurements: recipe settings (1.20 / 1.45 / 1.90 and the other level values), the 5 to 8 word span, the 35 % edited-word cap, the 20 to 40 s and 80 % passage rules, frame sizes, the IoU 0.5 criterion, the 0.20 s pause minimum, upload limits (50 MiB, 180 s) and the checkpoint size. The saturation values of the severity formula (ln 1.9, 1.0 s, 5 st, 1.5, 12 dB, 1.0) are `X_SAT` in `src/cvoice/config.py`. Their authority is `docs/DESIGN.md`, `src/cvoice/config.py` and `Dockerfile`. The PDF page count (6) is printed by `scripts/build_pdf.sh`.
+## Short names
 
-Also not listed here: values quoted from the research literature (for example the 5 % tempo difference, 3 semitones, 1.5 to 3 dB, the 0.2 s pause threshold, and the aligner's published word-boundary error of 48 and 89 ms). Each is traced to its reference and to the research report and line where it was recorded in `docs/GROUNDING.md`.
+The short names are the ones `docs/GROUNDING.md` uses. Run-output paths are relative to the output folder of the final Kaggle run, which is not part of the repository. The files that a reader needs are copied, byte for byte, to `docs/evidence_final_782d7df7/` (checksums in its `SHA256SUMS`).
 
-| Where it appears | Value | Source |
+| Short name | Repository copy | Run output it copies (same sha256) |
 |---|---|---|
-| technical: Summary; Results table, Test row; README: first paragraph; map, Temporal grounding | strict F1 0.879, all predictions counted (29 TP, 5 FP, 3 FN) | docs/evidence/results.json $.headline.by_split_strict[split=test, levels=headline (L2+L3), group=all]; docs/evidence/tables.md "Event F1" row all predictions counted / headline / test / all |
-| technical: Results table, Test row; README: map, Temporal grounding | strict F1 0.892, secondary firings exempt (29 TP, 4 FP, 3 FN) | docs/evidence/results.json $.headline.by_split[split=test, levels=headline (L2+L3), group=all] |
-| technical: Results table, Test row; README: map | overlap recall 32 of 32 | docs/evidence/results.json $.headline.overlap[levels=headline (L2+L3), split=test].touched / .truths |
-| technical: Results table, Test row; README: map | flag precision 32 of 34 (0.941) | docs/evidence/results.json $.headline.overlap[levels=headline (L2+L3), split=test].flags_on_flaw / .flags / .flag_precision |
-| technical: Summary; Results table; Limitations; README: first paragraph; Limits | test: 2 speakers, 8 L2+L3 clips, 32 L2+L3 edits | docs/evidence/results.json $.n.test.speakers; clips = rows of $.headline.per_speech with split=test; edits = their summed "of" |
-| technical: Results table, Train row; README: map, Temporal grounding | train (development): strict F1 0.884 all counted (76 TP, 16 FP, 4 FN) | docs/evidence/results.json $.headline.by_split_strict[split=train, levels=headline (L2+L3), group=all] |
-| technical: Results table, Train row; README: map, Temporal grounding | train (development): strict F1 0.921 secondary exempt (76 TP, 9 FP, 4 FN) | docs/evidence/results.json $.headline.by_split[split=train, levels=headline (L2+L3), group=all] |
-| technical: Results table, Train row | train: overlap recall 79 of 80; flag precision 80 of 92 (0.870) | docs/evidence/results.json $.headline.overlap[levels=headline (L2+L3), split=train] |
-| technical: Results table, Train row | train: 5 speakers, 20 clips, 80 edits | docs/evidence/results.json $.n.train.speakers; $.headline.per_speech rows with split=train (count, summed "of") |
-| technical: Results table, Validation row; README: map, Temporal grounding | validation (development): strict F1 0.811 all counted (30 TP, 12 FP, 2 FN) | docs/evidence/results.json $.headline.by_split_strict[split=val, levels=headline (L2+L3), group=all] |
-| technical: Results table, Validation row; README: map, Temporal grounding | validation (development): strict F1 0.882 secondary exempt (30 TP, 6 FP, 2 FN) | docs/evidence/results.json $.headline.by_split[split=val, levels=headline (L2+L3), group=all] |
-| technical: Results table, Validation row | validation: overlap recall 32 of 32; flag precision 32 of 42 (0.762) | docs/evidence/results.json $.headline.overlap[levels=headline (L2+L3), split=val] |
-| technical: Results table, Validation row | validation: 2 speakers, 8 clips, 32 edits | docs/evidence/results.json $.n.val.speakers; $.headline.per_speech rows with split=val (count, summed "of") |
-| technical: Results, "On test, by dimension" | slower pace: 4 TP / 0 FP / 0 FN | docs/evidence/results.json $.headline.by_split_strict[split=test, levels=headline (L2+L3), group=D1+] |
-| technical: Results, "On test, by dimension" | faster pace: 3 TP / 2 FP / 1 FN | docs/evidence/results.json $.headline.by_split_strict[split=test, levels=headline (L2+L3), group=D1-] |
-| technical: Results, "On test, by dimension" | longer pause: 4 TP / 0 FP / 0 FN | docs/evidence/results.json $.headline.by_split_strict[split=test, levels=headline (L2+L3), group=D2+] |
-| technical: Results, "On test, by dimension" | shorter pause: 4 TP / 0 FP / 0 FN | docs/evidence/results.json $.headline.by_split_strict[split=test, levels=headline (L2+L3), group=D2-] |
-| technical: Results, "On test, by dimension" | pitch range: 2 TP / 2 FP / 2 FN | docs/evidence/results.json $.headline.by_split_strict[split=test, levels=headline (L2+L3), group=D3-] |
-| technical: Results, "On test, by dimension" | emphasis: 4 TP / 1 FP / 0 FN | docs/evidence/results.json $.headline.by_split_strict[split=test, levels=headline (L2+L3), group=D4-] |
-| technical: Results, "On test, by dimension" | volume: 4 TP / 0 FP / 0 FN | docs/evidence/results.json $.headline.by_split_strict[split=test, levels=headline (L2+L3), group=D5-] |
-| technical: Results, "On test, by dimension" | spectral change: 4 TP / 0 FP / 0 FN | docs/evidence/results.json $.headline.by_split_strict[split=test, levels=headline (L2+L3), group=D6-] |
-| technical: Results, "The three misses" | 3 misses (2 MONOTONE, 1 RUSH), each touched by a flag of its dimension; 3 of the 5 false positives lie on those edits | docs/evidence/results.json $.headline.missed_detail[split=test, level>1] (type, touched) and $.headline.false_detail[split=test, level>1] (on_flaw) |
-| technical: Results, "The other two false positives" | 1 emphasis flag (D4-) inside the MONOTONE span of mobama_weekly_2014__single_L3A; 1 faster-pace flag (D1-) inside the FADE span of nixon_resignation_1974__single_L3A | docs/evidence/results.json $.headline.false_detail[split=test, on_flaw=false] (group, units) with the word spans in data/dataset/labels/<clip>.json |
-| technical: Results, "Trivial baselines" | test F1: no flags 0; flag everything 0.015; random regions 0.056 | docs/evidence/results.json $.trivial.totals.test.no_flags or flag_all or random as [TP, FP, FN], F1 = 2TP/(2TP+FP+FN); docs/evidence/tables.md "Trivial baselines" rows test |
-| technical: Results, table "Test: edits matched, of 2", row L1 | RUSH 2 / DRAG 2 / PAUSE_DROPPED 2 / PAUSE_INTRUSIVE 2 / MONOTONE 0 / DEEMPHASIS 1 / FADE 1 / MUMBLE 0 (each of 2) | docs/evidence/results.json $.headline.magnitude[split=test, level=1]: count of detected=true per type; docs/evidence/tables.md "Detection versus physical magnitude", column test k/n |
-| technical: Results, table "Test: edits matched, of 2", row L2 | RUSH 1 / DRAG 2 / PAUSE_DROPPED 2 / PAUSE_INTRUSIVE 2 / MONOTONE 1 / DEEMPHASIS 2 / FADE 2 / MUMBLE 2 (each of 2) | docs/evidence/results.json $.headline.magnitude[split=test, level=2]: count of detected=true per type; docs/evidence/tables.md "Detection versus physical magnitude", column test k/n |
-| technical: Results, table "Test: edits matched, of 2", row L3 | RUSH 2 / DRAG 2 / PAUSE_DROPPED 2 / PAUSE_INTRUSIVE 2 / MONOTONE 1 / DEEMPHASIS 2 / FADE 2 / MUMBLE 2 (each of 2) | docs/evidence/results.json $.headline.magnitude[split=test, level=3]: count of detected=true per type; docs/evidence/tables.md "Detection versus physical magnitude", column test k/n |
-| technical: Results, Sensitivity | L1 test: 10 of 16 matched, 0 FP, F1 0.769; pace and pause edits 8 of 8 | docs/evidence/results.json $.headline.by_split_strict[split=test, levels=sensitivity (L1), group=all or D1+ or D1- or D2+ or D2-] |
-| technical: Results, Sensitivity; Evaluation rubric (expectation) | design expectation for L1 in R1: detection near or below 50 % | docs/evidence/results.json $.expectation_table.R1; docs/evidence/tables.md "Expectation table" |
-| technical: Results, Timing | test median absolute onset error: 10 ms (RUSH, 3 regions) to 306 ms (MONOTONE, 2 regions) | docs/evidence/tables.md "Onset / offset absolute error of matched regions", rows test (n matched, onset median); per-region values in docs/evidence/results.json $.headline.onset_offset[split=test] |
-| technical: Results, Timing | test median absolute offset error: 35 ms (MUMBLE, 4 regions) to 232 ms (RUSH, 3 regions) | docs/evidence/tables.md same table, rows test (offset median) |
-| technical: Results, Timing | 8 matched test pause events: median absolute onset error 10 ms (largest 37 ms); median absolute offset error 33 ms (largest 108 ms) | docs/evidence/results.json $.headline.pause_localisation[split=test].pause_onset_ms / .pause_offset_ms (median and maximum of absolute values; medians 10.45 and 32.5, maxima 36.7 and 108.4); docs/evidence/tables.md "Pause localisation error" rows test |
-| technical: Results, Nulls; README: map, False flags | R1 test nulls: 0 false regions in 5.89 comparison-minutes; 12 variants of 2 recordings | docs/evidence/results.json $.nulls.rows["R1 test…"] and $.nulls.detail["R1 test"] (regions, minutes, unique_source_recordings, unique_variant_recordings) |
-| technical: Results, Nulls | R1 validation nulls: 0 false regions in 5.93 comparison-minutes | docs/evidence/results.json $.nulls.rows["R1 val…"] |
-| technical: Results, R2 Nulls; Limitations; Figure 1 right; README: map, False flags | R2 held-out reader pairs: 18 ordered pairs, 6 false regions in 7.76 comparison-minutes = 0.77 per minute (0.773) | docs/evidence/results.json $.nulls.rows["R2 held-out reader pairs…"]; docs/evidence/tables.md "False regions per minute on held-out nulls" |
-| technical: Results, R2 Nulls | all 6 are pitch-range (D3) flags; per reader 4, 2 and 0 | docs/evidence/results.json $.nulls.detail["R2 held-out"].reader_counts[].regions / .by_dimension; docs/evidence/tables.md "Reader-level R2 null counts" |
-| technical: Results, R2 Nulls | Greenman against Reagan, unedited: 0 regions in 0.54 minutes | docs/evidence/results.json $.nulls.rows["R2 orator-reference row…"] |
-| technical: Scoring methodology (R2); Figure 1; Results, R2 Nulls; README: map | training target 0.5 false regions per comparison-minute; 0.125 per scored dimension | models/detector.json $.regimes.R2.null.budget_per_dimension (0.125 x 4 enabled dimensions); constant FALSE_RATE_BUDGET in src/cvoice/config.py |
-| technical: Summary; Results, R2; Limitations; README: first paragraph; map, Different speakers | check readers: 18 injected edits, 1 flagged; 15 of the 18 move the reader away from the reference, 1 of those 15 flagged | docs/evidence/results.json $.cross_speaker.summary.check.detected / .truth; $.cross_speaker.edits with reader_group=check (18 rows, 1 with flagged=true); docs/evidence/tables.md "Cross-speaker flawed pairs" rows with reader group check |
-| technical: Results, R2; README: first paragraph; map, Different speakers | check readers: 14 of 15 flagged or among the five listed differences | docs/evidence/results.json $.cross_speaker.summary.check.flagged_or_listed / .truth |
-| technical: Results, R2; README: map, Different speakers | check readers: 3 repair controls, 0 flagged; 18 edits in 9 clips | docs/evidence/results.json $.cross_speaker.summary.check.repair_controls / .controls_detected; $.cross_speaker.edits with reader_group=check (18 edits, 9 clips) |
-| technical: Results, R2 ("an L3 DRAG on a span where the reader was already slower") | the flagged edit is DRAG in gettysburg_dj__x2_L3; pace difference before the edit +0.31 ln | docs/evidence/results.json $.cross_speaker.edits[clip=gettysburg_dj__x2_L3, type=DRAG].detected / .x_clean |
-| technical: Results, R2; README: map, Different speakers | Greenman against Reagan: 1 of 6 flagged; 4 of 6 flagged or listed | docs/evidence/results.json $.cross_speaker.summary.train.detected / .flagged_or_listed / .truth |
-| technical: Scoring methodology, threshold table, D3 "L3 edit size" | 4.1 to 6.4 semitones (pitch-range difference of the 3 check readers after L3 MONOTONE) | docs/evidence/results.json $.cross_speaker.edits[reader_group=check, type=MONOTONE].x_edited (absolute values 4.10, 4.71, 6.38) |
-| technical: Scoring methodology, threshold table, D1 R1; README: screenshot text "flagged above 18 %" | R1 Pace: scale 0.095 x h 1.7 = 0.162 (e^0.162 = 1.18, 18 %) | models/detector.json $.regimes.R1.scales.D1 x $.regimes.R1.h.D1 |
-| technical: Scoring methodology, threshold table, D2 R1 | R1 Pauses: scale 0.15 x h 1.7 = 0.255 | models/detector.json $.regimes.R1.scales.D2 x $.regimes.R1.h.D2 |
-| technical: Scoring methodology, threshold table, D3 R1 | R1 Pitch range: scale 2.0 x h 1.7 = 3.4 | models/detector.json $.regimes.R1.scales.D3 x $.regimes.R1.h.D3 |
-| technical: Scoring methodology, threshold table, D4 R1 | R1 Emphasis: scale 0.5 x h 1.7 = 0.85 | models/detector.json $.regimes.R1.scales.D4 x $.regimes.R1.h.D4 |
-| technical: Scoring methodology, threshold table, D5 R1 | R1 Volume: scale 2.0 x h 1.7 = 3.4 | models/detector.json $.regimes.R1.scales.D5 x $.regimes.R1.h.D5 |
-| technical: Scoring methodology, threshold table, D6 R1 | R1 Spectral change: scale 0.223 x h 1.7 = 0.379 | models/detector.json $.regimes.R1.scales.D6 x $.regimes.R1.h.D6 |
-| technical: Scoring methodology, threshold table, D1 R2; README: Two regimes | R2 Pace: scale 0.164 x h 5.60 = 0.916 (e^0.916 = 2.5 times) | models/detector.json $.regimes.R2.scales.D1 x $.regimes.R2.h.D1; also docs/evidence/STATUS.json $.detector.h.R2.D1 |
-| technical: Scoring methodology, threshold table, D2 R2; README: Two regimes | R2 Pauses: scale 0.504 x h 2.65 = 1.34 | models/detector.json $.regimes.R2.scales.D2 x $.regimes.R2.h.D2; also docs/evidence/STATUS.json $.detector.h.R2.D2 |
-| technical: Scoring methodology, threshold table, D3 R2; README: Two regimes | R2 Pitch range: scale 3.48 x h 3.05 = 10.6 | models/detector.json $.regimes.R2.scales.D3 x $.regimes.R2.h.D3; also docs/evidence/STATUS.json $.detector.h.R2.D3 |
-| technical: Scoring methodology, threshold table, D5 R2; README: Two regimes | R2 Volume: scale 4.34 x h 5.25 = 22.8 | models/detector.json $.regimes.R2.scales.D5 x $.regimes.R2.h.D5; also docs/evidence/STATUS.json $.detector.h.R2.D5 |
-| technical: Scoring methodology, threshold table, D4 and D6 R2 | not flagged in R2 (h = null) | models/detector.json $.regimes.R2.h.D4 / .D6; $.regimes.R2.enabled |
-| technical: Scoring methodology, R1 ("the scales are the physical floors") | R1 scales equal the floors ln 1.10, 0.15 s, 2.0 st, 0.5, 2.0 dB, ln 1.25 | models/detector.json $.regimes.R1.scales against FLOORS in src/cvoice/config.py |
-| technical: Scoring methodology, R1 selection | h = 1.7: train 76 TP, 20 FP, 4 FN, F1 0.864; 4 of the FP are on controls, all on the 5 noisy identity clips | docs/evidence/calibration/report.json $.R1_selection[h=1.7] (TP, FP, FN, F1, control_regions = 4); the controls are the 30 identity and placebo clips plus 5 noise clips ($.nuisance_controls), and the 30 identity and placebo clips have 0 regions (models/detector.json $.regimes.R1.null.regions_by_dimension), so the 4 lie on the noise clips; models/detector.json $.regimes.R1.h |
-| technical: Scoring methodology, R1 selection | h = 1.0: 44 FP, F1 0.760 | docs/evidence/calibration/report.json $.R1_selection[h=1.0] |
-| technical: Scoring methodology, R2 | 30 ordered calibration pairs of 6 readers; 3 regions in 13.6 minutes (0.22 per minute) | models/detector.json $.regimes.R2.null (n_pairs, regions_by_dimension summed, minutes 13.598, false_per_minute_at_h 0.2206); pair list in docs/evidence/calibration/report.json $.nulls.R2 |
-| technical: Scoring methodology, R2 | leave-one-reader-out h ranges: D1 4.5 to 5.75; D2 2.0 to 2.7; D3 2.65 to 3.1; D5 4.15 to 5.35 | docs/evidence/calibration/report.json $.R2_leave_one_reader_out.threshold_ranges.<D>.min / .max |
-| technical: Scoring methodology, R2 | leave-one-reader-out thresholds (h x refitted scale): D1 0.73 to 0.92 ln; D2 0.98 to 1.34 s; D3 8.5 to 10.7 st; D5 15.9 to 22.8 dB; the 0.98 s pause threshold is the refit without reader wt (2.0 x 0.489) | docs/evidence/calibration/report.json $.R2_leave_one_reader_out.rows[].h.<D> x .scales.<D> (minimum and maximum over the 6 rows; D2 minimum at removed_reader=gettysburg_wt) |
-| technical: Scoring methodology, Scores | Pmax factor 0.645 | models/detector.json $.report.pmax_factor; docs/evidence/STATUS.json $.detector.pmax_factor |
-| technical: Scoring methodology, Scores; README: map, Scoring rubric | score gates: 0 violations on 50 train clips and 20 validation clips | models/detector.json $.report.gates_train / .gates_val (n_clips, violations) |
-| technical: Results, Feature consistency; README: map, Feature extraction | test median of paired ratios: 0.55 (MONOTONE L2, 0.547) to 1.50 (FADE L1) for windowed dimensions; for pause and emphasis events the ratio is 1.00 by construction (both sides are the same measurement), stated as "no check exists" | docs/evidence/tables.md "Feature internal consistency", rows test, last column; docs/evidence/results.json $.validity.rows[split=test] |
-| technical: Stress testing, table 1 header | exposure: R1 validation 0.99 min, R1 test 0.98 min, R2 check readers 7.76 min (18 pairs); 2 identity clips per split | docs/evidence/results.json $.stress.rows[].minutes / .measurable_score_pairs; gallery/stress_matrix.md column "exposure (min)" |
-| technical: Stress testing, table 1, Gain; README: map, Stress testing | gain +6 dB and -6 dB: 0 added, score change 0 (R1 validation, R1 test); R2 0 added, score change 0.05 and 0 | docs/evidence/results.json $.stress.rows[split, condition=gain +6 dB or gain -6 dB]; gallery/stress_matrix.md same rows |
-| technical: Stress testing, table 1, Low-pass; README: map, Stress testing | low-pass 3.4 kHz: validation 0 added; test 2 added (both pace, D1-), score change 0.28; R2 0 added, 0.06 | docs/evidence/results.json $.stress.rows[split, condition=low-pass 3.4 kHz] (added, added_by_dim, max_abs_delta_score) |
-| technical: Stress testing, table 1, White noise; README: map, Stress testing | white noise 20 dB SNR: validation 1 added (pace), 0.02; test 1 added (pace), 0; R2 1 added (pace), 0.07 | docs/evidence/results.json $.stress.rows[split, condition=white noise 20 dB SNR] |
-| technical: Stress testing, table 1, MP3; README: map, Stress testing | MP3 64 kbit/s: 0 added, 0 (validation, test); R2 0 added, 1 removed, 0.03 | docs/evidence/results.json $.stress.rows[split, condition=MP3 64 kbit/s] |
-| technical: Stress testing, table 1, Compression; Limitations; README: map, Stress testing | compression: validation 5 added (1 pace D1+, 2 pause D2-, 2 volume D5-), 5.54; test 5 added (2 pause D2-, 3 volume D5-), 9.45; R2 0 added, 0.05 | docs/evidence/results.json $.stress.rows[split, condition=dynamic-range compression] |
-| technical: Stress testing, paragraph after table 1; README: map | achieved compression reduction: 10.2 dB (R1 validation and test identity clips), 11.1 dB (reader clips) | docs/evidence/results.json $.stress.rows[condition=dynamic-range compression].compression_gain_reduction_db; gallery/stress_matrix.md column "achieved compression reduction (dB)" |
-| technical: Stress testing, paragraph after table 1 | WORLD speaker transform under R2: 0 regions (0.99 min validation, 0.98 min test) | docs/evidence/results.json $.stress.rows[condition=WORLD speaker transform…] |
-| technical: Stress testing, table 2, validation; Limitations; README: map, Stress testing; Limits | white noise 20 dB SNR on edited clips, validation: edits found 30 to 28 of 32; 5 regions added, 4 removed; largest score change 5.66 | docs/evidence/results.json $.stress.rows[split=val, condition=white noise 20 dB SNR (flawed L2+L3)] (flaws_found_before, flaws_found_after, added, removed, max_abs_delta_score) |
-| technical: Stress testing, table 2, test; Limitations; README: map, Stress testing; Limits | white noise 20 dB SNR on edited clips, test: edits found 29 to 27 of 32; 3 regions added, 1 removed; largest score change 7.66 | docs/evidence/results.json $.stress.rows[split=test, condition=white noise 20 dB SNR (flawed L2+L3)] (flaws_found_before, flaws_found_after, added, removed, max_abs_delta_score) |
-| technical: Stress testing, table 2, validation, and paragraph after table 1; README: Limits | dynamic-range compression on edited clips, validation: edits found 30 to 28 of 32; 31 regions added (10 pause D2-, 8 volume D5-, 10 pace: 9 D1+ and 1 D1-, 3 emphasis D4-), 7 removed; largest score change 7.06; achieved reduction 10.2 dB | docs/evidence/results.json $.stress.rows[split=val, condition=dynamic-range compression (flawed L2+L3)] (flaws_found_before, flaws_found_after, added, added_by_dim, removed, max_abs_delta_score) |
-| technical: Stress testing, table 2, test; Limitations; README: map, Stress testing; Limits | dynamic-range compression on edited clips, test: edits found 29 to 24 of 32; 17 regions added, 3 removed; largest score change 6.19; achieved reduction 10.0 dB | docs/evidence/results.json $.stress.rows[split=test, condition=dynamic-range compression (flawed L2+L3)] (flaws_found_before, flaws_found_after, added, removed, max_abs_delta_score) |
-| technical: Stress testing, table 2 (test compression) | the 17 regions added by compression on edited test clips: 8 pause (D2-), 9 volume (D5-) | docs/evidence/results.json $.stress.rows[split=test, condition=dynamic-range compression (flawed L2+L3)].added_by_dim |
-| technical: Stress testing, Chain A against chain B | validation: A 12 of 12, 0 false regions; B 12 of 12, 1 false region | docs/evidence/results.json $.chain_b.rows[split=val, chain] (sum TP, truths, false_regions); docs/evidence/tables.md "Chain A versus chain B" |
-| technical: Stress testing, Chain A against chain B | test: A 9 of 12, B 10 of 12, 2 false regions each; RUSH and DRAG 4 of 4 on both chains and splits; MONOTONE test A 1 of 4, B 2 of 4 | docs/evidence/results.json $.chain_b.rows[split=test, chain, type] |
-| technical: Stress testing, Repair test; README: map, Causal explanation | test: flag removed in 10 of 10 repairs; score rises in 10 of 10; flag kept in 10 of 10 placebos | docs/evidence/results.json $.repair.rows[split=test] (repaired, placebo_kept, score_before, score_after); $.repair.by_type.test |
-| technical: Stress testing, Repair test; README: map, Causal explanation | validation: 11 of 12 repairs remove the flag; 12 of 12 placebos keep it | docs/evidence/results.json $.repair.rows[split=val]; $.repair.by_type.val |
-| technical: Stress testing, Repair test | the unrepaired case is the L3 FADE of lbush_radio_2001__single_L3A, score 74.9 to 81.2 | docs/evidence/results.json $.repair.rows[clip=lbush_radio_2001__single_L3A, type=FADE] |
-| technical: Stress testing, Repair test | one RUSH repair (eisenhower_farewell_1961__single_L2A) removes the flag and lowers the score 90.9 to 90.6 | docs/evidence/results.json $.repair.rows[clip=eisenhower_farewell_1961__single_L2A, type=RUSH] |
-| technical: Stress testing, Repair test | no repair created a new flag; the L3 FADE repairs are the two validation FADE cases | docs/evidence/results.json $.repair.rows[].new_flags (all empty); clip names of the FADE rows |
-| technical: Stress testing, Directional test; README: map, Scoring rubric | 72 cells, 3 violations, all train (obama PAUSE_INTRUSIVE "pause not measured at the labelled boundary", L2 score 100; obama MONOTONE; hclinton MONOTONE); validation 0 of 16, test 0 of 16; README states 69 of 72 without violation | docs/evidence/results.json $.directional.cells / .violations; docs/evidence/tables.md "Directional test" rows per split |
-| technical: Stress testing, Devices and repeatability; README: map, Feature extraction; Reproduce | GPU against CPU: test 3 clips of one speaker (Michelle Obama: single L1A, L1B, L2A), 4 recordings, 0 ms, identical flags; validation the same; 8 recordings in total | docs/evidence/results.json $.device_agreement.rows[split=test or val or val+test]; docs/evidence/tables.md "Device agreement"; the clips are the first three single-level clips of each split by id (src/cvoice/evaluate.py, device_section) |
-| technical: Stress testing, Devices and repeatability; README: map, Reproducibility | two analyses of one validation clip (eisenhower_farewell_1961__single_L3A) give identical JSON | docs/evidence/results.json $.reproducibility (clip, identical) |
-| technical: Figure 1, left panel caption | validation and test pooled: 4 speeches, 4 edits per type and level | docs/evidence/results.json $.n["val+test"].speakers / .trials_per_type_level; figure docs/evidence/figures/detection_vs_level.png |
-| technical: Dataset construction, Clips; README: What is in the repository; map, Dataset | 121 audio files, 54.1 minutes: 9 baselines, 10 reader clips, 102 generated clips | data/dataset/manifest.json $.counts (files, minutes, baselines, readers, flawed); docs/evidence/STATUS.json $.dataset_counts |
-| technical: Dataset construction, Clips; README: map, Dataset | 9 identity, 54 single-level, 27 ladder, 12 cross-speaker clips | data/dataset/manifest.json $.clips[].kind (counts of identity, single, ladder, cross) |
-| technical: Dataset construction, Sources | passages 21.4 to 31.1 s, 51 to 91 words | data/dataset/manifest.json $.baselines[].duration_s / .n_words; data/dataset/dataset_card.md source table |
-| technical: Dataset construction, Sources | split by speaker 5 train, 2 validation, 2 test; readers: 6 calibration, 3 check, 1 Greenman (train group) | data/dataset/manifest.json $.baselines[].split and $.readers[].split |
-| technical: Dataset construction, Labels | edited share of clip time reaches 36.6 % (obama_weekly_2009__single_L3B) | data/dataset/manifest.json $.clips[kind=single].edit_support_time_share (maximum); data/dataset/dataset_card.md table "edit-support time share" |
-| technical: Dataset construction, Clips ("two edits each") | cross-speaker clips carry 2 edits each (24 edits); single-level clips 4 each | data/dataset/manifest.json $.clips[kind=cross or single].n_flaws |
-| README: Reproduce (Kaggle); What is in the repository | 19 source recordings | data/sources_manifest.json $.entries (length) |
-| technical: Reproducing; README: Reproduce; map, Reproducibility | final run 652.7 s in total; bootstrap 72.2 s; dataset 144.3 s; calibration 61.7 s; evaluation 338.9 s; gallery 17.4 s; 4 of 4 stages complete | docs/evidence/STATUS.json $.total_seconds, $.bootstrap_seconds, $.stages[name].seconds / .ok, $.complete |
-| technical: Reproducing; README: Reproduce | 4 workers on 2 Tesla T4 GPUs | docs/evidence/STATUS.json $.device_plan.workers / .gpus |
-| technical: title block; Reproducing; README: Reproduce (Test split); What is in the repository | detector configuration 32cdd86f3d6e; test split evaluated in 1 recorded run; ledger holds detector, manifest and project hashes | models/detector.json $.config_sha256 (first 12 characters); models/final_evaluations.json $.<config hash>.runs / .splits / .detector_sha256 / .manifest_sha256 / .project_sha256; docs/evidence/results.json $.final = true |
-| technical: Model architecture, quoted explanation; README: screenshot paragraph | L3A example, finding #3 Rushed: 15.80 to 17.14 s; 0.87 s against 1.62 s; 86 % faster; 6.5 x tolerance; flagged above 18 %; costs 4.1 points; score with penalty removed 89.2 | gallery/results/L3A.json $.flaws[id=d1-003] (p, participant, baseline, tolerance_multiple, points_lost, overall_if_fixed, text); visible in docs/img/dashboard.png |
-| README: screenshot paragraph | Level 3, Set A: delivery score 85.1; 6 flagged regions; 4 injected edits | gallery/results/L3A.json $.scores.overall (85.12), $.flaws (length), $.truth (length); visible in docs/img/dashboard.png |
-| README: Two regimes, second screenshot paragraph | Greenman edited: inserted 1.2 s pause and 14 dB fade (L3), 0 flagged regions, score 100.0; the two edits are entries 4 and 5 of the five listed differences | gallery/results/greenman_edited.json $.truth, $.flaws (empty), $.scores.overall, $.differences (x4 lower level, x5 longer pause overlap the two edits); docs/evidence/tables.md "Cross-speaker flawed pairs" row greenman_reagan__x3_L3; visible in docs/img/dashboard_other_speaker.png |
-| README: What is in the repository; map, Dashboard | 13 gallery examples | gallery/index.json $.items (length); files in gallery/results/ |
-| technical: Dataset construction, Labels | label check, largest difference between re-aligned and carried word times: 280 ms on test (mobama_weekly_2014__single_L3B), 607 ms on train (obama_weekly_2009__single_L2B), 1.58 s on validation (eisenhower_farewell_1961__single_L3A); Eisenhower identity clip 640 ms | data/dataset/label_qa.json $.clips[].all_words.max_ms (maximum per split; split of each clip from data/dataset/manifest.json $.baselines[].split) |
-| technical: Scoring methodology, Scores | the gates were not checked on test: 6 test ladder clips and 2 test identity clips | models/detector.json $.report has gates_train and gates_val only; data/dataset/manifest.json $.clips[kind=ladder or identity] of the 2 test baselines (3 ladder and 1 identity clip each) |
-| technical: Scoring methodology, table "Score by rung" (train row) | mean overall score, lowest to highest: identity 100 (5 clips); G1 99.9, 99.8 to 100 (5); L1 98.6, 96.2 to 99.5 (10); G3 95.3, 91.3 to 99.0 (5); L2 91.8, 87.3 to 95.0 (10); L3 83.5, 75.7 to 86.9 (10); G5 34.7, 22.5 to 48.5 (5) | docs/evidence/calibration/report.json $.train_penalties[] (P, scored_dims, recipe) with models/detector.json $.score.pmax: overall = mean over scored_dims of 100 x max(0, 1 - P_k / pmax_k), then mean, minimum and maximum per recipe (single_L1A and single_L1B together are L1, and so on). The formula reproduces the ten Reagan scores in gallery/index.json $.items[].overall to two decimals |
-| technical: Scoring methodology, table "Score by rung" (validation row); README: map, Scoring rubric | identity 100 (2 clips); G1 99.8, 99.6 to 100 (2); L1 97.7, 94.1 to 99.9 (4); G3 94.8, 92.1 to 97.5 (2); L2 89.6, 88.8 to 90.9 (4); L3 78.6, 74.9 to 85.3 (4); G5 36.0, 34.7 to 37.3 (2) | docs/evidence/calibration/report.json $.val_penalties[] with models/detector.json $.score.pmax, same computation |
-| technical: Results, "Per speaker F1"; README: map, Temporal grounding | strict F1, all counted, per speaker: Michelle Obama 0.848 (14 TP, 3 FP, 2 FN); Nixon 0.909 (15, 2, 1); Eisenhower 0.750 (15, 9, 1); Laura Bush 0.882 (15, 3, 1) | docs/evidence/results.json $.headline.per_speech[speech]: TP = summed detected, FP = summed strict_false_regions, FN = summed (of - detected); F1 = 2TP / (2TP + FP + FN) |
-| technical: Results, Sensitivity | validation L2 FADE: 0 of 2 matched | docs/evidence/tables.md "Detection versus physical magnitude", row FADE level 2, column val k/n; docs/evidence/results.json $.headline.magnitude[split=val, level=2, type=FADE] |
-| technical: Results, Timing; Limitations; README: map, Temporal grounding; Limits; video script: Shot 7 | test matched windowed regions: largest onset error 550 ms (MONOTONE), largest offset error 980 ms (MUMBLE); 9 of 17 with an onset or offset error above 200 ms | docs/evidence/results.json $.headline.onset_offset[split=test] (17 rows; maximum of absolute onset_ms and offset_ms; count with either above 200) |
-| technical: Results, Nulls; README: map, False flags | unmatched flags on L2 and L3 edited clips: test 5 in 3.99 minutes, 2 of them off any edit; validation 12 in 3.97 minutes, 10 off any edit | docs/evidence/results.json $.headline.by_split_strict[split, levels=headline (L2+L3), group=all] (FP); minutes from $.headline.false_on_flawed[split, levels=headline (L2+L3)].minutes; off-edit count = $.headline.false_detail[split, level>1] with on_flaw=false |
-| technical: Results, R2 Nulls | the 6 false regions come from 3 of the 18 pairs (dl against sa 1, pc against dj 2, pc against sa 3); 5 of 6 against reference reader gettysburg_pc; with pc left out the pitch threshold is 8.5 st (2.65 x 3.193) | docs/evidence/results.json $.nulls.detail["R2 held-out"].by_pair; docs/evidence/calibration/report.json $.R2_leave_one_reader_out.rows[removed_reader=gettysburg_pc].h.D3 x .scales.D3 |
-| technical: Results, R2 injected edits; README: map, Different speakers | the 15 away-from-reference edits: 12 at L3, 3 at L2; flagged 1 of 12 at L3, 0 of 3 at L2; RUSH and PAUSE_DROPPED exist at L2 only; all 9 check clips compared with reference reader gettysburg_amb | docs/evidence/results.json $.cross_speaker.edits[reader_group=check] (direction, flagged, level from the clip name x1_L2, x2_L3, x3_L3); CROSS_SPEAKER_CLIPS in src/cvoice/config.py; reference reader in docs/DESIGN.md section 2.3 |
-| technical: Results, R2 injected edits; README: first paragraph; map, Different speakers | of up to 45 listed entries on the 9 check clips (5 per clip at most), 13 lie on an injected edit | docs/evidence/results.json $.cross_speaker.edits[reader_group=check] with difference_rank not null (13 rows); list length MAX_DIFFERENCES = 5 in src/cvoice/config.py |
-| technical: Results, R2 (after the list) | check-reader curve: pauses at h = 2 give 0.13 false regions per minute (0.129) with 3 of 3 inserted pauses found; volume at h = 3 gives 0 with 2 of 3 fades found | docs/evidence/tables.md "Cross-speaker operating curve", rows D2 h=2 and D5 h=3; docs/evidence/results.json $.cross_speaker.curve |
-| technical: Stress testing, Repair test; README: map, Causal explanation | repair exists for six of the eight edit types (RUSH, DRAG, PAUSE_DROPPED, PAUSE_INTRUSIVE, MONOTONE, FADE); the inverse is sized from the detector's measured difference | docs/evidence/results.json $.repair.by_type.test / .val (keys); src/cvoice/evaluate.py, repair_audio |
-| technical: Stress testing, Directional test | some cells pass with equal scores at two or three levels (for example Eisenhower PAUSE_DROPPED 74.2, 74.2, 74.2) | docs/evidence/tables.md "Directional test" |
-| README: Reproduce (Test split) | evaluated source snapshot: project hash b18bb8de… | models/final_evaluations.json $.<config hash>.project_sha256 |
-| video script: Before recording; Shots 14 and 15 | upload of data/dataset/flawed/greenman_reagan__x2_L3.wav against the bundled reference: regime R2, overall 99.99, 1 flagged region (slower, 11.42 to 13.48 s, "up there that I", 153 % longer, 5.7 x the tolerance, flagged above 150 %, 0.01 points), 5 listed differences; the MONOTONE edit is not flagged | build/work/upload_result_x2.json $.regime, $.scores.overall, $.flaws (length 1; p, text, points_lost), $.differences (length 5); this file is a saved result of the local server (2 October 2026), outside the final-run evidence. Cross-check in the final run: docs/evidence/results.json $.cross_speaker.edits[clip=greenman_reagan__x2_L3] (DRAG flagged=true, MONOTONE flagged=false) |
-| video script: Shot 6 | gallery chip scores: Identity 100.0, Level 1 Set A 97.2, Level 2 Set A 95.0, Level 3 Set A 85.1, G5 40.2 | gallery/index.json $.items[id=identity or L1A or L2A or L3A or G5].overall |
+| R | `docs/evidence_final_782d7df7/results.json` | `eval/results.json` (sha256 `49a306d9…`) |
+| A | `docs/evidence_final_782d7df7/addendum.json` and `addendum.md` | `eval/addendum.json`, `eval/addendum.md`; computed after the final evaluation from saved outputs (`src/cvoice/addendum.py`) |
+| T | `docs/evidence_final_782d7df7/tables_rendered.md` (cited by section title) | `eval/tables_rendered.md`, re-rendered from R |
+| D | `models/detector.json` | `models/detector.json` (sha256 `d5935d3f…`) |
+| K | `docs/evidence_final_782d7df7/calibration/report.json` | `calibration/report.json` (sha256 `0f25392b…`) |
+| S | `docs/evidence_final_782d7df7/STATUS.json` | `../STATUS.json` |
+| F | `models/final_evaluations.json` (also `docs/evidence_final_782d7df7/final_evaluations.json`) | `models/final_evaluations.json` (sha256 `4d13595c…`) |
+| C | `docs/evidence_final_782d7df7/dataset_card.md` | `data/dataset/dataset_card.md` |
+| M | not copied (5.8 MB) | `data/dataset/manifest.json` (sha256 `d67c9cd9…`); C lists the same recordings |
+| G | `gallery/results/<item>.json`, `gallery/index.json`, `gallery/evaluation.json` | rebuilt on CPU with the frozen detector after the final evaluation (`gallery/index.json` `provenance`) |
+| E1 | `docs/evidence_final_32cdd86f3d6e/results.json` | the earlier final evaluation (2026-10-02, configuration `32cdd86f…`) |
+| L | section 9 of `docs/technical.md` (stated limits, verbatim, numbered as in the review) | the review's stated-limits file with a numbers-and-sources list per limit (not in the repository; the sources are repeated in section 9 below) |
+
+Notation: `rows[split=test, levels=headline (L2+L3)]` means the row of a list whose fields have these values. "Pre-registered" = all predictions counted; "one per change" = one detection per change, same-change duplicates reported separately (introduced after the plan).
+
+## Summary and section 1 (problem, regimes)
+
+| Number | Meaning | Source |
+|---|---|---|
+| D1 to D9, nine quantities | keys of the comparison | `src/cvoice/config.py` `DIMS`; D `regimes.R1.scales` |
+| 0.812; TP 28, FP 9, FN 4; 0.800 and 0.824 | core-8 test F1, L2+L3, pre-registered; per speaker (mobama_weekly_2014, nixon_resignation_1974) | A `accounting.rows[tier=core8, levels=headline (L2+L3), split=test].pre_registered` and `.pre_registered_per_speaker`; A §1 table |
+| 0.879 (one per change) | core-8 test F1, L2+L3 | R `headline.groups.core8.by_split_strict[group=all, split=test, levels=headline (L2+L3)]`; A `accounting.rows[…test].count_once` |
+| 0.879 (earlier final) | test F1 of configuration `32cdd86f…`, all predictions counted | A `accounting.rows[…test].first_final`; E1 `headline.by_split_strict` (test); F entry `32cdd86f…` |
+| 0.46, upper 95 % 0.54 | R2 lockbox, one reference, false regions per comparison-minute, equal source weights | R `lockbox.modes.single.total_local.rate` (0.4601), `.bootstrap_upper95` (0.5377) |
+| 1 of 18, 4 of 17 | R2 check readers, single reference, level 3: RUSH, PAUSE_DROPPED detected | R `cross_speaker.modes.single.by_type`; A `r2_by_reader.single`; A §5 "R2 check readers (single)" |
+| 30 % | two expert raters gave the same "vocal expression" score | [2], `docs/GROUNDING.md` "Reference-relative comparison" |
+| 985 readers (fit set) | R2 fit set size | M `r2_pool.groups[].entries[].null_set` = fit (count); C table, split column |
+| six readings (Gettysburg bank), median of five | upload reference bank | `gallery/index.json` `baselines[id=gettysburg_address]` (`consensus_k` 5, 6 `references`) |
+| `UPLOAD_REGIME = "R2"` | every upload is R2 | `src/cvoice/app.py` |
+
+## Section 2 (data engineering)
+
+| Number | Meaning | Source |
+|---|---|---|
+| 9 baselines, split 5 / 2 / 2 | baseline speeches by split | C first table (split column); R `n.<split>.speakers` |
+| 21.4–31.1 s, 51–91 words | baseline passage durations and word counts | C first table, columns "passage (s)" and "words" (rows with split train/val/test) |
+| 10 (6 + 3 + 1) | LibriVox calibration, check readers, Greenman | C first table rows `gettysburg_*` (calibration, check), `greenman_reagan`; M `readers[].role` |
+| 779, 856, 308; 1943 | R2 null-pool readings: Speech Accent Archive (CC BY-NC-SA 4.0), EARS (CC BY-NC 4.0), LibriVox poetry and Gettysburg (public domain); total | M `readers[role=null_reader]` counted by `licence_basis`; C table rows `null_*` by licence column |
+| 19 source recordings | entries of the source manifest | `data/sources_manifest.json` `entries` |
+| `d67c9cd9…`, byte-identical | dataset manifest of development run v13 (2026-10-06) and of the final run | S `dataset_manifest_sha256`; `STATUS.json` `dataset_manifest_sha256` of development run v13 (not in the repository); `sha256sum` of both `manifest.json` files |
+| Core recipe levels (1.20/1.45/1.90; 0.40/0.20/0.06 s; 0.35/0.60/1.20 s; 0.50/0.25/0; 0.5/0.75/1.0; 4/8/14 dB; 0.3/0.6/1.0) | core-8 edit magnitudes | `src/cvoice/config.py` `LEVEL_PARAM`, `PAUSE_FLOOR_S` (0.06), `PAUSE_DROP_MIN_BASE_S` (0.5) |
+| fifteen further types | extra recipe types | `src/cvoice/config.py` `FLAW_REGISTRY` entries added after the core 8 (`EXTRA_SINGLE_LEVEL_SETS`) |
+| ×1/1.13 to ×1/1.18 | natural-rush word-time compression | `src/cvoice/config.py` `RUSH_RATE` (1.13, 1.15, 1.18) |
+| 118; 53, 28, 21, 9, 7 | realisation shortfalls by type | M `realisation_shortfalls` (count by `type`) |
+| 82 | events excluded from evaluation truth | R `realisation_shortfalls.excluded_events` |
+| 2410 files, 1109.2 min, 9, 1953, 448 | dataset counts | S `dataset_counts` |
+| 162, 27, 9, 130, 116, 4 | edited clips by kind: single, ladder, identity, extra_botched, cross, cross_botched | M `clips[].kind` (count) |
+| 90 (5), 36 (2), 36 (2) | R1 single-level clips (speakers) per split | R `n.train`, `n.val`, `n.test` (`clips`, `speakers`) |
+| 30 groups: 1, 8, 20, 1 | same-text groups by source (accent, EARS, poetry, Gettysburg) | M `r2_pool.groups` (source prefix of `group`) |
+| 985, 707, 251 | planned fit, select, lockbox readers | M `r2_pool.groups[].entries[].null_set` (count); C split column |
+| 192, 45, 14 | lockbox readers measured (accent, poetry); poetry readings excluded, text not located | R `lockbox.readers_by_source`; R `lockbox.excluded` |
+
+## Section 3 (feature extraction)
+
+| Number | Meaning | Source |
+|---|---|---|
+| 20 ms | CTC frame | `src/cvoice/config.py` `CTC_FRAME_S` |
+| 48 ms, 89 ms | published word-boundary error of wav2vec 2.0 CTC alignment (TIMIT, Buckeye) | [100]; `docs/GROUNDING.md` §11 "Forced alignment" |
+| 25 ms, 10 ms | frame and hop | `src/cvoice/config.py` `WIN` = 400 and `HOP` = 160 samples at `SR` = 16 kHz |
+| 0.20 s | pause minimum | `src/cvoice/config.py` `PAUSE_MIN_S` |
+| five words | window | `src/cvoice/config.py` `WINDOW_WORDS` |
+| 0.5 s | dropped-pause eligibility | `src/cvoice/config.py` `PAUSE_DROP_MIN_BASE_S` |
+| +1 st, P90 − P10 | pitch-range regulariser and percentiles | `src/cvoice/compare.py` `d3_pitch`; `docs/GROUNDING.md` §3 System |
+| MFCC 1–12 | clarity proxy coefficients | `src/cvoice/features.py` `mfcc_delta_magnitude`; `docs/GROUNDING.md` §6 System |
+| 0.20 s (D8 final part) | final window of a sentence-final word | `src/cvoice/features.py` `final_pitch_word`; `docs/GROUNDING.md` §8 System |
+| scored / shown / listed per regime | keys per regime | D `regimes.R1.enabled`, `regimes.R2.enabled`; `src/cvoice/config.py` `REGIME_DIMS`, `LISTED_DIMS`, `OWNER_LISTED` |
+| 0.39 at 0.10 false | D7 lab gate, LibriStutter word-duration ratio | R `real_validation.D7+.reason`; `docs/research/design/LAB_DECISIONS.md` |
+| 2 eligible ending events | reason D8 is listed | `src/cvoice/config.py` `OWNER_LISTED['R1']['D8']` |
+| 0 of 68 | development run v13 R2 rush positives, reason D9 is listed in R2 | `src/cvoice/config.py` `OWNER_LISTED['R2']['D9']` |
+| 12,868 recordings, 48 tests | lab kernel v2 | `docs/research/design/LAB_DECISIONS.md` (source line) |
+| precision 0.54, recall 0.15; six labels failed | filled-pause candidate on PodcastFillers; other pattern labels | R `real_validation.labels`; D `regimes.R1.pattern_labels`; `docs/research/design/LAB_DECISIONS.md` |
+
+## Section 4 (detection and calibration)
+
+| Number | Meaning | Source |
+|---|---|---|
+| 1.4826, 68th percentile | robust scale terms | `src/cvoice/detect.py` module docstring and `fit_scales`; [104] |
+| h/2, 0.5 × peak; pitch range h/2 only | region extension rule | `src/cvoice/config.py` `HYSTERESIS_LOW`, `REGION_PEAK_FRACTION` |
+| h = 2.15; F1 0.835, TP 76, FP 16, FN 14 | R1 common h and train objective | D `regimes.R1.selected_operating_point` (`h`, `F1`, `TP`, `FP`, `FN`) |
+| 680 of 1000 | bootstrap draws choosing 2.15 | D `regimes.R1.selection_bootstrap.chosen_h_counts["2.15"]`, `.draws` |
+| h = 3.05; 0.1484 ln | D9 h; clean alignment-noise floor | D `regimes.R1.natural_rush_selection` (`h`, `grid_min_h`, `noise_floor_ln`) |
+| 0.0833, 0.5/min | R2 per-key share and budget | D `regimes.R2.null.budget_per_key`; `src/cvoice/config.py` `FALSE_RATE_BUDGET` |
+| 0.05 per clip, 0.025 per key | R2 clip budget | `src/cvoice/config.py` `FALSE_CLIP_RATE_BUDGET`; D `regimes.R2.null.clip_budget_per_key` |
+| R1 thresholds ×1.227 / ×0.815, ±0.3225 s, ×0.485, 1.075 p, ×0.619, −4.3 dB, ×0.862 | h × scale | D `regimes.R1.h` × `regimes.R1.scales` (D1 0.09531, D2 0.15, D3 0.336472, D4- 0.5, D5 2.0, D6 0.223144, D9 0.04879); ratios are exp(±threshold) |
+| R2 single ×2.194 / ×0.452, +0.981 / −1.504 s, ×0.273, −10.08 dB | h × scale | D `regimes.R2.h` × `regimes.R2.scales`; K `R2_modes.single.physical_thresholds` |
+| R2 consensus ×2.052 / ×0.581, +1.008 / −0.805 s, ×0.303, −9.0 dB | h × scale | D `regimes.R2_consensus.h` × `.scales`; K `R2_modes.consensus5.physical_thresholds` |
+| whole clip 0.223 / 0.693; 0.612 / 0.702; 0.392 / 0.506 | D1 / D3 clip thresholds, ln | D `regimes.R1.clip`, `regimes.R2.clip`, `regimes.R2_consensus.clip` |
+| L3 edit ×1.90, +1.20 s, to 0.06 s, 0, 1.0, −14 dB, ×1/1.18 | level-3 magnitudes | `src/cvoice/config.py` `LEVEL_PARAM`, `PAUSE_FLOOR_S`, `RUSH_RATE` |
+| 2θ | R2 minimum saturation | `src/cvoice/config.py` `R2_SAT_THRESHOLD_FACTOR` |
+| 0.4584 | Pmax factor | D `report.pmax_factor`; D `score.pmax` = `PMAX_START` × 0.4584 |
+| 100, 90, 50 | score gates | `src/cvoice/config.py` `GATE_IDENTITY`, `GATE_L1_MIN`, `GATE_G5_MAX` |
+| 0 violations train, val, test | gate check | D `report.gates_train` (50 clips), `report.gates_val` (20 clips); T "Score by rung of the bad spectrum (R1)", "Score gates (violations)" |
+| 100, 100, 99.3, 96.1, 94.7, 76.5, 45.9 | test median scores: identity, G1, L1, G3, L2, L3, G5 | R `ladder.rows[split=test]` (median column); T "Score by rung of the bad spectrum (R1)" |
+
+## Section 5 (causal explainability and temporal grounding)
+
+| Number | Meaning | Source |
+|---|---|---|
+| 0.20 s, 0.775 | natural-rush rule: reference pause minimum and kept-fraction limit | `src/cvoice/config.py` `PAUSE_MIN_S`, `NATURAL_RUSH_PAUSE_KEPT_MAX` = sqrt(`RUSH_PAUSE_KEEP[0]`) |
+| 56 of 59; DEEMPHASIS 4 of 7 (2 MONOTONE, 1 RUSH) | core-8 cause labels, val+test, L2+L3 | A `labels["core8|headline (L2+L3)|val+test"]`; A §2 tables (confusion) |
+| 7 of 13; HESITATION 7 of 8 | synthetic-only cause labels, val+test, L2+L3 | A `labels["synthetic_only|headline (L2+L3)|val+test"]`; A §2 |
+| every rush and natural-rush edit | RUSH/NATURAL_RUSH label | A `rush_confusion` |
+| D1→D9 cell | activation matrix | `docs/evidence_final_782d7df7/figures/activation_matrix.png`; R `headline.activation` |
+| 16 events; 10 ms, 29 ms; 128 ms, 149 ms | pause edge errors, val+test, L2+L3 | R `headline.groups.core8.pause_localisation`; T "Pause localisation error (matched boundary events)"; L 16 |
+| 14 of 35; 4/7, 4/8, 0/6, 3/6, 3/8; 867 ms | window regions with both edges within 0.20 s, by type; MONOTONE onset 90th percentile | R `headline.groups.core8.grounding[split=val+test]` (`both_edges_within_tolerance`, `matched`, `onset_p90_ms`); L 16 |
+| 15.80-17.14 s, 0.87 s, 1.62 s, 86 %, 3.0x, 23 %, 91.0 | quoted explanation | G `L3A.json` `flaws[id=d1-003]` (`text`, `p`, `participant`, `baseline`, `overall_if_fixed`) |
+| 12 of 12, 10 of 10 | repairs removing the flag; placebos keeping it (val, test) | R `repair.by_type`; T "Repair test (inverse edit vs placebo)" |
+
+## Section 6 (evaluation)
+
+### 6.1 and 6.2: R1
+
+| Number | Meaning | Source |
+|---|---|---|
+| 2026-10-02 | date of the plan and of the earlier final evaluation | `docs/FINAL_EVALUATION_PLAN.md` |
+| IoU 0.5; 0.20 s | matching rules | `src/cvoice/config.py` `IOU_MIN`, `EVENT_TOL_S` |
+| train 74/20/6, 0.851 [0.795, 0.907] | pre-registered, train L2+L3 | A `accounting.rows[core8, headline (L2+L3), train].pre_registered`, `.pre_registered_per_speaker.f1_ci95` |
+| train 76/8/10/4, 0.927 [0.885, 0.969] | one per change, train | A `accounting.rows[…train].count_once`, `.count_once_interval`; R `headline.groups.core8.by_split_strict[group=all, split=train]` |
+| train 76/16/4, 0.884 | earlier final, train | A `accounting.rows[…train].first_final` |
+| val 30/13/2, 0.800 (0.769, 0.833) | pre-registered, val, per speaker (eisenhower, lbush) | A `accounting.rows[…val].pre_registered`, `.pre_registered_per_speaker` |
+| val 30/9/4/2, 0.845 (0.811, 0.882) | one per change, val | A `accounting.rows[…val].count_once`; T "Recovery of the synthetic edit: R1 event F1" |
+| val 30/12/2, 0.811 | earlier final, val | A `accounting.rows[…val].first_final` |
+| test 28/9/4, 0.812 (0.800, 0.824); 29/5/3/3, 0.879 (0.848, 0.909); 29/5/3, 0.879 | test, three accountings | A `accounting.rows[…test]`; A §1 table |
+| test L1 3/2/13, 0.286; 5/0/0/11, 0.476; 10/0/6, 0.769 | level 1, test | A `accounting.rows[core8, sensitivity (L1), test]` |
+| 4 of 4 except MONOTONE 2 of 4, DEEMPHASIS 3 of 4; RUSH 3 of 4 pre-registered | per type, test L2+L3 | R `headline.groups.core8.magnitude` (count `detected` by type, split test, levels 2–3); A §1 "Count-once rule" table (1 same-change detection, RUSH, test) |
+| 31 of 32; 32 of 34 | overlap view, test L2+L3 | A `overlap[split=test, levels=headline (L2+L3)]`; T "Overlap view" |
+| 2/10, 1/4, 1/4; 0.167 | NATURAL_RUSH detected (train, val, test); lab-passed tier test F1, both accountings | R `headline.groups.lab_passed.magnitude`; A `accounting.rows[lab_passed, headline (L2+L3), test]` |
+| 0.211 | synthetic-only tier test F1 | A `accounting.rows[synthetic_only, headline (L2+L3), test]` |
+| 0 of 28; 0.3225 s; 0.15–0.30 s | WORD_BY_WORD detected on test; D2 threshold; recipe silences | R `headline.groups.synthetic_only.magnitude` (type WORD_BY_WORD, split test); D `regimes.R1`; `src/cvoice/config.py` `READING_PAUSE_S` |
+| 0 in 5.89 min; 0 in 5.93 min | R1 null false regions, test and val | R `nulls.rows`; T "False flags per minute on nulls" |
+
+### 6.3: R2
+
+| Number | Meaning | Source |
+|---|---|---|
+| fit 0.491 (0.450) [0.545], met; 0.468 (0.457) [0.564], met | fit set, single and median of five | K `R2_modes.single.fit.total_local`, `R2_modes.consensus5.fit.total_local` (`rate`, `pooled_rate`, `bootstrap_upper95`, `budget_status`) |
+| select 0.549 (0.482) [0.640], not met; 0.536 (0.401) [0.670], not met on covered sources | select set | K `R2_modes.<mode>.select.total_local` |
+| lockbox 0.460 (0.522) [0.538]; 0.516 (0.530) [0.684]; statuses | lockbox | R `lockbox.modes.<mode>.total_local`; A `lockbox`; T "R2 lockbox false regions (final evaluation, both modes)" |
+| clip 0.046 / 0.050; 0.046 / 0.068; 0.057 / 0.084 | whole-clip false flags per null clip (single / five) | K `R2_modes.<mode>.{fit,select}.false_clip_flags_per_clip`; R `lockbox.modes.<mode>.false_clip_flags_per_clip` |
+| MONOTONE 17/18, PAUSE_INTRUSIVE 14/18, FADE 13/18, HESITATION 13/18, LOW_EFFORT 11/18, DRAG 6/17, PAUSE_DROPPED 4/17, RUSH 1/18 | check readers, single reference, level 3 | R `cross_speaker.modes.single.by_type`; A `r2_by_reader.single`; A §5 table |
+| 4 of 36 | Greenman against Reagan | R `cross_speaker.modes.single.summary.train` (`detected`, `truth`) |
+| rush 0/1/11, monotone 14/18/18 of 18; 2 of 18 unedited | whole-passage edits, single reference | R `cross_botched.ladder` |
+| 2 flags in 7.76 min | check-reader nulls (both D3- whole clip) | R `nulls.rows`; T "False flags per minute on nulls", reader-level table |
+
+### 6.4: stress
+
+| Number | Meaning | Source |
+|---|---|---|
+| eleven conditions | stress conditions | R `stress.rows` (distinct `condition`); T "Stress matrix" |
+| every R1 val and test cell (added/min, kept) and every R2 check-reader cell | stress table | A `stress_rows[split, condition, regime]` (columns: added/min, kept count, kept fraction); A §6 "Stress matrix (all rows)"; R `stress.rows` |
+| val added/min: gain +6 0.21, gain −6 0.28, MP3 0.07, low-pass 0.38, WORLD 0.94, reverb 0.89, white noise 2.63, phone 1.84, compression 6.48, babble 20 dB 8.41, babble 10 dB 24.5; kept 1.00, 1.00, 1.00, 0.96, 0.96, 0.95, 0.91, 0.89, 0.78, 0.89, 0.65 | R1 val rows, rounded to 2 decimals or 3 significant digits | A `stress_rows[split=val, regime=R1]` (`added/min`, kept fraction); A §6 "Stress matrix (all rows)" |
+| test added/min: 0.14, 0.28, 0.14, 1.46, 0.76, 0.61, 1.85, 5.52, 2.60, 13.2, 26.2; kept 1.00, 1.00, 1.00, 0.94, 0.99, 0.99, 0.91, 0.87, 0.76, 0.85, 0.60 (same order) | R1 test rows | A `stress_rows[split=test, regime=R1]` |
+| check readers, one reference, added/min: 0 for gain, MP3, low-pass, WORLD, reverb and compression; white noise 0.26, phone 0.39, babble 20 dB 0.13, babble 10 dB 2.06 | R2 check-reader rows | A `stress_rows[split=check readers, regime=R2, reference mode=single]` |
+| 7.76 min | check-reader comparison-minutes, single reference | R `stress.rows[split=check readers]` minutes; L 17 |
+
+### 6.5: baselines
+
+| Number | Meaning | Source |
+|---|---|---|
+| 0.800 / 0.845; 0.812 / 0.879 | detector, both accountings, val / test | A `baselines`; A §6 "Trivial baselines" |
+| 0.016 / 0.045; 0.016 / 0.056 | flag everything / random | A `baselines` (methods `flag_all`, `random`); R `trivial` |
+| 0.217 / 0.218; 0.247 / 0.261; h 2.75 | reference-free, detector h / train-chosen h | A `baselines` (method `reference_free (detector h)`, `reference_free (train-chosen h=2.75)`); R `trivial.reference_free` |
+| 0.295; 0.407; TP 12, FP 15, FN 20 | reference-free with own scales and h (added after the final evaluation) | A `baselines` (method `reference_free (own scales and h; …)`); A `local.reference_free_fair`; A §4 |
+
+### 6.6: further checks
+
+| Number | Meaning | Source |
+|---|---|---|
+| 5 violations in 205 cells; causes | directional test | R `directional.violations`, `directional.cells`; T "Directional test" |
+| 24 pairs, 22 and 22 | chain A against chain B | R `chain_b.rows`; T "Chain A versus chain B" |
+| 0.436 | lowest median ratio, test MONOTONE L3 | T "Feature internal consistency"; R `validity.rows` |
+| 6 clips, 8 recordings, 0 ms | GPU against CPU | R `device_agreement.rows[split=val+test]` (or the val and test rows) |
+| 89,227 bytes, identical | repeatability | R `reproducibility` |
+
+## Section 7 (dashboard)
+
+| Number | Meaning | Source |
+|---|---|---|
+| 180 s | upload length limit | `src/cvoice/config.py` `MAX_UPLOAD_S` |
+| 17 examples | gallery items | `gallery/index.json` `items` |
+| 320 to 1440 px; 0 failures, 0 console errors | browser harness result (2026-10-08 07:29 IST) | browser harness output `checks.json` (`passed`, `consoleErrors`, `gallery.items`, `gallery.failures`; not in the repository) |
+| 86.11 and the figure values | screenshot of example L3A | G `L3A.json` `scores.overall`, `flaws[]` |
+
+## Section 8 (reproducibility)
+
+| Number | Meaning | Source |
+|---|---|---|
+| version 19, 2 × T4 | Kaggle kernel version and devices | the Kaggle kernel page of cvoice-build (version 19, private); S `device_plan.gpus` |
+| 1364.8, 1135.8, 4402.5, 51.3, 167.7, 7228.9 s | stage seconds, bootstrap, total | S `stages[].seconds`, `bootstrap_seconds`, `total_seconds` |
+| 117.8 s | lockbox time inside evaluation | R `lockbox.seconds` |
+| `d67c9cd9…`, `d5935d3f…`, `782d7df7…`, `49a306d9…` | hashes | S `dataset_manifest_sha256`, `detector.config_sha256`; `sha256sum models/detector.json`, `sha256sum docs/evidence_final_782d7df7/results.json`; F entry `782d7df7…` (`detector_sha256`) |
+| 162 clips, 24 of 24 rows | CPU re-run of the frozen detector | A `local.reproduction`, `local.clips`; A §7 |
+| 561 passed, 2 deselected | `pytest -q` on 2026-10-08 IST (about 21:45 IST) | command output; `README.md` "Tests" |
+| ruff clean | `ruff check --select F,E9 src kaggle tests` on 2026-10-08 IST | command output |
+
+## Section 9 (limits)
+
+Each limit gives, in `L`, a "Numbers and sources" list. The numbers of the limits come from these sources (repository copies as above):
+
+| Limit | Sources |
+|---|---|
+| 1 | `src/cvoice/config.py` `RUSH_RATE`; R `validity.natural_rush_recovery`; D `regimes.R1.natural_rush_selection` (`threshold_ln` 0.14881, `noise_floor_ln` 0.14842, `control_max_abs_x_ln` 0.318); K `report.alignment_noise_floor.rows`; R `headline.groups.lab_passed.magnitude`, `.grounding`; R `real_validation.labels.natural_rush.product_measure` |
+| 4 | G `natural_rush.json` (`flaws[id=d1-003]` text and `points_lost` 3.25; `flaws[id=d9-002]` evidence); R `stress.rows[…].added_by_key`; A `stress_by_speaker[].added_by_key_per_speaker`; K `report.alignment_noise_floor.identity_shift_640ms` |
+| 8 | R `cross_speaker.modes.single.summary.train`, `cross_speaker.modes.single.by_type`; A `r2_by_reader.single`; R `lockbox`; R `expectation_table.R2` |
+| 11 | K `R2_modes.single.physical_thresholds`; D `regimes.R2.clip.D1`; R `cross_speaker.modes.single.by_type`; A `r2_by_reader.single`; A `accounting.rows` |
+| 12 | R `lockbox.modes.<mode>.total_local`, `.false_clip_flags_per_clip`, `.source_weights`; R `lockbox.limits`; A `lockbox` |
+| 13 | D `regimes.R1.natural_rush_selection`; R `headline.groups.lab_passed.magnitude`, `.grounding`; R `stress.rows[val, white noise 20 dB SNR, R1].added_by_key.D9-`; A `stress_by_speaker` |
+| 16 | R `headline.groups.core8.grounding` (split val+test); R `headline.groups.core8.pause_localisation` |
+| 17 | R `stress.rows`; A `stress_by_speaker`; R `stress.rows[split=train, regime=R2]`; R `stress.rows[split=check readers]`; R `device_agreement` |
+| 18 | T "Expectation table" (no listening check); R `real_validation.labels`; A `labels`, `rush_confusion`; `src/cvoice/config.py` `NATURAL_RUSH_PAUSE_KEPT_MAX` |
+| 19 | A `accounting.rows`; R `headline.groups.core8.by_split_strict[test]`; E1 `headline.by_split_strict[test]`; F entry `32cdd86f…`; R `n.test.speakers`; C baselines table |
+
+## README.md headline sections
+
+| Number in README.md | Source |
+|---|---|
+| 17 examples; 86.11; six flagged regions; 0.87 s against 1.62 s; 4.89 points | G `index.json` `items`; G `L3A.json` `scores.overall`, `flaws` (6), `flaws[id=d1-003]` (`participant`, `baseline`, `points_lost`) |
+| ×2.19 slower, ×0.45 faster (R2 local pace) | D `regimes.R2.h` × `regimes.R2.scales` (D1); K `R2_modes.single.physical_thresholds` |
+| six LibriVox readings, median of five | `gallery/index.json` `baselines[id=gettysburg_address]` |
+| `782d7df7…`, `d5935d3f…`, 2 × T4, 2026-10-07 IST | as section 8 |
+| val 30/13/2, 0.800 (0.769, 0.833); 30/9/4/2, 0.845 (0.811, 0.882) | as section 6.2 |
+| test 28/9/4, 0.812 (0.800, 0.824); 29/5/3/3, 0.879 (0.848, 0.909) | as section 6.2 |
+| 2026-10-02, `32cdd86f…`, 0.879 (29/5/3) | as section 6.2 |
+| level 1 test 0.286 and 0.476 | A `accounting.rows[core8, sensitivity (L1), test]` |
+| 0 false regions in 5.89 comparison-minutes | R `nulls.rows` |
+| 4 of 18 (train 2/10, validation 1/4, test 1/4) | R `headline.groups.lab_passed.magnitude` |
+| 0.46 (0.54), 0.057; 0.52 (0.68), 0.084 | R `lockbox.modes.<mode>.total_local`, `.false_clip_flags_per_clip` |
+| 0.5 per minute, 0.05 per clip | `src/cvoice/config.py` `FALSE_RATE_BUDGET`, `FALSE_CLIP_RATE_BUDGET` |
+| monotone 17 of 18, fade 13 of 18, dropped pause 4 of 17, rush 1 of 18 | R `cross_speaker.modes.single.by_type` |
+| Limits list: 1.3/min Amharic, 1.0/min Arabic; 0.15 s; others | dashboard wording of limits 1, 4, 8, 11, 12, 13, 16, 17, 18, 19 in L; sources as section 9 above |

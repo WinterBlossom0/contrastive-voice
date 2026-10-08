@@ -36,29 +36,29 @@ Reconstruct with your own Kaggle account, starting with only this code:
     kaggle datasets create -p 'build/cvoice-project' --dir-mode zip --keep-tabular
 
    Dataset creation is private by default; do not add --public. For subsequent snapshots use the version command printed by
-   stage_project.sh. No access to the owner's datasets is needed.
-3. In kaggle/kernel-metadata.json set id to YOUR_USERNAME/cvoice-build and dataset_sources to
-   ["YOUR_USERNAME/cvoice-project"] (remove electroknight/cvoice-sources); keep is_private and enable_internet true.
-   Run the kernels push command above. Edit SOURCE_USER_AGENT's contact URL before running. Each download URL gets at most
-   three attempts within a ten-minute retry deadline per entry; an audio or transcript hash mismatch stops before dataset building.
+   stage_project.sh. No access to the author's datasets is needed.
+3. In kaggle/kernel-metadata.json set id to YOUR_USERNAME/cvoice-build, dataset_sources to ["YOUR_USERNAME/cvoice-project"]
+   (remove electroknight/cvoice-sources) and kernel_sources to YOUR_USERNAME/cvoice-data and YOUR_USERNAME/cvoice-data-vctk
+   (see below); keep is_private and enable_internet true. Edit SOURCE_USER_AGENT's contact URL, then run the push command
+   above. Each download URL gets at most three attempts within a ten-minute retry deadline; a hash mismatch stops the build.
 4. Check STATUS.json: complete must be true, sources.route must be "rebuilt from origins", sources.transcript_source must be
    "repository snapshot", and every audio and transcript check must match.
-   Compare dataset_manifest_sha256 (also detector.json report.manifest_sha256) and dataset_counts with the owner's same
-   snapshot/device run. The current checked-in reference is 8db28b8bc970d1af7a3ce0ff38d80c72eae686b60920909007957dee35d7915c,
-   with 9 baselines, 10 readers, 110 flawed clips and 129 audio files. File counts here mean audio files, excluding labels.
+   Compare dataset_manifest_sha256 (also detector.json report.manifest_sha256) and dataset_counts with the reference run of
+   models/detector.json: d67c9cd95b46efb247f10167b57b8288be954efe7df48bc4cc2c786d4f04a50f, with 9 baselines,
+   1953 readers, 448 flawed clips and 2410 audio files. File counts here mean audio files, excluding labels.
    SHA256SUMS checks each run's packages; zip hashes and timings need not match another run. Download the output chunks,
    STATUS.json and SHA256SUMS together; scripts/import_run.sh RUN_DIR checks them before importing a complete run.
-   The ten owner transcript snapshots and their hashes travel with the project. Clinton still uses its pinned repository
-   plain text; its archived HTML is retained and checked too. Gutenberg uses the archived plain-text edition.
+   The transcript snapshots (one for each transcript in data/sources_manifest.json) and their hashes travel with the project.
+   Gutenberg uses the archived plain-text edition.
    Equal counts alone do not establish identical data; a different manifest hash needs investigation.
 
-External research corpora use the separate kaggle/data/fetch.py kernel and the subsets/licences in
-build/work/research/chain/data/PLAN.md. Set kaggle/data/kernel-metadata.json id to YOUR_USERNAME/cvoice-data, retain its five
-public dataset_sources and keep is_private/enable_internet true; then run `kaggle kernels push -p kaggle/data`.
-Its defaults include priority 2 (CVOICE_PRIORITY2=0 omits it). Check its STATUS.json for every completed source and no failures;
-keep manifest.json, LICENSES.md, fetch.log and every source tar part. Four corpora require those public mounts (LibriTTS
-prominence, VCTK, Accent Archive, LibriStutter); missing mounts cannot be rebuilt by that script. SEP-28k supplies labels only.
-Those outputs remain private; neither kernel requires an owner access grant. That fetcher has not been fully verified here.
+External research corpora use the kaggle/data/fetch.py kernel and the subsets/licences in docs/research/chain/data/PLAN.md. Set
+kaggle/data/kernel-metadata.json id to YOUR_USERNAME/cvoice-data, keep its five public dataset_sources and is_private/enable_internet
+true, then run `kaggle kernels push -p kaggle/data`. The build also needs a second output: a copy of that kernel with id
+YOUR_USERNAME/cvoice-data-vctk whose entry point calls main(["--only", "vctk"]); the build checks this mount but reads no VCTK audio.
+Defaults include priority 2 (CVOICE_PRIORITY2=0 omits it). Check STATUS.json for every completed source and keep manifest.json,
+LICENSES.md, fetch.log and every tar part. LibriTTS prominence, VCTK, Accent Archive and LibriStutter need those public mounts, which
+the script cannot rebuild; SEP-28k supplies labels only. Outputs stay private; no kernel needs an access grant from the author.
 
 Environment, caches, the copied project and all intermediates live under /tmp; the checkpoint is fetched into /tmp/torch_home and
 verified by SHA-256 inside cvoice.
@@ -482,7 +482,7 @@ def stage_numbers(stats: list[dict], seconds: float) -> dict:
 
 def run_stage(name: str, cmd: list[str]) -> bool:
     forecast = {"dataset": "21–23 min", "calibrate": "19–22 min", "evaluate": "73–87 min with --final, 56–60 min without", "gallery": "1 min"}
-    log(f"forecast T4 x2 {name}: {forecast.get(name, '3–4 min packaging/bootstrap')}; based on v13 101.9 min plus the test split and the R2 lockbox")
+    log(f"forecast T4 x2 {name}: {forecast.get(name, '3–4 min packaging/bootstrap')}; based on a measured 101.9 min T4 x2 run plus the test split and the R2 lockbox")
     log(f"=== stage {name}")
     t = time.time()
     stats: list[dict] = []

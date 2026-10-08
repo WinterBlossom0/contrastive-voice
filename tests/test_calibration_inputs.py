@@ -1,4 +1,4 @@
-"""Review regressions: crops, source weights, split isolation and bounded select calibration."""
+"""Calibration inputs and features: word occupancy, null crops, source weights, split isolation and bounded select calibration."""
 import dataclasses
 import json
 from types import SimpleNamespace
@@ -213,10 +213,10 @@ def test_promotion_recall_uses_new_worsened_rule(base, monkeypatch):
     before.dims['D7'].g, after.dims['D7'].g = .8, 1.
     monkeypatch.setattr(calibrate, 'compare', lambda B,P: before if P is base else after)
     P = dataclasses.replace(base)
-    found,total = calibrate._away_hits([(base,base,P,lab)], regime())
+    found,total = calibrate._away_outcomes([(base,base,P,lab)], {'current': regime()})['current']
     assert found['D7+ whole clip'] == total['D7+ whole clip'] == 1
     after.dims['D7'].g = .8 + 1e-10
-    found,total = calibrate._away_hits([(base,base,P,lab)], regime())
+    found,total = calibrate._away_outcomes([(base,base,P,lab)], {'current': regime()})['current']
     assert total['D7+ whole clip'] == 1 and found['D7+ whole clip'] == 0
 
 

@@ -57,7 +57,7 @@ def find_mount(name: str) -> Path:
     for cand in (INPUT / name, *sorted(INPUT.glob(f"*/*/{name}")), *sorted(INPUT.glob(f"*/{name}"))):
         if cand.is_dir():
             return cand
-    return INPUT / name
+    return INPUT / name  # not mounted: the caller reports the missing path
 
 
 def unpack_project_zips(base: Path, target: Path) -> None:
@@ -257,7 +257,8 @@ def main():
         try:
             with (WORKING / 'lab.log').open('a') as logfile:
                 for line in process.stdout:
-                    print(line, end='', flush=True); logfile.write(line)
+                    print(line, end='', flush=True)
+                    logfile.write(line)
             code = process.wait()
         finally:
             timer.cancel()

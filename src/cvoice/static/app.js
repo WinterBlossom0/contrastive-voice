@@ -78,12 +78,14 @@ const typeText = (f) => f.dimension === "D1" && (f.type === "RUSH" || f.type ===
 const valUnit = (f) => f.value_unit === "x" ? "×" : f.value_unit ?? (f.words == null ? "×" : VALUE_UNIT[f.dimension] || "");
 const withUnit = (v, unit) => v == null ? "-" : unit === "×" ? `×${num(v, 2)}` : `${num(v, 2)} ${unit}`.trim();
 const factor = (v) => `×${Math.exp(v).toFixed(2)}`;   // an ln ratio as a plain factor
-// Points are rounded to 2 decimals, so a stored 0.00 is a loss below 0.005, not a zero.
-const ptsText = (v) => v == null ? "" : v < 0.005 ? "<0.01 pts" : `−${num(v, 2)} pts`;
+// Points are rounded to 2 decimals, so a stored 0.00 is a loss below MIN_SHOWN_POINTS, not a zero (gallery.MIN_SHOWN_POINTS).
+const MIN_SHOWN_POINTS = 0.005;
+const shownLoss = (v) => (v ?? 0) >= MIN_SHOWN_POINTS;
+const ptsText = (v) => v == null ? "" : !shownLoss(v) ? "<0.01 pts" : `−${num(v, 2)} pts`;
 // A counted finding can lose 0 points while its dimension still costs points (explain.dimension_loss). The dimension's loss is
 // shown once: on the finding of that dimension that carries points, else on this finding as the dimension's total.
-const zeroLoss = (f) => f.counted !== false && (f.points_lost ?? 0) < 0.005 && (f.dimension_points_lost ?? 0) >= 0.005;
-const lossCarrier = (f) => S.result.flaws.findIndex((x) => x !== f && x.dimension === f.dimension && x.counted !== false && (x.points_lost ?? 0) >= 0.005);
+const zeroLoss = (f) => f.counted !== false && !shownLoss(f.points_lost) && shownLoss(f.dimension_points_lost);
+const lossCarrier = (f) => S.result.flaws.findIndex((x) => x !== f && x.dimension === f.dimension && x.counted !== false && shownLoss(x.points_lost));
 const saturated = (f) => zeroLoss(f) && lossCarrier(f) < 0;
 const dimText = (f) => S.result.scores.dims.find((d) => d.key === f.dimension)?.label || f.dimension;
 const findingPts = (f) => saturated(f) ? `${dimText(f)} −${num(f.dimension_points_lost, 2)} pts in total`
@@ -92,7 +94,6 @@ const synthetic = (f) => (f.text || "").toLowerCase().includes(SYNTHETIC_TEXT.to
 // Scores and multiples are shown at their stored 2 decimals: a second rounding makes them disagree with points_lost and the text.
 const scoreText = (v) => v == null ? "n/a" : num(v, 2);
 const multipleText = (v) => v == null ? "-" : `×${num(v, 2)}`;
-const displayText = (t) => (t || "").replace(/overall if fixed/gi, "score with this penalty removed");
 const patternText = (p) => PATTERN_TEXT[p] || TYPE_TEXT[p] || p || "No pattern label";
 // The pattern has its own chip (patternTags), so the title names the measured departure.
 const findingText = (f) => f.type ? typeText(f) : f.label || f.brief_word || f.dimension;
@@ -101,16 +102,6 @@ const unevenTempo = (f) => f.pattern === "UNEVEN_TEMPO" || f.type === "UNEVEN_TE
 const statedFactor = (f, pattern, v) => { const m = (f.text || "").match(pattern); return m ? `×${m[1]}` : factor(v); };
 const spreadFactor = (f) => statedFactor(f, /typical factor of x(\d+(?:\.\d+)?)/, f.participant);
 const thresholdFactor = (f) => statedFactor(f, /flagged above x(\d+(?:\.\d+)?)/, f.threshold);
-
-function resultDefaults(r) {
-  if (r.schema >= 2) return r;
-  return { ...r, detection: { listed_keys: [], listed_clip_keys: [] },
-    rows: r.rows.map((row) => ({ ...row, status: row.tol?.some((v) => v != null) ? "scored" : "displayed" })),
-    flaws: r.flaws.map((f) => ({ pattern: null, evidence: [], group: null, group_pattern: null, counted: true, candidate: false,
-      span_kind: wholePassage(f) ? null : f.dimension === "D2" ? "boundary" : "word", ...f })),
-    differences: (r.differences || []).map((f) => ({ status: "difference", context: f.words == null ? "whole passage" : "",
-      pattern: null, span_kind: null, evidence: [], candidate: false, ...f })) };
-}
 
 function el(tag, attrs = {}, ...kids) {
   const e = document.createElement(tag);
@@ -150,14 +141,14 @@ function showAlert(msg) {
 }
 
 // ---------------------------------------------------------------------------------------------------- state
-const S = { result: null, base: "", sel: null, filter: null, rid: 0, index: null, ws: null, regions: null, ref: new Audio(),
+const S = { result: null, sel: null, filter: null, rid: 0, limits: null, ws: null, regions: null, ref: new Audio(),
   refTimer: null, chart: null, hasLibs: false, selKind: "flaw", allDimensions: false, openId: 0,
   mediaId: 0, youReady: false, refReady: false, playId: 0, priority: null, pattern: null, evaluation: null };
 
 function differences() { return S.result.regime === "R2" && Array.isArray(S.result.differences) ? S.result.differences : []; }
 function selected() { return (S.selKind === "difference" ? differences() : S.result.flaws)[S.sel]; }
 function mediaSpan(f, who) { return f[who === "you" ? "p" : "b"] || [0, S.result[who === "you" ? "participant" : "baseline"].duration]; }
-/** Badge and sentence for the result's reference mode, or null when the result does not state one (older results). */
+/** Badge and sentence for the result's reference mode, or null when the result does not state one. */
 function referenceMode(r) {
   const d = r.detection || {};
   if (!d.reference_mode) return null;
@@ -260,7 +251,6 @@ function renderFilters(r) {
   pattern.replaceChildren(el("option", { value: "", text: "All patterns" }),
     ...[...patterns].sort().map((p) => el("option", { value: p, text: patternText(p) })),
     el("option", { value: "unlabelled", text: "No pattern label" }));
-  pattern.closest("label").hidden = r.schema < 2;
 }
 
 function setFilter(keys) {
@@ -296,7 +286,6 @@ function refreshLists() {
 }
 
 function patternTags(f) {
-  if (S.result.schema < 2) return document.createDocumentFragment();
   const p = f.pattern || "unlabelled";
   const repeats = !!f.pattern && patternText(f.pattern) === findingText(f);   // e.g. uneven word timing: type and pattern share one name
   return el("div", { class: "finding-tags" },
@@ -403,13 +392,12 @@ const referenceText = (f) => f.dimension === "D7" ? "reference at this recording
 
 function diffLine(f) {
   if (unevenTempo(f)) return `Whole passage: typical word-to-word factor ${spreadFactor(f)}${f.status === "listed" ? "; listed, not scored" : ""}.`;
-  const vu = valUnit(f), v = (x) => withUnit(x, vu);
+  const valueUnit = valUnit(f), v = (x) => withUnit(x, valueUnit);
   // A ratio value already states the factor, so the ln difference is not repeated as a second factor.
-  const by = f.delta == null || vu === "×" || REGULARISED.has(f.dimension) ? "" : f.unit === "ln" ? ` (${factor(f.delta)} the reference)`
+  const by = f.delta == null || valueUnit === "×" || REGULARISED.has(f.dimension) ? "" : f.unit === "ln" ? ` (${factor(f.delta)} the reference)`
     : ` (${signed(f.delta)} ${UNIT[f.unit] || f.unit || ""})`;
-  const status = f.status === "listed" ? "not flagged for a different performance" : "flags start well above 1";
   const values = wholeRatio(f) || `${referenceText(f)} ${v(f.baseline)}, this recording ${v(f.participant)}${by}`;
-  return `${wholePassage(f) ? "Whole passage" : span(f.p)}: ${values}${f.multiple == null ? "" : `. ${multipleText(f.multiple)} the tolerance scale (${status})`}`;
+  return `${wholePassage(f) ? "Whole passage" : span(f.p)}: ${values}`;
 }
 
 function fact(dl, term, value) {
@@ -436,7 +424,7 @@ function renderExplain() {
     return;
   }
   const words = wholePassage(f) ? "whole passage" : r.words.slice(f.words[0], f.words[1] + 1).map((w) => w.w).join(" ");
-  const vu = valUnit(f), dunit = UNIT[f.unit] || f.unit || "";
+  const valueUnit = valUnit(f), deltaUnit = UNIT[f.unit] || f.unit || "";
   const ratio = f.unit !== "ln" || f.delta == null ? "" : REGULARISED.has(f.dimension) && valUnit(f) !== "×"
     ? ` (${factor(f.delta)} after the same small constant is added to both values)` : ` (${factor(f.delta)})`;
   const dl = el("dl", { class: "facts" });
@@ -447,20 +435,19 @@ function renderExplain() {
     const whole = wholeRatio(f);
     if (whole) fact(dl, "This recording", whole);
     else {
-      fact(dl, referenceText(f)[0].toUpperCase() + referenceText(f).slice(1), withUnit(f.baseline, vu));
-      fact(dl, "This recording", withUnit(f.participant, vu));
+      fact(dl, referenceText(f)[0].toUpperCase() + referenceText(f).slice(1), withUnit(f.baseline, valueUnit));
+      fact(dl, "This recording", withUnit(f.participant, valueUnit));
     }
-    fact(dl, "Difference", `${signed(f.delta)} ${dunit}${ratio}`);
+    fact(dl, "Difference", `${signed(f.delta)} ${deltaUnit}${ratio}`);
   }
   if (diff) {
-    if (f.multiple != null) fact(dl, "Multiple of the tolerance scale", multipleText(f.multiple));
   } else {
-    fact(dl, "Points lost", f.points_lost == null ? "-" : f.points_lost < 0.005 ? "<0.01" : num(f.points_lost, 2));
+    fact(dl, "Points lost", f.points_lost == null ? "-" : !shownLoss(f.points_lost) ? "<0.01" : num(f.points_lost, 2));
     if (saturated(f)) fact(dl, `${dimText(f)}, points lost in total`, num(f.dimension_points_lost, 2));
     else if (zeroLoss(f)) fact(dl, `${dimText(f)} loss carried by`, `#${lossCarrier(f) + 1} (${ptsText(r.flaws[lossCarrier(f)].points_lost)})`);
     fact(dl, "Score with this penalty removed", f.overall_if_fixed == null ? "-" : scoreText(f.overall_if_fixed));
     fact(dl, "Multiple of the flag threshold", multipleText(f.tolerance_multiple));
-    fact(dl, "Flagged beyond", f.threshold == null ? "-" : unevenTempo(f) ? thresholdFactor(f) : `${f.delta < 0 ? "−" : "+"}${num(f.threshold, 2)} ${dunit}`);
+    fact(dl, "Flagged beyond", f.threshold == null ? "-" : unevenTempo(f) ? thresholdFactor(f) : `${f.delta < 0 ? "−" : "+"}${num(f.threshold, 2)} ${deltaUnit}`);
   }
   box.append(
     el("p", { class: "eyebrow", text: diff ? f.status === "listed" ? "Listed, not scored · no point penalty" : "Reference difference · not scored" : "Selected finding · listen, then try the fix" }),
@@ -470,8 +457,7 @@ function renderExplain() {
     el("div", { class: "ab-row" },
       el("button", { type: "button", class: "ab", "data-audio": "you", onclick: () => playSpan("you", mediaSpan(f, "you")) }, el("b", { text: "A" }), "This recording"),
       el("button", { type: "button", class: "ab", "data-audio": "ref", onclick: () => playSpan("ref", mediaSpan(f, "ref")) }, el("b", { text: "B" }), "Reference")),
-    el("p", { class: "what", text: displayText(f.candidate ? f.text.replace(CANDIDATE_TEXT, "").trim() : f.text)
-      .replace(/Unclear articulation/gi, "Reduced spectral change (spectral-change proxy)") }));
+    el("p", { class: "what", text: (f.candidate ? f.text.replace(CANDIDATE_TEXT, "").trim() : f.text) || "" }));
   if (f.candidate) box.append(el("p", { class: "candidate-note", text: CANDIDATE_TEXT }));
   if (f.group) {
     const members = r.flaws.filter((x) => f.group.includes(x.id));
@@ -520,9 +506,11 @@ function revealInSide(btn, head = btn) {
 function select(i, { scroll = false, kind = "flaw", reveal = true } = {}) {
   const before = rowDefs(S.result).map((d) => d.key).join();
   S.sel = i; S.selKind = kind;
-  document.querySelectorAll("button[data-kind]").forEach((b) =>
-    b.setAttribute("aria-pressed", String(+b.dataset.i === i && b.dataset.kind === kind ||
-      kind === "flaw" && b.classList.contains("group-select") && selected()?.group?.includes(S.result.flaws[+b.dataset.i].id))));
+  document.querySelectorAll("button[data-kind]").forEach((b) => {
+    const isItem = +b.dataset.i === i && b.dataset.kind === kind;
+    const isGroup = kind === "flaw" && b.classList.contains("group-select") && selected()?.group?.includes(S.result.flaws[+b.dataset.i].id);
+    b.setAttribute("aria-pressed", String(isItem || isGroup));
+  });
   const selector = `button[data-i="${i}"][data-kind="${kind}"]`;
   const btn = document.querySelector(kind === "difference" ? `#differences ${selector}, #listed ${selector}` : `#flaws ${selector}`);
   if (btn?.closest("details")) btn.closest("details").open = true;
@@ -558,14 +546,11 @@ function renderTranscript(r) {
 }
 
 /** Injected edits with their matched findings and listed differences. A gallery truth carries the evaluator's match
-    (`finding`, `difference`); an older result without it falls back to the same type and an overlapping span. Truths of one
-    labelled edit (the boundaries of a word-by-word edit) form one entry. */
+    (`finding`, `difference`). Truths of one labelled edit (the boundaries of a word-by-word edit) form one entry. */
 function truthEdits(r) {
   const edits = [];
-  for (const t of r.schema >= 2 ? r.truth || [] : []) {
-    const flaws = "finding" in t ? [r.flaws.findIndex((f) => f.id === t.finding)].filter((i) => i >= 0)
-      : r.flaws.map((f, i) => [f, i]).filter(([f]) => [f.type, f.pattern, f.group_pattern].includes(t.type) &&
-        f.dimension === t.dimension && onSpan(f, t.p)).map(([, i]) => i);
+  for (const t of r.truth || []) {
+    const flaws = [r.flaws.findIndex((f) => f.id === t.finding)].filter((i) => i >= 0);
     const diff = t.difference == null ? -1 : differences().findIndex((d) => d.id === t.difference);
     const shared = (t.duplicate_findings || []).map((id) => r.flaws.findIndex((f) => f.id === id)).filter((i) => i >= 0);
     const unit = { flaws, diff, sameChange: !!t.same_change, shared };
@@ -577,13 +562,9 @@ function truthEdits(r) {
   return edits;
 }
 
-/** The truth's detector_status (pipeline.detector_status); older truths without it get it from the result's detection lists. */
+/** The truth's detector_status (pipeline.detector_status). */
 function truthStatus(t) {
-  if (t.detector_status) return t.detector_status;
-  const det = S.result.detection;
-  if (!det.enabled || det.enabled.includes(t.dimension)) return "enabled";   // schema 1 has no enabled list: every dimension flags
-  const listed = det.listed_keys.some((k) => k.replace(/[+-]$/, "") === t.dimension) || det.listed_clip_keys.includes(t.dimension);
-  return listed ? "unscored" : "no detector";
+  return t.detector_status;
 }
 
 /** Why an edit of this dimension cannot have a flag in this result, or null when it can. */
@@ -740,7 +721,6 @@ function chartModel(r) {
           marker: { symbol: "diamond", size: 10, color, line: { color: c.surface, width: 1.5 } }, hovertemplate: "%{customdata}<extra></extra>" });
       }
       Object.assign(yaxis, { range: [-0.8, 1.8], tickvals: [0, 1], ticktext: ["You", "Ref"] });
-      head = narrow ? spec.s : `${spec.t}`;
     } else {
       const vals = row.p, finite = vals.filter((v) => v != null);
       const [below, above] = row.tol || [null, null];   // flag thresholds per direction, null where never flagged
@@ -757,8 +737,8 @@ function chartModel(r) {
         traces.push({ type: "bar", name, x: b.x, y: b.y, width: b.w, yaxis: ax, customdata: b.c, marker: { color: c.you },
           hovertemplate: `%{y:+.2f} ${unit} (%{customdata})<extra></extra>` });
       } else {
-        const sgm = wordSegments(r.words, vals);
-        traces.push({ type: "scatter", mode: "lines", name, x: sgm.x, y: sgm.y, yaxis: ax, customdata: sgm.c, connectgaps: false,
+        const segments = wordSegments(r.words, vals);
+        traces.push({ type: "scatter", mode: "lines", name, x: segments.x, y: segments.y, yaxis: ax, customdata: segments.c, connectgaps: false,
           line: { color: c.you, width: 3 }, hovertemplate: `%{y:+.2f} ${unit} (%{customdata})<extra></extra>` });
       }
       if (below != null || above != null) {
@@ -886,30 +866,30 @@ function drawChart() {
 
 function highlight() {
   if (!S.chart || !$("#chart").data) return;
-  const c = S.chart.colors, upd = {};
+  const c = S.chart.colors, updates = {};
   S.result.flaws.forEach((f, i) => {
     const on = S.selKind === "flaw" && (S.sel === i || selected()?.group?.includes(f.id));
     for (const k of S.chart.flawShapes[i]) {
-      upd[`shapes[${k}].line.width`] = on ? 2.5 : 1;
-      upd[`shapes[${k}].line.color`] = on ? c.ink : c.ink2;
-      upd[`shapes[${k}].fillcolor`] = rgba(c.flag, on ? BAND_ALPHA_SEL : BAND_ALPHA);
+      updates[`shapes[${k}].line.width`] = on ? 2.5 : 1;
+      updates[`shapes[${k}].line.color`] = on ? c.ink : c.ink2;
+      updates[`shapes[${k}].fillcolor`] = rgba(c.flag, on ? BAND_ALPHA_SEL : BAND_ALPHA);
     }
   });
   S.chart.groupShapes.forEach((g) => {
     const on = S.selKind === "flaw" && g.ids.includes(selected()?.id);
     for (const k of g.indices) {
-      upd[`shapes[${k}].line.width`] = on ? 3 : 2;
-      upd[`shapes[${k}].line.color`] = on ? c.ink : c.ink2;
+      updates[`shapes[${k}].line.width`] = on ? 3 : 2;
+      updates[`shapes[${k}].line.color`] = on ? c.ink : c.ink2;
     }
   });
   S.chart.differenceShapes.forEach((indices, i) => {
     const on = S.selKind === "difference" && S.sel === i;
     for (const k of indices) {
-      upd[`shapes[${k}].line.width`] = on ? (S.chart.layout.shapes[k].type === "path" ? 1 : 2) : 0;
-      if (S.chart.layout.shapes[k].type !== "path") upd[`shapes[${k}].fillcolor`] = rgba(c.neutral, on ? 0.18 : 0);
+      updates[`shapes[${k}].line.width`] = on ? (S.chart.layout.shapes[k].type === "path" ? 1 : 2) : 0;
+      if (S.chart.layout.shapes[k].type !== "path") updates[`shapes[${k}].fillcolor`] = rgba(c.neutral, on ? 0.18 : 0);
     }
   });
-  if (Object.keys(upd).length) Plotly.relayout($("#chart"), upd);
+  if (Object.keys(updates).length) Plotly.relayout($("#chart"), updates);
 }
 
 function onChartClick(ev) {   // clickanywhere: off-trace clicks carry xvals in axis units
@@ -1043,7 +1023,7 @@ async function playSpan(who, s) {
 // ---------------------------------------------------------------------------------------------------- render
 function renderNotices(r) {
   const ul = $("#notices");
-  ul.replaceChildren(...r.notices.map((t) => el("li", { text: displayText(t) })));
+  ul.replaceChildren(...r.notices.map((t) => el("li", { text: t || "" })));
   if (r.regime === "R2" && S.evaluation?.texts?.r2_lockbox) ul.append(el("li", { text: S.evaluation.texts.r2_lockbox }));
   ul.append(...r.scores.dims.filter((d) => d.note || d.coverage < 1).map((d) => el("li", {
     text: `${d.label}: ${d.note ? d.note + ". " : ""}Measurable coverage: ${num(d.coverage * 100, 0)}%.` })));
@@ -1063,10 +1043,9 @@ function initialSelection(r, focus) {
 
 function render(r, base, focus = null) {
   stopAll();
-  r = resultDefaults(r);
   // Temporal numbers are stable even when the highest-impact whole-passage finding leads the list.
   r = { ...r, flaws: [...r.flaws].sort((a, b) => (a.p?.[0] ?? 0) - (b.p?.[0] ?? 0)) };
-  S.result = r; S.base = base; S.sel = null; S.selKind = "flaw"; S.filter = null; S.chart = null; S.rid += 1;
+  S.result = r; S.sel = null; S.selKind = "flaw"; S.filter = null; S.chart = null; S.rid += 1;
   S.allDimensions = false;
   S.pattern = null;
   S.priority = r.flaws.length ? r.flaws.reduce((best, f, i) => (f.points_lost ?? 0) > (r.flaws[best].points_lost ?? 0) ? i : best, 0) : null;
@@ -1377,7 +1356,7 @@ async function poll(id) {
       $("#ledger").scrollIntoView({ block: "start" });
       return;
     }
-    await new Promise((res2) => setTimeout(res2, POLL_MS));
+    await new Promise((resolve) => setTimeout(resolve, POLL_MS));
   }
 }
 
@@ -1411,7 +1390,7 @@ async function init() {
   matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { if (S.ws) S.ws.setOptions({ waveColor: css("--you"), progressColor: css("--ink2"), cursorColor: css("--ink") }); drawChart(); });
   let index;
   try {
-    index = S.index = await getJSON("gallery/index.json");
+    index = await getJSON("gallery/index.json");
   } catch (e) {
     return showAlert(`The bundled examples could not be loaded (${e.message}).`);
   }

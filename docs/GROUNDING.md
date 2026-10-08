@@ -27,19 +27,19 @@ It describes the frozen detector: `models/detector.json`, sha256 d5935d3f…, de
 
 No listener has rated the generated clips. No human marked flaws in these recordings. Every citation therefore motivates or defines a method; none validates a threshold, a severity value or a fix sentence of this system.
 
-**Rules followed.** Every cited work is recorded as read in a research report under `build/work/research/` (the `*/REPORT.md` files and `chain/**`). Each claim is the claim that report attributes to the work. Read status (full text, abstract, secondary) is in the reference list and in `docs/PAPERS.md`. Numbers measured by this project are traced in `docs/NUMBERS.md`.
+**Rules followed.** Every cited work is recorded as read in a research report under `docs/research/` (the `*/REPORT.md` files and `chain/**`). Each claim is the claim that report attributes to the work. Read status (full text, abstract, secondary) is in the reference list and in `docs/PAPERS.md`. Numbers measured by this project are traced in `docs/NUMBERS.md`.
 
-**Short names for sources of numbers.** Paths are under `build/work/kaggle_runs/last_run/x/` unless they start at the repository root.
+**Short names for sources of numbers.** Each file is a byte-identical repository copy of a final-run output (checksums in `docs/evidence_final_782d7df7/SHA256SUMS`; `docs/NUMBERS.md` gives the run path of each).
 
 | Short name | File |
 |---|---|
-| R | `eval/results.json` |
-| A | `eval/addendum.json` and `eval/addendum.md` (computed after the final evaluation from saved outputs; its CPU re-run reproduces the saved counts in 24 of 24 rows) |
-| T | `eval/tables.md` |
-| D | `models/detector.json` (byte-identical to the repository `models/detector.json`) |
-| K | `calibration/report.json` |
-| M | `data/dataset/manifest.json` |
-| L | `build/work/critics/last_run_limits.md` (stated limits, numbered as there) |
+| R | `docs/evidence_final_782d7df7/results.json` |
+| A | `docs/evidence_final_782d7df7/addendum.json` and `addendum.md` (computed after the final evaluation from saved outputs; its CPU re-run reproduces the saved counts in 24 of 24 rows) |
+| T | `docs/evidence_final_782d7df7/tables_rendered.md` (the run's `eval/tables.md` re-rendered from R; cited by section title) |
+| D | `models/detector.json` (byte-identical to the run's `models/detector.json`) |
+| K | `docs/evidence_final_782d7df7/calibration/report.json` |
+| M | the run's `data/dataset/manifest.json` (5.8 MB, not in the repository; `docs/evidence_final_782d7df7/dataset_card.md` lists the same recordings) |
+| L | section 9 of `docs/technical.md` (stated limits, in their agreed wording and numbering) |
 
 **Thresholds.** A physical threshold is h × scale. Both come from D: `regimes.R1.h`, `regimes.R1.scales`, `regimes.R2.*` (single reference) and `regimes.R2_consensus.*` (median of five references).
 
@@ -194,7 +194,7 @@ Habitual rate differs between speakers: read sentences 3.40 syllables/s, SD 0.42
 **Evaluation.**
 - [validated here: R1, synthetic] DEEMPHASIS 7/10, 4/4, 3/4 at L2+L3 (R `headline.groups.core8.magnitude`).
 - [validated here: R1, synthetic] The shown cause label is DEEMPHASIS for 4 of 7 detected val and test deemphasis edits; 2 are shown as MONOTONE and 1 as RUSH (A `labels`; L 18).
-- MISPLACED_EMPHASIS (synthetic-only recipe, D4 primary): 1/9, 1/4, 1/4 at L2+L3, shown as DEEMPHASIS (R `headline.groups.synthetic_only.magnitude`; A `labels`). The two-sided check (D4+) failed its lab gate for lack of labels, so only losses are flagged (`build/work/design/LAB_DECISIONS.md`).
+- MISPLACED_EMPHASIS (synthetic-only recipe, D4 primary): 1/9, 1/4, 1/4 at L2+L3, shown as DEEMPHASIS (R `headline.groups.synthetic_only.magnitude`; A `labels`). The two-sided check (D4+) failed its lab gate for lack of labels, so only losses are flagged (`docs/research/design/LAB_DECISIONS.md`).
 
 **What the citations do not support.** There are no human stress labels for these recordings; a stress point is an acoustic prominence candidate. [57] scored read news against labels, not a single reference reading. Emphasis edits are placed on words the detector's own statistic marks as stressed.
 
@@ -340,7 +340,7 @@ Base rate: adults who do not stutter, reading a 200-syllable text aloud, 0.21 % 
 
 | Family | Pattern and source | System | Evaluation (R1, synthetic edits, L2+L3, train / val / test) |
 |---|---|---|---|
-| HESITATION | One word slowed and a silence before it [24, 25]; recipe word ×1.2–1.8, silence 0.2 / 0.5 / 1.0 s ("within-phrase insertion 0.2–1.0 s", PP §4) | D2+ region plus a D7 stretch ≥ ln 1.25 at the next word: `patterns.groups`, `patterns.describe`. Registry primary D2 (decision recorded in `build/work/design/DETECTOR_EXTENSION.md` §2) | 10/10, 4/4, 4/4 by dimension; label HESITATION on 7 of 8 detected val and test edits (R `headline.groups.synthetic_only.magnitude`; A `labels`). R2 check readers level 3: 13 of 18 |
+| HESITATION | One word slowed and a silence before it [24, 25]; recipe word ×1.2–1.8, silence 0.2 / 0.5 / 1.0 s ("within-phrase insertion 0.2–1.0 s", PP §4) | D2+ region plus a D7 stretch ≥ ln 1.25 at the next word: `patterns.groups`, `patterns.describe`. Registry primary D2 (decision recorded in `docs/research/design/DETECTOR_EXTENSION.md` §2) | 10/10, 4/4, 4/4 by dimension; label HESITATION on 7 of 8 detected val and test edits (R `headline.groups.synthetic_only.magnitude`; A `labels`). R2 check readers level 3: 13 of 18 |
 | WORD_BY_WORD | "Reads primarily word-by-word" [27]; recipe silences 0.15 / 0.225 / 0.30 s after each word (PP §4) | ≥ 3 D2+ regions in one sentence form one group: `patterns.groups`, `WORD_BY_WORD_MIN_EVENTS = 3` | 0/58, 0/16, 0/28. The R1 D2+ threshold of 0.3225 s is above every recipe silence (D `regimes.R1`; `READING_PAUSE_S`) |
 | UNEVEN_TEMPO | Dispersion of the local tempo ratio along an alignment with a reference: r = .37 alone with human rhythm scores, human agreement .49 [28] | Whole-clip D7 measure (`compare.d7_word_time`, g); not shipped | Lab: EARS fast 0.17, slow 0.35 found; failed (R `real_validation.labels.uneven_tempo`) |
 | REPEATED_CONTOUR | Same contour on every sentence; no validating study [42, 51] (PE §5 item 1) | No detector (`FLAW_REGISTRY['REPEATED_CONTOUR']`, primary NO_DETECTOR) | none |
@@ -396,7 +396,7 @@ Base rate: adults who do not stutter, reading a 200-syllable text aloud, 0.21 % 
 
 ## 13. Stated limits that bear on these chains
 
-The full agreed wording is in `build/work/critics/last_run_limits.md` and in the technical report. The opening sentence of each, verbatim:
+The full agreed wording is in section 9 of the technical report (`docs/technical.md`). The opening sentence of each, verbatim:
 
 | L | Chains | Opening sentence |
 |---|---|---|
@@ -415,7 +415,7 @@ The full agreed wording is in `build/work/critics/last_run_limits.md` and in the
 
 Style: authors by surname, year, title, venue, identifier, read status, report. Bibliographic fields of the chain-report sources are taken from the report's reference list or its `sources/<key>.txt` file. The first-round reports (RE, FE, AL, GM) cite most sources by link or DOI; their remaining fields (author lists, titles, pages) are those confirmed against Crossref, arXiv, the ISCA archive or the publisher on 2026-10-02 for the earlier version of this file.
 
-Read status: **full** = full text read; **full-F** = full text read through a fetch tool, numbers marked "to re-check" by the report; **abstract** = abstract only; **secondary** = read through the named source; **metadata** = bibliographic record only. Report keys: RE `rubric_explain/REPORT.md`, FE `features/REPORT.md`, AL `alignment/REPORT.md`, GM `grounding_model/REPORT.md`, PP `chain/pace_pauses/REPORT.md`, DF `chain/disfluency/REPORT.md`, PE `chain/pitch_emphasis/REPORT.md`, VC `chain/volume_clarity/REPORT.md`, VF `chain/VERIFICATION.md` (all under `build/work/research/`).
+Read status: **full** = full text read; **full-F** = full text read through a fetch tool, numbers marked "to re-check" by the report; **abstract** = abstract only; **secondary** = read through the named source; **metadata** = bibliographic record only. Report keys: RE `rubric_explain/REPORT.md`, FE `features/REPORT.md`, AL `alignment/REPORT.md`, GM `grounding_model/REPORT.md`, PP `chain/pace_pauses/REPORT.md`, DF `chain/disfluency/REPORT.md`, PE `chain/pitch_emphasis/REPORT.md`, VC `chain/volume_clarity/REPORT.md`, VF `chain/VERIFICATION.md` (all under `docs/research/`).
 
 **Rubrics and perception**
 

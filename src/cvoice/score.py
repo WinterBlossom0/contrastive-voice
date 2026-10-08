@@ -7,9 +7,8 @@ from dataclasses import dataclass, field
 import numpy as np
 
 from . import config as C
-from .detect import scale
 from .compare import Comparison, Dim
-from .detect import Region, clip_flags, flagged_dims, threshold
+from .detect import Region, clip_flags, flagged_dims, scale, threshold
 from .patterns import counted
 
 
@@ -20,20 +19,24 @@ def severity(x: float, theta: float, sat: float) -> float:
     return float(np.clip((abs(x) - theta) / (sat - theta), 0.0, 1.0))
 
 
-def unit_severity(dim: Dim, i: int, scale: float, h: float, r2: bool = False) -> float:
-    theta = h * scale
-    sat = max(C.X_SAT[dim.key], C.R2_SAT_THRESHOLD_FACTOR * theta) if r2 else C.X_SAT[dim.key]
-    return severity(float(dim.x[i]), theta, sat)
+def _saturation(nominal: float, theta: float, r2: bool) -> float:
+    """In R2 the saturation is at least R2_SAT_THRESHOLD_FACTOR times the threshold."""
+    return max(nominal, C.R2_SAT_THRESHOLD_FACTOR * theta) if r2 else nominal
 
 
-def region_mass(dim: Dim, region: Region, scale: float, h: float, r2: bool = False) -> float:
+def unit_severity(dim: Dim, i: int, unit_scale: float, h: float, r2: bool = False) -> float:
+    theta = h * unit_scale
+    return severity(float(dim.x[i]), theta, _saturation(C.X_SAT[dim.key], theta, r2))
+
+
+def region_mass(dim: Dim, region: Region, unit_scale: float, h: float, r2: bool = False) -> float:
     """m_r = sum over the region's units of w_u * sev_u."""
-    return float(sum(dim.w[i] * unit_severity(dim, i, scale, h, r2) for i in region.units if np.isfinite(dim.x[i])))
+    return float(sum(dim.w[i] * unit_severity(dim, i, unit_scale, h, r2) for i in region.units if np.isfinite(dim.x[i])))
 
 
 def clip_mass(dim: str, g: float, theta: float, r2: bool = False) -> float:
     """Mass of a whole-clip flag: the severity of the clip median g between its threshold and the dimension's saturation."""
-    return severity(g, theta, max(C.CLIP_SAT[dim], C.R2_SAT_THRESHOLD_FACTOR * theta) if r2 else C.CLIP_SAT[dim])
+    return severity(g, theta, _saturation(C.CLIP_SAT[dim], theta, r2))
 
 
 def dim_score(P: float, pmax: float) -> float:

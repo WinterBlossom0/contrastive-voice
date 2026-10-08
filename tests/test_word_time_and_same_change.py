@@ -1,4 +1,5 @@
-"""Owner decisions O1 (word-time D9) and O2 (one detection per change), and the v12 verifier follow-ups."""
+"""D9 as the ln ratio of aligned word time, one detection per change, and the shared same-change rule of scoring,
+display and evaluation."""
 import dataclasses
 import inspect
 import math
@@ -7,28 +8,23 @@ from types import SimpleNamespace
 
 import numpy as np
 import pytest
+from runs import check_reader_dataset, r1_run, two_modes
 from synth import label, local, recording, regime, with_x
 
 from cvoice import calibrate, config as C, evaluate, explain, patterns
 from cvoice.calibrate import Null, select_r1
 from cvoice.compare import compare
-from cvoice.events import Run, eval_clip
+from cvoice.events import eval_clip
 from cvoice.features import recording_arrays
 from cvoice.lab.extract import recording_view
 from cvoice.protocol import STRICT_ACCOUNTING, exemption_policy
 from cvoice.reference import consensus_reference
 from cvoice.score import score
 
-R1_ENABLED = tuple(C.REGIME_DIMS['R1'])
 APP_JS = Path(evaluate.__file__).with_name('static') / 'app.js'
 
 
-def _run(base, comp, regions=()):
-    return Run(base, base, comp, list(regions), score(comp, [], regime('R1'), C.PMAX_START), 'R1', {},
-               regime('R1')['scales'], R1_ENABLED)
-
-
-# ------------------------------------------------------------------------------------------------ O1: D9 measure
+# ------------------------------------------------------------------------------------------------ D9: aligned word time
 def test_d9_is_the_ln_ratio_of_aligned_word_time_when_the_pauses_are_kept():
     B = recording(40, pauses={7: 0.7, 19: 0.8})
     P = recording(40, pauses={7: 0.7, 19: 0.8}, word_s=0.25)  # every word 0.21 s instead of 0.26 s; gaps and pauses kept
@@ -54,7 +50,7 @@ def test_d9_evidence_is_the_aligned_word_time_of_the_peak_window(base):
     comp = compare(base, P)
     info = patterns.describe(local('D9', 10, 15, -6), comp, base, P, {'natural_rush': True})
     values = {e['key']: e['value'] for e in info['evidence']}
-    # K1: the reference has no paired pause time around the span, so the region is part of the RUSH change
+    # pause rule: the reference has no paired pause time around the span, so the region is part of the RUSH change
     assert info['pattern'] is None and info['type'] == 'RUSH'
     assert set(values) == {'word_time_ln', 'word_time_p_s', 'word_time_b_s', 'pause_p_s', 'pause_b_s'}
     assert values['word_time_p_s'] == comp.dims['D9'].p[10] and values['word_time_b_s'] == comp.dims['D9'].b[10]
@@ -71,10 +67,10 @@ def test_d9_explanation_says_the_words_were_faster(base):
     assert 'aligned word durations' in flaw['measure'] and 'pause-free' not in flaw['text'].lower()
 
 
-# ------------------------------------------------------------------------------------------------ O2: duplicates
+# ------------------------------------------------------------------------------------------------ one detection per change
 def test_strict_headline_counts_one_detection_per_change_and_reports_duplicates(base, pinned_detector, monkeypatch):
     clips = [{"id": "rush", "split": "val", "level": 2, "parent": "s", "kind": "single", "spectrum": "core8"}]
-    run = _run(base, compare(base, base), [local('D1', 10, 15, -5), local('D9', 10, 15, -9)])
+    run = r1_run(base, compare(base, base), [local('D1', 10, 15, -5), local('D9', 10, 15, -9)])
     monkeypatch.setattr(evaluate, "clip_runs", lambda ds, det, cl: [(c, run, label(base, 'RUSH', (10, 15))) for c in cl])
     out = evaluate.headline_section(SimpleNamespace(clips=lambda **kw: clips), pinned_detector(), ("val",))
     core = out['groups']['core8']
@@ -101,23 +97,23 @@ def test_select_r1_reports_same_change_duplicates_beside_its_counts(base, monkey
     comp = with_x(base, 'D9', [(10, 15, -0.6)])
     comp.dims['D1'].x[10:16] = -0.5
     reg = regime('R1')
-    curve = select_r1([(_run(base, comp), label(base, 'RUSH', (10, 15)))], [], reg)
-    # K2: the D9 region detects the rush when D1 is not decoded (speech-tempo component), so it is never a duplicate there.
+    curve = select_r1([(r1_run(base, comp), label(base, 'RUSH', (10, 15)))], [], reg)
+    # one detection per change: the D9 region detects the rush when D1 is not decoded (speech-tempo component), so it is never a duplicate there.
     assert all(row['same_change_duplicates'] == 0 and row['FP'] == 0 for row in curve)
     assert STRICT_ACCOUNTING in reg['selected_operating_point']['objective']
 
 
-# ------------------------------------------------------------------------------------------------ follow-ups
+# ------------------------------------------------------------------------------------------------ same-change rule and display
 def test_same_change_uses_one_half_window_test_in_scoring_display_and_evaluation(base):
     comp = compare(base, base)
     regions = [local('D1', 10, 15, -5), local('D9', 17, 20, -6)]  # the D9 region starts two words after the D1 region
     assert [(g.pattern, g.members) for g in patterns.groups(comp, regions)] == [('RUSH', (0, 1))]
     assert patterns.counted(comp, regions, [1., 9.]) == {0}
-    ev = eval_clip(_run(base, comp, regions), label(base, 'RUSH', (10, 15)), secondary_exempt=False)
+    ev = eval_clip(r1_run(base, comp, regions), label(base, 'RUSH', (10, 15)), secondary_exempt=False)
     assert ev['false'] == [] and [(d['group'], d['change'], d['units']) for d in ev['duplicates']] == [('D9-', 'D1-', [17, 20])]
     beyond = [local('D1', 10, 15, -5), local('D9', 18, 21, -6)]
     assert patterns.groups(comp, beyond) == []
-    assert len(eval_clip(_run(base, comp, beyond), label(base, 'RUSH', (10, 15)), secondary_exempt=False)['false']) == 1
+    assert len(eval_clip(r1_run(base, comp, beyond), label(base, 'RUSH', (10, 15)), secondary_exempt=False)['false']) == 1
 
 
 def test_d9_member_of_a_rush_group_is_shown_as_rushed(base):
@@ -131,7 +127,7 @@ def test_d9_member_of_a_rush_group_is_shown_as_rushed(base):
     flaw = explain.build(regions[1], comp, base, base, reg, sc.masses[1], sc, 'f', info[1])
     assert flaw['type'] == 'RUSH' and flaw['pattern'] is None and flaw['group_pattern'] == 'RUSH'
     alone = patterns.annotate(comp, regions[1:], base, base, reg['pattern_labels'])[0]
-    assert alone['pattern'] is None and alone['type'] == 'RUSH'  # K1: no paired pause time, so not natural rushing
+    assert alone['pattern'] is None and alone['type'] == 'RUSH'  # pause rule: no paired pause time, so not natural rushing
     pattern_text = APP_JS.read_text().split('const PATTERN_TEXT = {', 1)[1].split('};', 1)[0]
     assert 'RUSH: "Rushed"' in pattern_text
 
@@ -151,25 +147,10 @@ def test_cross_section_qualifies_the_select_rate_columns_with_their_sources(base
     clip = dict(id='check__natural', baseline=ids[0], parent='check', split='check', regime='R2')
     lab = label(base, 'NATURAL_RUSH', (10, 15))
 
-    class DS:
-        manifest = {'readers': entries}
-        def clips(self, **kw): return [clip]
-        def entry(self, kind, id): return {'id': id}
-        def any_entry(self, id): return {'id': id}
-        def parent_entry(self, c): return {'id': c['parent']}
-        def rec(self, e): return base
-        def recs(self, entries): return [base for e in entries]
-        def clip_recs(self, clips): return [base for c in clips]
-        def load(self, **kw): pass
-        def labels(self, c): return lab
-
-    single, consensus = regime('R2'), regime('R2', 4.)
-    single['reference_mode'], consensus['reference_mode'] = 'single', 'consensus5'
-    from cvoice.detect import make_detector
-    det = make_detector({'R1': regime('R1'), 'R2': single, 'R2_consensus': consensus}, C.PMAX_START, {'calibrated': False})
+    det = two_modes()
     scope = 'consensus select rates cover accent with equal source weights; poetry is not covered: no consensus readers'
     det['report'] = {'R2_modes': {'single': {'select': {'total_local': {'sources': ['accent', 'poetry']}}},
                                   'consensus5': {'select': {'scope': scope, 'local_by_key': {'D9-': {'rate': 0.1, 'sources': ['accent']}}}}}}
-    result = evaluate.cross_section(DS(), det, ('val',))
+    result = evaluate.cross_section(check_reader_dataset(entries, clip, lab, base, base), det, ('val',))
     assert result['select_scope'] == {'single': 'select rates cover accent, poetry', 'consensus5': scope}
     assert '| select sources |' in result['table'] and 'Select rate scope: single: select rates cover accent, poetry; consensus5: ' + scope in result['table']

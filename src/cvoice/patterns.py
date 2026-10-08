@@ -7,8 +7,9 @@ from typing import NamedTuple
 import numpy as np
 
 from . import config as C
-from .detect import key
-from .features import frame_slice, mean
+from .compare import final_span, pause_span
+from .detect import key, parse_key, whole_clip_key
+from .features import frame_slice, mean, sentence_final
 
 
 def evidence(key, label, value, unit):
@@ -129,15 +130,15 @@ def groups(comp, regions, clip=None) -> list[Group]:
 
 
 def change_anchors(comp, regions, clip) -> list[tuple[str, int | str, tuple[int, int]]]:
-    """K2 order of the changes that another key measures, as (flag key, anchor, words), for scoring, display and
+    """Order of the changes that another key measures (one detection per change, config.SAME_CHANGE), as (flag key, anchor, words), for scoring, display and
     evaluation: each region of the key, then its whole-clip flag ('<key> whole clip'), then each same-change region that
     measures the change alone, largest |z| first (the count_once choice)."""
     out = []
     for target in sorted(set(C.SAME_CHANGE.values())):
         out += [(target, j, (r.i0, r.i1)) for j, r in enumerate(regions) if key(r.dim, r.sign) == target]
-        dim, sign = C.dim_of(target), (1 if target.endswith('+') else -1)
+        dim, sign = parse_key(target)
         if dim in clip and np.sign(clip[dim]) == sign:
-            out.append((target, target + ' whole clip', (0, max((r.i1 for r in regions), default=0))))
+            out.append((target, whole_clip_key(dim, sign), (0, max((r.i1 for r in regions), default=0))))
         alone = [j for j, r in enumerate(regions)
                  if C.SAME_CHANGE.get(key(r.dim, r.sign)) == target and _rush_member(comp, regions, clip, j, target)]
         out += [(target, j, (regions[j].i0, regions[j].i1)) for j in sorted(alone, key=lambda j: (-abs(regions[j].z), j))]
@@ -159,7 +160,7 @@ def paired_pause_time(comp, region) -> tuple[float, float]:
 
 
 def natural_rush(comp, region) -> bool:
-    """K1 pause rule of a D9- region alone: natural rushing shrinks the pauses with the words (recipe
+    """Pause rule of a D9- region alone: natural rushing shrinks the pauses with the words (recipe
     edits_extra.natural_rushing), the RUSH change keeps them (flaws.stretch_speech). True when the reference has
     PAUSE_MIN_S of paired pause time and the kept fraction p/b is below both the words' ratio (exp of D9 x at the peak)
     and NATURAL_RUSH_PAUSE_KEPT_MAX."""
@@ -185,13 +186,13 @@ def same_change(comp, regions, clip, j, target: str, words) -> bool:
 
 def _rush_member(comp, regions, clip, j, target) -> bool:
     r = regions[j]
-    dim, sign = C.dim_of(target), (1 if target.endswith('+') else -1)
+    dim, sign = parse_key(target)
     return (any(key(v.dim, v.sign) == target and within_half_window(r, (v.i0, v.i1)) for v in regions) or
             (dim in (clip or {}) and np.sign(clip[dim]) == sign) or not natural_rush(comp, r))
 
 
 def count_once(comp, regions, clip, target: str, words, matched: int | None = None, taken=()) -> tuple[int | None, tuple[int, ...]]:
-    """K2, one detection per change of flag key `target` on words (first, last): (detection, duplicates). The detection
+    """One detection per change of flag key `target` on words (first, last): (detection, duplicates). The detection
     is `matched` (the region matched to the change by its own key) when there is one; otherwise the same-change region
     with the largest |z| detects the change. Every other same-change region is a duplicate. Regions in `taken`
     (matched to another change) are neither."""
@@ -207,13 +208,13 @@ def _core_type(flag):
 
 
 def rush_type(comp, regions, clip, j) -> str:
-    """K1 type of the D9- region j among `regions` with the whole-clip flags `clip`: RUSH or NATURAL_RUSH."""
+    """Type of the D9- region j by the pause rule (natural_rush) among `regions` with the whole-clip flags `clip`: RUSH or NATURAL_RUSH."""
     return 'RUSH' if _rush_member(comp, regions, clip, j, C.SAME_CHANGE['D9-']) else 'NATURAL_RUSH'
 
 
 def _cause_type(comp, regions, clip, j):
     """Registry type of region j whose expected secondaries join it: a windowed core type by the region's key, or RUSH /
-    NATURAL_RUSH for a D9- region by the K1 rule. Event types (pauses, emphasis) take no members, so that a windowed
+    NATURAL_RUSH for a D9- region by the pause rule (natural_rush). Event types (pauses, emphasis) take no members, so that a windowed
     change is never shown as a secondary of a one-word event."""
     r = regions[j]
     if r.dim == 'D9':
@@ -234,7 +235,6 @@ def counted(comp, regions, masses, clip=None):
 
 def describe(region, comp, B, P, labels=None):
     """One label; report switches apply only to labels requiring Real validation."""
-    from .compare import final_span, pause_span
     r, i = region, region.peak
     out = {'pattern': None, 'evidence': [], 'span_kind': 'boundary' if r.dim == 'D2' else 'word',
            'candidate': False, 'words': [r.i0, r.i0 + 1] if r.dim == 'D2' else [r.i0, r.i1],
@@ -277,7 +277,7 @@ def describe(region, comp, B, P, labels=None):
             return mean(rec.fr.L[lw][rec.fr.voiced[lw]]) - mean(rec.fr.L[sl][rec.fr.voiced[sl]])
         dp, db = drop(P), drop(B)
         alpha = mean(P.alpha_word[r.i0:r.i1 + 1]) - mean(B.alpha_word[r.i0:r.i1 + 1])
-        if P.tr.punct[last] == '.' and dp < db:
+        if sentence_final(P.tr)[last] and dp < db:
             out.update(pattern='TRAILING_OFF', evidence=[evidence('last_word_drop_db', 'Last-word drop', dp, 'dB'),
                                                         evidence('reference_last_word_drop_db', 'Last-word drop, reference', db, 'dB')])
         elif alpha <= -C.ALPHA_DROP_DB:

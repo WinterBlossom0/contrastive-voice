@@ -17,6 +17,7 @@ rm -rf "$TOP"
 mkdir -p "$OUT/data"
 cp "$ROOT/pyproject.toml" "$ROOT/uv.lock" "$OUT/"
 [ -f "$ROOT/README.md" ] && cp "$ROOT/README.md" "$OUT/"
+cp "$ROOT/LICENSE" "$OUT/"  # pyproject license-files names it, so the project build needs it
 cp -r "$ROOT/src" "$OUT/src"
 if [ -f "$ROOT/models/final_evaluations.json" ]; then  # the record of earlier final (test-split) evaluations: kaggle/run.py puts it beside detector.json
   mkdir -p "$OUT/models" && cp "$ROOT/models/final_evaluations.json" "$OUT/models/"

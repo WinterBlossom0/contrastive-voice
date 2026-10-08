@@ -75,7 +75,7 @@ def test_schema_fields_and_rounding(pair, pinned_detector):
         assert v is None or round(v, 2) == v
     assert res["rows"][2]["tol"] == pytest.approx([2.0 * C.FLOORS["D1"]] * 2, abs=0.01)  # [below, above]
     assert all(round(t, 3) == t for w in res["words"] for t in w["p"] + w["b"])
-    assert list(res["scores"]["dims"][0]) == ["brief_word", "key", "label", "note", "score", "scored"] or set(res["scores"]["dims"][0]) == {"key", "label", "brief_word", "score", "scored", "note", "coverage"}
+    assert set(res["scores"]["dims"][0]) == {"key", "label", "brief_word", "score", "scored", "note", "coverage"}
 
 
 def test_result_json_is_deterministic(pair, pinned_detector):

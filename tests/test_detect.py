@@ -89,7 +89,6 @@ def test_minimum_words_for_pace_and_pitch_only():
     x[4] = -9.0
     assert decode_regions(dim("D3", x), 2.0, 3.0) == []
     x = np.zeros(24)
-    x[4] = -0.6
     x[4] = -9.0
     assert len(decode_regions(dim("D5", x), 2.0, 3.0)) == 1  # single word is enough for volume
 
@@ -148,7 +147,7 @@ def test_choose_h_is_the_smallest_grid_value_within_the_budget():
 
 
 def toy_rush(width: int, r: float, h: float, start: int = 25) -> float:
-    """Noise-free toy of the reviewer's finding 2: 60 words of 0.30 s with 0.06 s gaps; words start .. start + width - 1 are sped
+    """Noise-free toy of a rush over five to eight words (IoU >= 0.5 needed): 60 words of 0.30 s with 0.06 s gaps; words start .. start + width - 1 are sped
     up by r (gaps inside the span scale too, as WSOLA scales a whole speech piece); five-word windows, floor scale ln 1.10.
     Returns the best temporal IoU, in participant time, of a detected region with the edited span."""
     n, W, G = 60, 0.30, 0.06
@@ -208,6 +207,24 @@ def test_detector_json_round_trip_and_hash(tmp_path, pinned_detector):
     with pytest.raises(FileNotFoundError):
         load_detector(tmp_path / "missing.json")
     assert (tmp_path / "d.json").read_text().endswith("\n") and list(json.loads((tmp_path / "d.json").read_text())) == sorted(det)
+
+
+def test_schema3_detector_loads_with_the_core_flag_keys_and_rejects_a_schema4_key(pinned_detector, tmp_path):
+    released = C.as_dict(3)
+    core_keys = [key(d, s) for d in released["DIMS"] for s in released["FLAG_SIGNS"][d]]
+    det = pinned_detector(2.0)
+    det["schema"] = 3
+    for v in det["regimes"].values():
+        v["h"] = {k: v["h"][k] for k in core_keys}
+        v["clip"] = {d: v["clip"][d] for d in released["CLIP_DIMS"]}
+    det["config_sha256"] = config_hash(det)
+    save_detector(det, tmp_path / "schema3.json")
+    assert load_detector(tmp_path / "schema3.json")["regimes"]["R1"]["h"] == det["regimes"]["R1"]["h"]
+    det["regimes"]["R1"]["h"]["D9-"] = 2.0
+    det["config_sha256"] = config_hash(det)
+    save_detector(det, tmp_path / "extra_key.json")
+    with pytest.raises(ValueError, match="threshold entry"):
+        load_detector(tmp_path / "extra_key.json")
 
 
 def test_decode_uses_regime_dims_and_disabled_flags(pinned_detector):

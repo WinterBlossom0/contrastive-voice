@@ -1,4 +1,5 @@
-"""Owner protocol and verified dev_v10 regressions."""
+"""Calibration protocol: source weights, null clusters, D7 eligibility, inventory, stress batches and the stored
+development reference table."""
 import dataclasses
 import json
 from types import SimpleNamespace
@@ -204,7 +205,7 @@ def test_stress_covers_all_kinds_and_seeds_in_bounded_batches(base, pinned_detec
     assert len(json.dumps(out)) > 0
 
 
-def test_v9_reference_has_the_verified_decomposition():
+def test_stored_development_reference_has_the_verified_decomposition():
     report = evaluate.dev_v9_change({'groups':{'core8':{'by_split_strict':[]}}})
     assert report['verified_v9_to_v10']['train']=={'FP_change':31,'D7':21,'non_D7':10}
     assert report['verified_v9_to_v10']['val']=={'FP_change':17,'D7':11,'non_D7':6}

@@ -28,7 +28,8 @@ def save_features(path, features, rows):
     with zipfile.ZipFile(path,'w',zipfile.ZIP_DEFLATED,compresslevel=3) as z:
         for clip,x in features.items():
             for key,value in x.items():
-                b=io.BytesIO();np.lib.format.write_array(b,np.asarray(value),allow_pickle=False)
+                b=io.BytesIO()
+                np.lib.format.write_array(b,np.asarray(value),allow_pickle=False)
                 z.writestr(clip+'__'+key+'.npy',b.getvalue())
         b=io.BytesIO()
         index=[{k:v for k,v in r.items() if k != 'path'} for r in rows]
@@ -60,7 +61,8 @@ def run_tests(results,annotated,features,out,deadline):
     paired=isolated('pair_plan',pair_plan,annotated,features)
     results['normal_plan']={k:v for k,v in normal.items() if k!='result'}
     results['pair_plan']={k:v for k,v in paired.items() if k!='result'}
-    tasks,inventory=normal.get('result',([],[])); pairs=paired.get('result',[])
+    tasks,inventory=normal.get('result',([],[]))
+    pairs=paired.get('result',[])
     for name in MEASURES:
         if deadline is not None and time.monotonic()>deadline:
             results['measures'][name]={'test':name,'complete':False,'error':'run-time budget: test not started; features retained'}
@@ -113,27 +115,34 @@ def run(data,out,local=False):
                 forecast='unbenchmarked conservative aggregate T4 x2 forecast; updated from each completed batch')
     print('[lab] time budget '+json.dumps(budget),flush=True)
     root=Path('/tmp/cvoice-lab-local' if local else '/tmp/cvoice-lab-data')
-    cache=root/'cache'; cache.mkdir(parents=True,exist_ok=True)
+    cache=root/'cache'
+    cache.mkdir(parents=True,exist_ok=True)
     _,input_status=unpack(data,root,selected)
-    annotated=[]; label_errors=[]
+    annotated=[]
+    label_errors=[]
     for r in selected:
         test=isolated('labels:'+r['source']+':'+r['audio_path'],annotate,r,root)
         if test['complete']:
             annotated.append(test['result'])
         else:
             label_errors.append(test)
-    features={}; extraction=[]; processed_audio=0.; alignment_start=time.monotonic()
+    features={}
+    extraction=[]
+    processed_audio=0.
+    alignment_start=time.monotonic()
     def accept(batch,done):
         nonlocal processed_audio
         for r,result in zip(batch,done):
             extraction.append({k:v for k,v in result.items() if k!='features'})
-            if 'features' in result:features[r['id']]=result['features']
+            if 'features' in result:
+                features[r['id']]=result['features']
             processed_audio+=r['duration']
         print(f'[lab] prepared {len(extraction)}/{len(annotated)} clips; {time.monotonic()-start:.1f}s',flush=True)
     if local:
         for r in annotated:
             if time.monotonic()-start>540:
-                skipped.append({'id':r['id'],'source':r['source'],'reason':'local nine-minute deadline'});continue
+                skipped.append({'id':r['id'],'source':r['source'],'reason':'local nine-minute deadline'})
+                continue
             accept([r],[extract_one(r,cache,True)])
         pool_stats={'workers':1,'devices':['cpu'],'mode':'in-process; no pool or child process'}
     else:
@@ -186,9 +195,11 @@ def run(data,out,local=False):
 
 def main(argv=None):
     p=argparse.ArgumentParser(description=__doc__)
-    p.add_argument('--data',type=Path);p.add_argument('--out',type=Path,required=True)
+    p.add_argument('--data',type=Path)
+    p.add_argument('--out',type=Path,required=True)
     p.add_argument('--features',type=Path,help='saved features.npz: rerun the tests only')
-    p.add_argument('--local',action='store_true');a=p.parse_args(argv)
+    p.add_argument('--local',action='store_true')
+    a=p.parse_args(argv)
     if (a.data is None)==(a.features is None):
         p.error('give exactly one of --data and --features')
     try:

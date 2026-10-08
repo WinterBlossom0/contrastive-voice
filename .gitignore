@@ -1,15 +1,33 @@
+# Python environments and caches
 .venv/
 __pycache__/
 *.pyc
 .pytest_cache/
 .ruff_cache/
-build/
 *.egg-info/
-.DS_Store
+.ipynb_checkpoints/
+
+# Local work: development runs, research drafts, staging copies
+build/
 out/
+
+# Default outputs of the calibrate, evaluate and dataset CLIs when --out is not given
+/eval/
+/calibration/
+/data/dataset/
+
+# Credentials and tool folders
+.agents/
 .aws/
 .codex/
-.agents/
-data/dataset/
-*.env
 .claude/
+.env
+.env.*
+kaggle.json
+.kaggle/
+
+# Archives, logs, OS files
+*.zip
+*.log
+.DS_Store
+*:Zone.Identifier
