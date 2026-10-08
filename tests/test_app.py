@@ -181,7 +181,12 @@ def test_oversize_body_is_413_before_it_is_read_and_unknown_job_404(server):
     host, port = base.removeprefix("http://").split(":")
     with socket.create_connection((host, int(port))) as c:   # headers only: the declared length alone is refused
         c.sendall(b"POST /api/analyze HTTP/1.1\r\nHost: x\r\nContent-Type: multipart/form-data; boundary=b\r\nContent-Length: 999999999\r\n\r\n")
-        reply = c.recv(4096)
+        c.settimeout(10)
+        reply = b""
+        chunk = c.recv(4096)
+        while chunk:  # the server closes the connection; headers and body can arrive in separate packets
+            reply += chunk
+            chunk = c.recv(4096)
     assert reply.startswith(b"HTTP/1.1 413") and b"MB" in reply
     assert call(f"{base}/api/jobs/{'0' * 32}")[0] == 404
     assert call(f"{base}/api/jobs/{'0' * 32}/participant.wav")[0] == 404

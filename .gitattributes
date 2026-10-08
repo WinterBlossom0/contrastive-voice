@@ -1,0 +1,2 @@
+# Transcript snapshots are hashed byte for byte (data/transcripts/sha256.json); line endings must not change.
+data/transcripts/** -text
