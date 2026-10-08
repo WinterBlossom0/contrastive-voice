@@ -2,10 +2,10 @@
 
 Team **Void**: Multimodal AI Hackathon 2026, Track C.
 
-The frozen detector is also published on Hugging Face: [WinterBlossom/contrastive-voice](https://huggingface.co/WinterBlossom/contrastive-voice). The same files are in `models/`; to fetch them on their own:
+The frozen detector is also published on Hugging Face: [WinterBlossom/contrastive-voice](https://huggingface.co/WinterBlossom/contrastive-voice). The same file is `models/detector.json`; to fetch it on its own:
 
 ```bash
-hf download WinterBlossom/contrastive-voice detector.json final_evaluations.json --local-dir models
+hf download WinterBlossom/contrastive-voice detector.json --local-dir models
 ```
 
 Contrastive Voice compares a spoken reading with a reference reading of the same words. It aligns both recordings word by word, measures pace, pauses, pitch range, emphasis, volume, a spectral-change proxy for clarity and speech tempo, and marks each time span where the reading departs from the reference by more than a calibrated threshold. Each finding names the words, gives both measured values and the threshold, states the points it costs in a reference-relative score, suggests a fix, and has A/B playback of the span in both recordings. The detector is a calibrated threshold detector (no trained classifier). It was built for Track C of the Multimodal AI Hackathon 2026 (contrastive speech analytics and temporal flaw grounding).
