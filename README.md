@@ -1,5 +1,7 @@
 # Contrastive Voice
 
+Team **Void**: Multimodal AI Hackathon 2026, Track C.
+
 Contrastive Voice compares a spoken reading with a reference reading of the same words. It aligns both recordings word by word, measures pace, pauses, pitch range, emphasis, volume, a spectral-change proxy for clarity and speech tempo, and marks each time span where the reading departs from the reference by more than a calibrated threshold. Each finding names the words, gives both measured values and the threshold, states the points it costs in a reference-relative score, suggests a fix, and has A/B playback of the span in both recordings. The detector is a calibrated threshold detector (no trained classifier). It was built for Track C of the Multimodal AI Hackathon 2026 (contrastive speech analytics and temporal flaw grounding).
 
 ![Dashboard: gallery example "Level 3, Set A", same-recording regime R1](docs/img/readme_dashboard.png)

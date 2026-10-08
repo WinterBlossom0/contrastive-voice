@@ -1,7 +1,7 @@
 ---
 title: 'Contrastive Voice: reference-relative speech analytics'
 subtitle: 'Multimodal AI Hackathon 2026, Track C: technical report'
-author: 'Final evaluation of detector configuration 782d7df7 (Kaggle, 2026-10-07 IST); report of 8 October 2026'
+author: 'Team Void. Final evaluation of detector configuration 782d7df7 (Kaggle, 2026-10-07 IST); report of 8 October 2026'
 fontsize: 10pt
 papersize: a4
 geometry: margin=1.15cm
