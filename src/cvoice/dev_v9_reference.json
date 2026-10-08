@@ -1,0 +1,2496 @@
+{
+ "R1_h": {
+  "D1+": 1.7,
+  "D1-": 1.7,
+  "D2+": 1.7,
+  "D2-": 1.7,
+  "D3-": 1.7,
+  "D4-": 1.7,
+  "D5-": 1.7,
+  "D6-": 1.7
+ },
+ "R1_selection": [
+  {
+   "F1": 0.7839195979899497,
+   "FN": 2,
+   "FP": 41,
+   "TP": 78,
+   "control_regions": 8,
+   "eligible": true,
+   "h": 1.0,
+   "per_type_recall": {
+    "DEEMPHASIS": 1.0,
+    "DRAG": 1.0,
+    "FADE": 1.0,
+    "MONOTONE": 1.0,
+    "MUMBLE": 1.0,
+    "PAUSE_DROPPED": 1.0,
+    "PAUSE_INTRUSIVE": 1.0,
+    "RUSH": 0.8
+   }
+  },
+  {
+   "F1": 0.7839195979899497,
+   "FN": 2,
+   "FP": 41,
+   "TP": 78,
+   "control_regions": 8,
+   "eligible": true,
+   "h": 1.05,
+   "per_type_recall": {
+    "DEEMPHASIS": 1.0,
+    "DRAG": 1.0,
+    "FADE": 1.0,
+    "MONOTONE": 1.0,
+    "MUMBLE": 1.0,
+    "PAUSE_DROPPED": 1.0,
+    "PAUSE_INTRUSIVE": 1.0,
+    "RUSH": 0.8
+   }
+  },
+  {
+   "F1": 0.7918781725888325,
+   "FN": 2,
+   "FP": 39,
+   "TP": 78,
+   "control_regions": 6,
+   "eligible": true,
+   "h": 1.1,
+   "per_type_recall": {
+    "DEEMPHASIS": 1.0,
+    "DRAG": 1.0,
+    "FADE": 1.0,
+    "MONOTONE": 1.0,
+    "MUMBLE": 1.0,
+    "PAUSE_DROPPED": 1.0,
+    "PAUSE_INTRUSIVE": 1.0,
+    "RUSH": 0.8
+   }
+  },
+  {
+   "F1": 0.7918781725888325,
+   "FN": 2,
+   "FP": 39,
+   "TP": 78,
+   "control_regions": 6,
+   "eligible": true,
+   "h": 1.15,
+   "per_type_recall": {
+    "DEEMPHASIS": 1.0,
+    "DRAG": 1.0,
+    "FADE": 1.0,
+    "MONOTONE": 1.0,
+    "MUMBLE": 1.0,
+    "PAUSE_DROPPED": 1.0,
+    "PAUSE_INTRUSIVE": 1.0,
+    "RUSH": 0.8
+   }
+  },
+  {
+   "F1": 0.8041237113402062,
+   "FN": 2,
+   "FP": 36,
+   "TP": 78,
+   "control_regions": 6,
+   "eligible": true,
+   "h": 1.2,
+   "per_type_recall": {
+    "DEEMPHASIS": 1.0,
+    "DRAG": 1.0,
+    "FADE": 1.0,
+    "MONOTONE": 1.0,
+    "MUMBLE": 1.0,
+    "PAUSE_DROPPED": 1.0,
+    "PAUSE_INTRUSIVE": 1.0,
+    "RUSH": 0.8
+   }
+  },
+  {
+   "F1": 0.8041237113402062,
+   "FN": 2,
+   "FP": 36,
+   "TP": 78,
+   "control_regions": 6,
+   "eligible": true,
+   "h": 1.25,
+   "per_type_recall": {
+    "DEEMPHASIS": 1.0,
+    "DRAG": 1.0,
+    "FADE": 1.0,
+    "MONOTONE": 1.0,
+    "MUMBLE": 1.0,
+    "PAUSE_DROPPED": 1.0,
+    "PAUSE_INTRUSIVE": 1.0,
+    "RUSH": 0.8
+   }
+  },
+  {
+   "F1": 0.8210526315789474,
+   "FN": 2,
+   "FP": 32,
+   "TP": 78,
+   "control_regions": 6,
+   "eligible": true,
+   "h": 1.3,
+   "per_type_recall": {
+    "DEEMPHASIS": 1.0,
+    "DRAG": 1.0,
+    "FADE": 1.0,
+    "MONOTONE": 1.0,
+    "MUMBLE": 1.0,
+    "PAUSE_DROPPED": 1.0,
+    "PAUSE_INTRUSIVE": 1.0,
+    "RUSH": 0.8
+   }
+  },
+  {
+   "F1": 0.8297872340425532,
+   "FN": 2,
+   "FP": 30,
+   "TP": 78,
+   "control_regions": 6,
+   "eligible": true,
+   "h": 1.35,
+   "per_type_recall": {
+    "DEEMPHASIS": 1.0,
+    "DRAG": 1.0,
+    "FADE": 1.0,
+    "MONOTONE": 1.0,
+    "MUMBLE": 1.0,
+    "PAUSE_DROPPED": 1.0,
+    "PAUSE_INTRUSIVE": 1.0,
+    "RUSH": 0.8
+   }
+  },
+  {
+   "F1": 0.8342245989304813,
+   "FN": 2,
+   "FP": 29,
+   "TP": 78,
+   "control_regions": 5,
+   "eligible": true,
+   "h": 1.4,
+   "per_type_recall": {
+    "DEEMPHASIS": 1.0,
+    "DRAG": 1.0,
+    "FADE": 1.0,
+    "MONOTONE": 1.0,
+    "MUMBLE": 1.0,
+    "PAUSE_DROPPED": 1.0,
+    "PAUSE_INTRUSIVE": 1.0,
+    "RUSH": 0.8
+   }
+  },
+  {
+   "F1": 0.8432432432432433,
+   "FN": 2,
+   "FP": 27,
+   "TP": 78,
+   "control_regions": 5,
+   "eligible": true,
+   "h": 1.45,
+   "per_type_recall": {
+    "DEEMPHASIS": 1.0,
+    "DRAG": 1.0,
+    "FADE": 1.0,
+    "MONOTONE": 1.0,
+    "MUMBLE": 1.0,
+    "PAUSE_DROPPED": 1.0,
+    "PAUSE_INTRUSIVE": 1.0,
+    "RUSH": 0.8
+   }
+  },
+  {
+   "F1": 0.8571428571428571,
+   "FN": 2,
+   "FP": 24,
+   "TP": 78,
+   "control_regions": 4,
+   "eligible": true,
+   "h": 1.5,
+   "per_type_recall": {
+    "DEEMPHASIS": 1.0,
+    "DRAG": 1.0,
+    "FADE": 1.0,
+    "MONOTONE": 1.0,
+    "MUMBLE": 1.0,
+    "PAUSE_DROPPED": 1.0,
+    "PAUSE_INTRUSIVE": 1.0,
+    "RUSH": 0.8
+   }
+  },
+  {
+   "F1": 0.8666666666666667,
+   "FN": 2,
+   "FP": 22,
+   "TP": 78,
+   "control_regions": 4,
+   "eligible": true,
+   "h": 1.55,
+   "per_type_recall": {
+    "DEEMPHASIS": 1.0,
+    "DRAG": 1.0,
+    "FADE": 1.0,
+    "MONOTONE": 1.0,
+    "MUMBLE": 1.0,
+    "PAUSE_DROPPED": 1.0,
+    "PAUSE_INTRUSIVE": 1.0,
+    "RUSH": 0.8
+   }
+  },
+  {
+   "F1": 0.8813559322033898,
+   "FN": 2,
+   "FP": 19,
+   "TP": 78,
+   "control_regions": 4,
+   "eligible": true,
+   "h": 1.6,
+   "per_type_recall": {
+    "DEEMPHASIS": 1.0,
+    "DRAG": 1.0,
+    "FADE": 1.0,
+    "MONOTONE": 1.0,
+    "MUMBLE": 1.0,
+    "PAUSE_DROPPED": 1.0,
+    "PAUSE_INTRUSIVE": 1.0,
+    "RUSH": 0.8
+   }
+  },
+  {
+   "F1": 0.8863636363636364,
+   "FN": 2,
+   "FP": 18,
+   "TP": 78,
+   "control_regions": 4,
+   "eligible": true,
+   "h": 1.65,
+   "per_type_recall": {
+    "DEEMPHASIS": 1.0,
+    "DRAG": 1.0,
+    "FADE": 1.0,
+    "MONOTONE": 1.0,
+    "MUMBLE": 1.0,
+    "PAUSE_DROPPED": 1.0,
+    "PAUSE_INTRUSIVE": 1.0,
+    "RUSH": 0.8
+   }
+  },
+  {
+   "F1": 0.896551724137931,
+   "FN": 2,
+   "FP": 16,
+   "TP": 78,
+   "control_regions": 4,
+   "eligible": true,
+   "h": 1.7,
+   "per_type_recall": {
+    "DEEMPHASIS": 1.0,
+    "DRAG": 1.0,
+    "FADE": 1.0,
+    "MONOTONE": 1.0,
+    "MUMBLE": 1.0,
+    "PAUSE_DROPPED": 1.0,
+    "PAUSE_INTRUSIVE": 1.0,
+    "RUSH": 0.8
+   }
+  },
+  {
+   "F1": 0.8901734104046243,
+   "FN": 3,
+   "FP": 16,
+   "TP": 77,
+   "control_regions": 4,
+   "eligible": false,
+   "h": 1.75,
+   "per_type_recall": {
+    "DEEMPHASIS": 0.9,
+    "DRAG": 1.0,
+    "FADE": 1.0,
+    "MONOTONE": 1.0,
+    "MUMBLE": 1.0,
+    "PAUSE_DROPPED": 1.0,
+    "PAUSE_INTRUSIVE": 1.0,
+    "RUSH": 0.8
+   }
+  },
+  {
+   "F1": 0.8837209302325582,
+   "FN": 4,
+   "FP": 16,
+   "TP": 76,
+   "control_regions": 4,
+   "eligible": false,
+   "h": 1.8,
+   "per_type_recall": {
+    "DEEMPHASIS": 0.9,
+    "DRAG": 1.0,
+    "FADE": 1.0,
+    "MONOTONE": 0.9,
+    "MUMBLE": 1.0,
+    "PAUSE_DROPPED": 1.0,
+    "PAUSE_INTRUSIVE": 1.0,
+    "RUSH": 0.8
+   }
+  },
+  {
+   "F1": 0.8837209302325582,
+   "FN": 4,
+   "FP": 16,
+   "TP": 76,
+   "control_regions": 4,
+   "eligible": false,
+   "h": 1.85,
+   "per_type_recall": {
+    "DEEMPHASIS": 0.9,
+    "DRAG": 1.0,
+    "FADE": 1.0,
+    "MONOTONE": 0.9,
+    "MUMBLE": 1.0,
+    "PAUSE_DROPPED": 1.0,
+    "PAUSE_INTRUSIVE": 1.0,
+    "RUSH": 0.8
+   }
+  },
+  {
+   "F1": 0.8823529411764706,
+   "FN": 5,
+   "FP": 15,
+   "TP": 75,
+   "control_regions": 4,
+   "eligible": false,
+   "h": 1.9,
+   "per_type_recall": {
+    "DEEMPHASIS": 0.8,
+    "DRAG": 1.0,
+    "FADE": 1.0,
+    "MONOTONE": 0.9,
+    "MUMBLE": 1.0,
+    "PAUSE_DROPPED": 1.0,
+    "PAUSE_INTRUSIVE": 1.0,
+    "RUSH": 0.8
+   }
+  },
+  {
+   "F1": 0.8809523809523809,
+   "FN": 6,
+   "FP": 14,
+   "TP": 74,
+   "control_regions": 3,
+   "eligible": false,
+   "h": 1.95,
+   "per_type_recall": {
+    "DEEMPHASIS": 0.7,
+    "DRAG": 1.0,
+    "FADE": 1.0,
+    "MONOTONE": 0.9,
+    "MUMBLE": 1.0,
+    "PAUSE_DROPPED": 1.0,
+    "PAUSE_INTRUSIVE": 1.0,
+    "RUSH": 0.8
+   }
+  },
+  {
+   "F1": 0.891566265060241,
+   "FN": 6,
+   "FP": 12,
+   "TP": 74,
+   "control_regions": 2,
+   "eligible": false,
+   "h": 2.0,
+   "per_type_recall": {
+    "DEEMPHASIS": 0.7,
+    "DRAG": 1.0,
+    "FADE": 1.0,
+    "MONOTONE": 0.9,
+    "MUMBLE": 1.0,
+    "PAUSE_DROPPED": 1.0,
+    "PAUSE_INTRUSIVE": 1.0,
+    "RUSH": 0.8
+   }
+  },
+  {
+   "F1": 0.896969696969697,
+   "FN": 6,
+   "FP": 11,
+   "TP": 74,
+   "control_regions": 2,
+   "eligible": false,
+   "h": 2.05,
+   "per_type_recall": {
+    "DEEMPHASIS": 0.7,
+    "DRAG": 1.0,
+    "FADE": 1.0,
+    "MONOTONE": 0.9,
+    "MUMBLE": 1.0,
+    "PAUSE_DROPPED": 1.0,
+    "PAUSE_INTRUSIVE": 1.0,
+    "RUSH": 0.8
+   }
+  },
+  {
+   "F1": 0.896969696969697,
+   "FN": 6,
+   "FP": 11,
+   "TP": 74,
+   "control_regions": 2,
+   "eligible": false,
+   "h": 2.1,
+   "per_type_recall": {
+    "DEEMPHASIS": 0.7,
+    "DRAG": 1.0,
+    "FADE": 1.0,
+    "MONOTONE": 0.9,
+    "MUMBLE": 1.0,
+    "PAUSE_DROPPED": 1.0,
+    "PAUSE_INTRUSIVE": 1.0,
+    "RUSH": 0.8
+   }
+  },
+  {
+   "F1": 0.9079754601226994,
+   "FN": 6,
+   "FP": 9,
+   "TP": 74,
+   "control_regions": 1,
+   "eligible": false,
+   "h": 2.15,
+   "per_type_recall": {
+    "DEEMPHASIS": 0.7,
+    "DRAG": 1.0,
+    "FADE": 1.0,
+    "MONOTONE": 0.9,
+    "MUMBLE": 1.0,
+    "PAUSE_DROPPED": 1.0,
+    "PAUSE_INTRUSIVE": 1.0,
+    "RUSH": 0.8
+   }
+  },
+  {
+   "F1": 0.9079754601226994,
+   "FN": 6,
+   "FP": 9,
+   "TP": 74,
+   "control_regions": 1,
+   "eligible": false,
+   "h": 2.2,
+   "per_type_recall": {
+    "DEEMPHASIS": 0.7,
+    "DRAG": 1.0,
+    "FADE": 1.0,
+    "MONOTONE": 0.9,
+    "MUMBLE": 1.0,
+    "PAUSE_DROPPED": 1.0,
+    "PAUSE_INTRUSIVE": 1.0,
+    "RUSH": 0.8
+   }
+  },
+  {
+   "F1": 0.8944099378881988,
+   "FN": 8,
+   "FP": 9,
+   "TP": 72,
+   "control_regions": 1,
+   "eligible": false,
+   "h": 2.25,
+   "per_type_recall": {
+    "DEEMPHASIS": 0.6,
+    "DRAG": 1.0,
+    "FADE": 0.9,
+    "MONOTONE": 0.9,
+    "MUMBLE": 1.0,
+    "PAUSE_DROPPED": 1.0,
+    "PAUSE_INTRUSIVE": 1.0,
+    "RUSH": 0.8
+   }
+  },
+  {
+   "F1": 0.8875,
+   "FN": 9,
+   "FP": 9,
+   "TP": 71,
+   "control_regions": 1,
+   "eligible": false,
+   "h": 2.3,
+   "per_type_recall": {
+    "DEEMPHASIS": 0.5,
+    "DRAG": 1.0,
+    "FADE": 0.9,
+    "MONOTONE": 0.9,
+    "MUMBLE": 1.0,
+    "PAUSE_DROPPED": 1.0,
+    "PAUSE_INTRUSIVE": 1.0,
+    "RUSH": 0.8
+   }
+  },
+  {
+   "F1": 0.8734177215189873,
+   "FN": 11,
+   "FP": 9,
+   "TP": 69,
+   "control_regions": 1,
+   "eligible": false,
+   "h": 2.35,
+   "per_type_recall": {
+    "DEEMPHASIS": 0.4,
+    "DRAG": 1.0,
+    "FADE": 0.9,
+    "MONOTONE": 0.9,
+    "MUMBLE": 1.0,
+    "PAUSE_DROPPED": 1.0,
+    "PAUSE_INTRUSIVE": 0.9,
+    "RUSH": 0.8
+   }
+  },
+  {
+   "F1": 0.8589743589743589,
+   "FN": 13,
+   "FP": 9,
+   "TP": 67,
+   "control_regions": 1,
+   "eligible": false,
+   "h": 2.4,
+   "per_type_recall": {
+    "DEEMPHASIS": 0.2,
+    "DRAG": 1.0,
+    "FADE": 0.9,
+    "MONOTONE": 0.9,
+    "MUMBLE": 1.0,
+    "PAUSE_DROPPED": 1.0,
+    "PAUSE_INTRUSIVE": 0.9,
+    "RUSH": 0.8
+   }
+  },
+  {
+   "F1": 0.8589743589743589,
+   "FN": 13,
+   "FP": 9,
+   "TP": 67,
+   "control_regions": 1,
+   "eligible": false,
+   "h": 2.45,
+   "per_type_recall": {
+    "DEEMPHASIS": 0.2,
+    "DRAG": 1.0,
+    "FADE": 0.9,
+    "MONOTONE": 0.9,
+    "MUMBLE": 1.0,
+    "PAUSE_DROPPED": 1.0,
+    "PAUSE_INTRUSIVE": 0.9,
+    "RUSH": 0.8
+   }
+  },
+  {
+   "F1": 0.8589743589743589,
+   "FN": 13,
+   "FP": 9,
+   "TP": 67,
+   "control_regions": 1,
+   "eligible": false,
+   "h": 2.5,
+   "per_type_recall": {
+    "DEEMPHASIS": 0.2,
+    "DRAG": 1.0,
+    "FADE": 0.9,
+    "MONOTONE": 0.9,
+    "MUMBLE": 1.0,
+    "PAUSE_DROPPED": 1.0,
+    "PAUSE_INTRUSIVE": 0.9,
+    "RUSH": 0.8
+   }
+  },
+  {
+   "F1": 0.8589743589743589,
+   "FN": 13,
+   "FP": 9,
+   "TP": 67,
+   "control_regions": 1,
+   "eligible": false,
+   "h": 2.55,
+   "per_type_recall": {
+    "DEEMPHASIS": 0.2,
+    "DRAG": 1.0,
+    "FADE": 0.9,
+    "MONOTONE": 0.9,
+    "MUMBLE": 1.0,
+    "PAUSE_DROPPED": 1.0,
+    "PAUSE_INTRUSIVE": 0.9,
+    "RUSH": 0.8
+   }
+  },
+  {
+   "F1": 0.8516129032258064,
+   "FN": 14,
+   "FP": 9,
+   "TP": 66,
+   "control_regions": 1,
+   "eligible": false,
+   "h": 2.6,
+   "per_type_recall": {
+    "DEEMPHASIS": 0.2,
+    "DRAG": 1.0,
+    "FADE": 0.9,
+    "MONOTONE": 0.8,
+    "MUMBLE": 1.0,
+    "PAUSE_DROPPED": 1.0,
+    "PAUSE_INTRUSIVE": 0.9,
+    "RUSH": 0.8
+   }
+  },
+  {
+   "F1": 0.8441558441558441,
+   "FN": 15,
+   "FP": 9,
+   "TP": 65,
+   "control_regions": 1,
+   "eligible": false,
+   "h": 2.65,
+   "per_type_recall": {
+    "DEEMPHASIS": 0.1,
+    "DRAG": 1.0,
+    "FADE": 0.9,
+    "MONOTONE": 0.8,
+    "MUMBLE": 1.0,
+    "PAUSE_DROPPED": 1.0,
+    "PAUSE_INTRUSIVE": 0.9,
+    "RUSH": 0.8
+   }
+  },
+  {
+   "F1": 0.8441558441558441,
+   "FN": 15,
+   "FP": 9,
+   "TP": 65,
+   "control_regions": 1,
+   "eligible": false,
+   "h": 2.7,
+   "per_type_recall": {
+    "DEEMPHASIS": 0.1,
+    "DRAG": 1.0,
+    "FADE": 0.9,
+    "MONOTONE": 0.8,
+    "MUMBLE": 1.0,
+    "PAUSE_DROPPED": 1.0,
+    "PAUSE_INTRUSIVE": 0.9,
+    "RUSH": 0.8
+   }
+  },
+  {
+   "F1": 0.8421052631578947,
+   "FN": 16,
+   "FP": 8,
+   "TP": 64,
+   "control_regions": 0,
+   "eligible": false,
+   "h": 2.75,
+   "per_type_recall": {
+    "DEEMPHASIS": 0.1,
+    "DRAG": 1.0,
+    "FADE": 0.9,
+    "MONOTONE": 0.7,
+    "MUMBLE": 1.0,
+    "PAUSE_DROPPED": 1.0,
+    "PAUSE_INTRUSIVE": 0.9,
+    "RUSH": 0.8
+   }
+  },
+  {
+   "F1": 0.847682119205298,
+   "FN": 16,
+   "FP": 7,
+   "TP": 64,
+   "control_regions": 0,
+   "eligible": false,
+   "h": 2.8,
+   "per_type_recall": {
+    "DEEMPHASIS": 0.1,
+    "DRAG": 1.0,
+    "FADE": 0.9,
+    "MONOTONE": 0.7,
+    "MUMBLE": 1.0,
+    "PAUSE_DROPPED": 1.0,
+    "PAUSE_INTRUSIVE": 0.9,
+    "RUSH": 0.8
+   }
+  },
+  {
+   "F1": 0.8456375838926175,
+   "FN": 17,
+   "FP": 6,
+   "TP": 63,
+   "control_regions": 0,
+   "eligible": false,
+   "h": 2.85,
+   "per_type_recall": {
+    "DEEMPHASIS": 0.1,
+    "DRAG": 1.0,
+    "FADE": 0.8,
+    "MONOTONE": 0.7,
+    "MUMBLE": 1.0,
+    "PAUSE_DROPPED": 1.0,
+    "PAUSE_INTRUSIVE": 0.9,
+    "RUSH": 0.8
+   }
+  },
+  {
+   "F1": 0.8322147651006712,
+   "FN": 18,
+   "FP": 7,
+   "TP": 62,
+   "control_regions": 0,
+   "eligible": false,
+   "h": 2.9,
+   "per_type_recall": {
+    "DEEMPHASIS": 0.1,
+    "DRAG": 1.0,
+    "FADE": 0.8,
+    "MONOTONE": 0.6,
+    "MUMBLE": 1.0,
+    "PAUSE_DROPPED": 1.0,
+    "PAUSE_INTRUSIVE": 0.9,
+    "RUSH": 0.8
+   }
+  },
+  {
+   "F1": 0.8299319727891157,
+   "FN": 19,
+   "FP": 6,
+   "TP": 61,
+   "control_regions": 0,
+   "eligible": false,
+   "h": 2.95,
+   "per_type_recall": {
+    "DEEMPHASIS": 0.1,
+    "DRAG": 1.0,
+    "FADE": 0.8,
+    "MONOTONE": 0.6,
+    "MUMBLE": 1.0,
+    "PAUSE_DROPPED": 0.9,
+    "PAUSE_INTRUSIVE": 0.9,
+    "RUSH": 0.8
+   }
+  },
+  {
+   "F1": 0.8356164383561644,
+   "FN": 19,
+   "FP": 5,
+   "TP": 61,
+   "control_regions": 0,
+   "eligible": false,
+   "h": 3.0,
+   "per_type_recall": {
+    "DEEMPHASIS": 0.1,
+    "DRAG": 1.0,
+    "FADE": 0.8,
+    "MONOTONE": 0.6,
+    "MUMBLE": 1.0,
+    "PAUSE_DROPPED": 0.9,
+    "PAUSE_INTRUSIVE": 0.9,
+    "RUSH": 0.8
+   }
+  }
+ ],
+ "R2_h": {
+  "D1+": 3.0,
+  "D1-": 3.0,
+  "D2+": 1.15,
+  "D2-": 2.95,
+  "D3-": 3.25,
+  "D4-": null,
+  "D5-": 4.0,
+  "D6-": null
+ },
+ "check_null": [
+  "R2 check-reader pairs, not fitted but seen during the detector redesign (18 ordered pairs; 9 recordings / readers)",
+  8,
+  7.76,
+  1.031,
+  null
+ ],
+ "cross_curve": [
+  {
+   "detected": 29,
+   "detected_by_type": {
+    "RUSH": "29/31"
+   },
+   "fitted": false,
+   "h": 1.0,
+   "injected": 31,
+   "key": "D1-",
+   "null_per_min": 6.316060840422789,
+   "null_regions": 49,
+   "reader_counts": {
+    "gettysburg_dj": 17,
+    "gettysburg_sa": 13,
+    "gettysburg_tg": 19
+   },
+   "threshold": 0.152261
+  },
+  {
+   "detected": 29,
+   "detected_by_type": {
+    "RUSH": "29/31"
+   },
+   "fitted": false,
+   "h": 1.5,
+   "injected": 31,
+   "key": "D1-",
+   "null_per_min": 3.351379221448827,
+   "null_regions": 26,
+   "reader_counts": {
+    "gettysburg_dj": 8,
+    "gettysburg_sa": 6,
+    "gettysburg_tg": 12
+   },
+   "threshold": 0.22839150000000003
+  },
+  {
+   "detected": 24,
+   "detected_by_type": {
+    "RUSH": "24/31"
+   },
+   "fitted": false,
+   "h": 2.0,
+   "injected": 31,
+   "key": "D1-",
+   "null_per_min": 1.8045888115493685,
+   "null_regions": 14,
+   "reader_counts": {
+    "gettysburg_dj": 5,
+    "gettysburg_sa": 3,
+    "gettysburg_tg": 6
+   },
+   "threshold": 0.304522
+  },
+  {
+   "detected": 23,
+   "detected_by_type": {
+    "RUSH": "23/31"
+   },
+   "fitted": false,
+   "h": 2.5,
+   "injected": 31,
+   "key": "D1-",
+   "null_per_min": 1.031193606599639,
+   "null_regions": 8,
+   "reader_counts": {
+    "gettysburg_dj": 4,
+    "gettysburg_sa": 1,
+    "gettysburg_tg": 3
+   },
+   "threshold": 0.3806525
+  },
+  {
+   "detected": 20,
+   "detected_by_type": {
+    "RUSH": "20/31"
+   },
+   "fitted": true,
+   "h": 3.0,
+   "injected": 31,
+   "key": "D1-",
+   "null_per_min": 0.3866976024748647,
+   "null_regions": 3,
+   "reader_counts": {
+    "gettysburg_dj": 1,
+    "gettysburg_sa": 1,
+    "gettysburg_tg": 1
+   },
+   "threshold": 0.45678300000000005
+  },
+  {
+   "detected": 13,
+   "detected_by_type": {
+    "RUSH": "13/31"
+   },
+   "fitted": false,
+   "h": 3.5,
+   "injected": 31,
+   "key": "D1-",
+   "null_per_min": 0.25779840164990975,
+   "null_regions": 2,
+   "reader_counts": {
+    "gettysburg_dj": 0,
+    "gettysburg_sa": 1,
+    "gettysburg_tg": 1
+   },
+   "threshold": 0.5329135
+  },
+  {
+   "detected": 8,
+   "detected_by_type": {
+    "RUSH": "8/31"
+   },
+   "fitted": false,
+   "h": 4.0,
+   "injected": 31,
+   "key": "D1-",
+   "null_per_min": 0.0,
+   "null_regions": 0,
+   "reader_counts": {
+    "gettysburg_dj": 0,
+    "gettysburg_sa": 0,
+    "gettysburg_tg": 0
+   },
+   "threshold": 0.609044
+  },
+  {
+   "detected": 4,
+   "detected_by_type": {
+    "RUSH": "4/31"
+   },
+   "fitted": false,
+   "h": 4.5,
+   "injected": 31,
+   "key": "D1-",
+   "null_per_min": 0.0,
+   "null_regions": 0,
+   "reader_counts": {
+    "gettysburg_dj": 0,
+    "gettysburg_sa": 0,
+    "gettysburg_tg": 0
+   },
+   "threshold": 0.6851745
+  },
+  {
+   "detected": 2,
+   "detected_by_type": {
+    "RUSH": "2/31"
+   },
+   "fitted": false,
+   "h": 5.0,
+   "injected": 31,
+   "key": "D1-",
+   "null_per_min": 0.0,
+   "null_regions": 0,
+   "reader_counts": {
+    "gettysburg_dj": 0,
+    "gettysburg_sa": 0,
+    "gettysburg_tg": 0
+   },
+   "threshold": 0.761305
+  },
+  {
+   "detected": 0,
+   "detected_by_type": {
+    "RUSH": "0/31"
+   },
+   "fitted": false,
+   "h": 5.5,
+   "injected": 31,
+   "key": "D1-",
+   "null_per_min": 0.0,
+   "null_regions": 0,
+   "reader_counts": {
+    "gettysburg_dj": 0,
+    "gettysburg_sa": 0,
+    "gettysburg_tg": 0
+   },
+   "threshold": 0.8374355
+  },
+  {
+   "detected": 0,
+   "detected_by_type": {
+    "RUSH": "0/31"
+   },
+   "fitted": false,
+   "h": 6.0,
+   "injected": 31,
+   "key": "D1-",
+   "null_per_min": 0.0,
+   "null_regions": 0,
+   "reader_counts": {
+    "gettysburg_dj": 0,
+    "gettysburg_sa": 0,
+    "gettysburg_tg": 0
+   },
+   "threshold": 0.9135660000000001
+  },
+  {
+   "detected": 17,
+   "detected_by_type": {
+    "DRAG": "17/17"
+   },
+   "fitted": false,
+   "h": 1.0,
+   "injected": 17,
+   "key": "D1+",
+   "null_per_min": 6.444960041247744,
+   "null_regions": 50,
+   "reader_counts": {
+    "gettysburg_dj": 14,
+    "gettysburg_sa": 17,
+    "gettysburg_tg": 19
+   },
+   "threshold": 0.152261
+  },
+  {
+   "detected": 17,
+   "detected_by_type": {
+    "DRAG": "17/17"
+   },
+   "fitted": false,
+   "h": 1.5,
+   "injected": 17,
+   "key": "D1+",
+   "null_per_min": 3.351379221448827,
+   "null_regions": 26,
+   "reader_counts": {
+    "gettysburg_dj": 9,
+    "gettysburg_sa": 7,
+    "gettysburg_tg": 10
+   },
+   "threshold": 0.22839150000000003
+  },
+  {
+   "detected": 16,
+   "detected_by_type": {
+    "DRAG": "16/17"
+   },
+   "fitted": false,
+   "h": 2.0,
+   "injected": 17,
+   "key": "D1+",
+   "null_per_min": 1.6756896107244135,
+   "null_regions": 13,
+   "reader_counts": {
+    "gettysburg_dj": 5,
+    "gettysburg_sa": 3,
+    "gettysburg_tg": 5
+   },
+   "threshold": 0.304522
+  },
+  {
+   "detected": 15,
+   "detected_by_type": {
+    "DRAG": "15/17"
+   },
+   "fitted": false,
+   "h": 2.5,
+   "injected": 17,
+   "key": "D1+",
+   "null_per_min": 0.6444960041247745,
+   "null_regions": 5,
+   "reader_counts": {
+    "gettysburg_dj": 1,
+    "gettysburg_sa": 1,
+    "gettysburg_tg": 3
+   },
+   "threshold": 0.3806525
+  },
+  {
+   "detected": 14,
+   "detected_by_type": {
+    "DRAG": "14/17"
+   },
+   "fitted": true,
+   "h": 3.0,
+   "injected": 17,
+   "key": "D1+",
+   "null_per_min": 0.25779840164990975,
+   "null_regions": 2,
+   "reader_counts": {
+    "gettysburg_dj": 0,
+    "gettysburg_sa": 0,
+    "gettysburg_tg": 2
+   },
+   "threshold": 0.45678300000000005
+  },
+  {
+   "detected": 12,
+   "detected_by_type": {
+    "DRAG": "12/17"
+   },
+   "fitted": false,
+   "h": 3.5,
+   "injected": 17,
+   "key": "D1+",
+   "null_per_min": 0.25779840164990975,
+   "null_regions": 2,
+   "reader_counts": {
+    "gettysburg_dj": 0,
+    "gettysburg_sa": 0,
+    "gettysburg_tg": 2
+   },
+   "threshold": 0.5329135
+  },
+  {
+   "detected": 10,
+   "detected_by_type": {
+    "DRAG": "10/17"
+   },
+   "fitted": false,
+   "h": 4.0,
+   "injected": 17,
+   "key": "D1+",
+   "null_per_min": 0.25779840164990975,
+   "null_regions": 2,
+   "reader_counts": {
+    "gettysburg_dj": 0,
+    "gettysburg_sa": 0,
+    "gettysburg_tg": 2
+   },
+   "threshold": 0.609044
+  },
+  {
+   "detected": 7,
+   "detected_by_type": {
+    "DRAG": "7/17"
+   },
+   "fitted": false,
+   "h": 4.5,
+   "injected": 17,
+   "key": "D1+",
+   "null_per_min": 0.12889920082495487,
+   "null_regions": 1,
+   "reader_counts": {
+    "gettysburg_dj": 0,
+    "gettysburg_sa": 0,
+    "gettysburg_tg": 1
+   },
+   "threshold": 0.6851745
+  },
+  {
+   "detected": 6,
+   "detected_by_type": {
+    "DRAG": "6/17"
+   },
+   "fitted": false,
+   "h": 5.0,
+   "injected": 17,
+   "key": "D1+",
+   "null_per_min": 0.0,
+   "null_regions": 0,
+   "reader_counts": {
+    "gettysburg_dj": 0,
+    "gettysburg_sa": 0,
+    "gettysburg_tg": 0
+   },
+   "threshold": 0.761305
+  },
+  {
+   "detected": 5,
+   "detected_by_type": {
+    "DRAG": "5/17"
+   },
+   "fitted": false,
+   "h": 5.5,
+   "injected": 17,
+   "key": "D1+",
+   "null_per_min": 0.0,
+   "null_regions": 0,
+   "reader_counts": {
+    "gettysburg_dj": 0,
+    "gettysburg_sa": 0,
+    "gettysburg_tg": 0
+   },
+   "threshold": 0.8374355
+  },
+  {
+   "detected": 1,
+   "detected_by_type": {
+    "DRAG": "1/17"
+   },
+   "fitted": false,
+   "h": 6.0,
+   "injected": 17,
+   "key": "D1+",
+   "null_per_min": 0.0,
+   "null_regions": 0,
+   "reader_counts": {
+    "gettysburg_dj": 0,
+    "gettysburg_sa": 0,
+    "gettysburg_tg": 0
+   },
+   "threshold": 0.9135660000000001
+  },
+  {
+   "detected": 30,
+   "detected_by_type": {
+    "PAUSE_DROPPED": "30/31"
+   },
+   "fitted": false,
+   "h": 1.0,
+   "injected": 31,
+   "key": "D2-",
+   "null_per_min": 3.7380768239236914,
+   "null_regions": 29,
+   "reader_counts": {
+    "gettysburg_dj": 6,
+    "gettysburg_sa": 6,
+    "gettysburg_tg": 17
+   },
+   "threshold": 0.415128
+  },
+  {
+   "detected": 25,
+   "detected_by_type": {
+    "PAUSE_DROPPED": "25/31"
+   },
+   "fitted": false,
+   "h": 1.5,
+   "injected": 31,
+   "key": "D2-",
+   "null_per_min": 1.6756896107244135,
+   "null_regions": 13,
+   "reader_counts": {
+    "gettysburg_dj": 2,
+    "gettysburg_sa": 3,
+    "gettysburg_tg": 8
+   },
+   "threshold": 0.622692
+  },
+  {
+   "detected": 19,
+   "detected_by_type": {
+    "PAUSE_DROPPED": "19/31"
+   },
+   "fitted": false,
+   "h": 2.0,
+   "injected": 31,
+   "key": "D2-",
+   "null_per_min": 0.6444960041247745,
+   "null_regions": 5,
+   "reader_counts": {
+    "gettysburg_dj": 0,
+    "gettysburg_sa": 1,
+    "gettysburg_tg": 4
+   },
+   "threshold": 0.830256
+  },
+  {
+   "detected": 12,
+   "detected_by_type": {
+    "PAUSE_DROPPED": "12/31"
+   },
+   "fitted": false,
+   "h": 2.5,
+   "injected": 31,
+   "key": "D2-",
+   "null_per_min": 0.25779840164990975,
+   "null_regions": 2,
+   "reader_counts": {
+    "gettysburg_dj": 0,
+    "gettysburg_sa": 0,
+    "gettysburg_tg": 2
+   },
+   "threshold": 1.03782
+  },
+  {
+   "detected": 9,
+   "detected_by_type": {
+    "PAUSE_DROPPED": "9/31"
+   },
+   "fitted": true,
+   "h": 2.95,
+   "injected": 31,
+   "key": "D2-",
+   "null_per_min": 0.0,
+   "null_regions": 0,
+   "reader_counts": {
+    "gettysburg_dj": 0,
+    "gettysburg_sa": 0,
+    "gettysburg_tg": 0
+   },
+   "threshold": 1.2246276
+  },
+  {
+   "detected": 9,
+   "detected_by_type": {
+    "PAUSE_DROPPED": "9/31"
+   },
+   "fitted": false,
+   "h": 3.0,
+   "injected": 31,
+   "key": "D2-",
+   "null_per_min": 0.0,
+   "null_regions": 0,
+   "reader_counts": {
+    "gettysburg_dj": 0,
+    "gettysburg_sa": 0,
+    "gettysburg_tg": 0
+   },
+   "threshold": 1.245384
+  },
+  {
+   "detected": 7,
+   "detected_by_type": {
+    "PAUSE_DROPPED": "7/31"
+   },
+   "fitted": false,
+   "h": 3.5,
+   "injected": 31,
+   "key": "D2-",
+   "null_per_min": 0.0,
+   "null_regions": 0,
+   "reader_counts": {
+    "gettysburg_dj": 0,
+    "gettysburg_sa": 0,
+    "gettysburg_tg": 0
+   },
+   "threshold": 1.452948
+  },
+  {
+   "detected": 2,
+   "detected_by_type": {
+    "PAUSE_DROPPED": "2/31"
+   },
+   "fitted": false,
+   "h": 4.0,
+   "injected": 31,
+   "key": "D2-",
+   "null_per_min": 0.0,
+   "null_regions": 0,
+   "reader_counts": {
+    "gettysburg_dj": 0,
+    "gettysburg_sa": 0,
+    "gettysburg_tg": 0
+   },
+   "threshold": 1.660512
+  },
+  {
+   "detected": 0,
+   "detected_by_type": {
+    "PAUSE_DROPPED": "0/31"
+   },
+   "fitted": false,
+   "h": 4.5,
+   "injected": 31,
+   "key": "D2-",
+   "null_per_min": 0.0,
+   "null_regions": 0,
+   "reader_counts": {
+    "gettysburg_dj": 0,
+    "gettysburg_sa": 0,
+    "gettysburg_tg": 0
+   },
+   "threshold": 1.868076
+  },
+  {
+   "detected": 0,
+   "detected_by_type": {
+    "PAUSE_DROPPED": "0/31"
+   },
+   "fitted": false,
+   "h": 5.0,
+   "injected": 31,
+   "key": "D2-",
+   "null_per_min": 0.0,
+   "null_regions": 0,
+   "reader_counts": {
+    "gettysburg_dj": 0,
+    "gettysburg_sa": 0,
+    "gettysburg_tg": 0
+   },
+   "threshold": 2.07564
+  },
+  {
+   "detected": 0,
+   "detected_by_type": {
+    "PAUSE_DROPPED": "0/31"
+   },
+   "fitted": false,
+   "h": 5.5,
+   "injected": 31,
+   "key": "D2-",
+   "null_per_min": 0.0,
+   "null_regions": 0,
+   "reader_counts": {
+    "gettysburg_dj": 0,
+    "gettysburg_sa": 0,
+    "gettysburg_tg": 0
+   },
+   "threshold": 2.283204
+  },
+  {
+   "detected": 0,
+   "detected_by_type": {
+    "PAUSE_DROPPED": "0/31"
+   },
+   "fitted": false,
+   "h": 6.0,
+   "injected": 31,
+   "key": "D2-",
+   "null_per_min": 0.0,
+   "null_regions": 0,
+   "reader_counts": {
+    "gettysburg_dj": 0,
+    "gettysburg_sa": 0,
+    "gettysburg_tg": 0
+   },
+   "threshold": 2.490768
+  },
+  {
+   "detected": 14,
+   "detected_by_type": {
+    "PAUSE_INTRUSIVE": "14/18"
+   },
+   "fitted": false,
+   "h": 1.0,
+   "injected": 18,
+   "key": "D2+",
+   "null_per_min": 0.7733952049497294,
+   "null_regions": 6,
+   "reader_counts": {
+    "gettysburg_dj": 0,
+    "gettysburg_sa": 6,
+    "gettysburg_tg": 0
+   },
+   "threshold": 0.415128
+  },
+  {
+   "detected": 14,
+   "detected_by_type": {
+    "PAUSE_INTRUSIVE": "14/18"
+   },
+   "fitted": true,
+   "h": 1.15,
+   "injected": 18,
+   "key": "D2+",
+   "null_per_min": 0.3866976024748647,
+   "null_regions": 3,
+   "reader_counts": {
+    "gettysburg_dj": 0,
+    "gettysburg_sa": 3,
+    "gettysburg_tg": 0
+   },
+   "threshold": 0.47739719999999997
+  },
+  {
+   "detected": 14,
+   "detected_by_type": {
+    "PAUSE_INTRUSIVE": "14/18"
+   },
+   "fitted": false,
+   "h": 1.5,
+   "injected": 18,
+   "key": "D2+",
+   "null_per_min": 0.3866976024748647,
+   "null_regions": 3,
+   "reader_counts": {
+    "gettysburg_dj": 0,
+    "gettysburg_sa": 3,
+    "gettysburg_tg": 0
+   },
+   "threshold": 0.622692
+  },
+  {
+   "detected": 14,
+   "detected_by_type": {
+    "PAUSE_INTRUSIVE": "14/18"
+   },
+   "fitted": false,
+   "h": 2.0,
+   "injected": 18,
+   "key": "D2+",
+   "null_per_min": 0.3866976024748647,
+   "null_regions": 3,
+   "reader_counts": {
+    "gettysburg_dj": 0,
+    "gettysburg_sa": 3,
+    "gettysburg_tg": 0
+   },
+   "threshold": 0.830256
+  },
+  {
+   "detected": 13,
+   "detected_by_type": {
+    "PAUSE_INTRUSIVE": "13/18"
+   },
+   "fitted": false,
+   "h": 2.5,
+   "injected": 18,
+   "key": "D2+",
+   "null_per_min": 0.0,
+   "null_regions": 0,
+   "reader_counts": {
+    "gettysburg_dj": 0,
+    "gettysburg_sa": 0,
+    "gettysburg_tg": 0
+   },
+   "threshold": 1.03782
+  },
+  {
+   "detected": 3,
+   "detected_by_type": {
+    "PAUSE_INTRUSIVE": "3/18"
+   },
+   "fitted": false,
+   "h": 3.0,
+   "injected": 18,
+   "key": "D2+",
+   "null_per_min": 0.0,
+   "null_regions": 0,
+   "reader_counts": {
+    "gettysburg_dj": 0,
+    "gettysburg_sa": 0,
+    "gettysburg_tg": 0
+   },
+   "threshold": 1.245384
+  },
+  {
+   "detected": 0,
+   "detected_by_type": {
+    "PAUSE_INTRUSIVE": "0/18"
+   },
+   "fitted": false,
+   "h": 3.5,
+   "injected": 18,
+   "key": "D2+",
+   "null_per_min": 0.0,
+   "null_regions": 0,
+   "reader_counts": {
+    "gettysburg_dj": 0,
+    "gettysburg_sa": 0,
+    "gettysburg_tg": 0
+   },
+   "threshold": 1.452948
+  },
+  {
+   "detected": 0,
+   "detected_by_type": {
+    "PAUSE_INTRUSIVE": "0/18"
+   },
+   "fitted": false,
+   "h": 4.0,
+   "injected": 18,
+   "key": "D2+",
+   "null_per_min": 0.0,
+   "null_regions": 0,
+   "reader_counts": {
+    "gettysburg_dj": 0,
+    "gettysburg_sa": 0,
+    "gettysburg_tg": 0
+   },
+   "threshold": 1.660512
+  },
+  {
+   "detected": 0,
+   "detected_by_type": {
+    "PAUSE_INTRUSIVE": "0/18"
+   },
+   "fitted": false,
+   "h": 4.5,
+   "injected": 18,
+   "key": "D2+",
+   "null_per_min": 0.0,
+   "null_regions": 0,
+   "reader_counts": {
+    "gettysburg_dj": 0,
+    "gettysburg_sa": 0,
+    "gettysburg_tg": 0
+   },
+   "threshold": 1.868076
+  },
+  {
+   "detected": 0,
+   "detected_by_type": {
+    "PAUSE_INTRUSIVE": "0/18"
+   },
+   "fitted": false,
+   "h": 5.0,
+   "injected": 18,
+   "key": "D2+",
+   "null_per_min": 0.0,
+   "null_regions": 0,
+   "reader_counts": {
+    "gettysburg_dj": 0,
+    "gettysburg_sa": 0,
+    "gettysburg_tg": 0
+   },
+   "threshold": 2.07564
+  },
+  {
+   "detected": 0,
+   "detected_by_type": {
+    "PAUSE_INTRUSIVE": "0/18"
+   },
+   "fitted": false,
+   "h": 5.5,
+   "injected": 18,
+   "key": "D2+",
+   "null_per_min": 0.0,
+   "null_regions": 0,
+   "reader_counts": {
+    "gettysburg_dj": 0,
+    "gettysburg_sa": 0,
+    "gettysburg_tg": 0
+   },
+   "threshold": 2.283204
+  },
+  {
+   "detected": 0,
+   "detected_by_type": {
+    "PAUSE_INTRUSIVE": "0/18"
+   },
+   "fitted": false,
+   "h": 6.0,
+   "injected": 18,
+   "key": "D2+",
+   "null_per_min": 0.0,
+   "null_regions": 0,
+   "reader_counts": {
+    "gettysburg_dj": 0,
+    "gettysburg_sa": 0,
+    "gettysburg_tg": 0
+   },
+   "threshold": 2.490768
+  },
+  {
+   "detected": 17,
+   "detected_by_type": {
+    "MONOTONE": "17/18"
+   },
+   "fitted": false,
+   "h": 1.0,
+   "injected": 18,
+   "key": "D3-",
+   "null_per_min": 6.316060840422789,
+   "null_regions": 49,
+   "reader_counts": {
+    "gettysburg_dj": 17,
+    "gettysburg_sa": 15,
+    "gettysburg_tg": 17
+   },
+   "threshold": 0.336472
+  },
+  {
+   "detected": 17,
+   "detected_by_type": {
+    "MONOTONE": "17/18"
+   },
+   "fitted": false,
+   "h": 1.5,
+   "injected": 18,
+   "key": "D3-",
+   "null_per_min": 2.7068832173240525,
+   "null_regions": 21,
+   "reader_counts": {
+    "gettysburg_dj": 6,
+    "gettysburg_sa": 6,
+    "gettysburg_tg": 9
+   },
+   "threshold": 0.5047079999999999
+  },
+  {
+   "detected": 17,
+   "detected_by_type": {
+    "MONOTONE": "17/18"
+   },
+   "fitted": false,
+   "h": 2.0,
+   "injected": 18,
+   "key": "D3-",
+   "null_per_min": 1.288992008249549,
+   "null_regions": 10,
+   "reader_counts": {
+    "gettysburg_dj": 4,
+    "gettysburg_sa": 3,
+    "gettysburg_tg": 3
+   },
+   "threshold": 0.672944
+  },
+  {
+   "detected": 18,
+   "detected_by_type": {
+    "MONOTONE": "18/18"
+   },
+   "fitted": false,
+   "h": 2.5,
+   "injected": 18,
+   "key": "D3-",
+   "null_per_min": 0.5155968032998195,
+   "null_regions": 4,
+   "reader_counts": {
+    "gettysburg_dj": 3,
+    "gettysburg_sa": 0,
+    "gettysburg_tg": 1
+   },
+   "threshold": 0.84118
+  },
+  {
+   "detected": 18,
+   "detected_by_type": {
+    "MONOTONE": "18/18"
+   },
+   "fitted": false,
+   "h": 3.0,
+   "injected": 18,
+   "key": "D3-",
+   "null_per_min": 0.0,
+   "null_regions": 0,
+   "reader_counts": {
+    "gettysburg_dj": 0,
+    "gettysburg_sa": 0,
+    "gettysburg_tg": 0
+   },
+   "threshold": 1.0094159999999999
+  },
+  {
+   "detected": 18,
+   "detected_by_type": {
+    "MONOTONE": "18/18"
+   },
+   "fitted": true,
+   "h": 3.25,
+   "injected": 18,
+   "key": "D3-",
+   "null_per_min": 0.0,
+   "null_regions": 0,
+   "reader_counts": {
+    "gettysburg_dj": 0,
+    "gettysburg_sa": 0,
+    "gettysburg_tg": 0
+   },
+   "threshold": 1.093534
+  },
+  {
+   "detected": 18,
+   "detected_by_type": {
+    "MONOTONE": "18/18"
+   },
+   "fitted": false,
+   "h": 3.5,
+   "injected": 18,
+   "key": "D3-",
+   "null_per_min": 0.0,
+   "null_regions": 0,
+   "reader_counts": {
+    "gettysburg_dj": 0,
+    "gettysburg_sa": 0,
+    "gettysburg_tg": 0
+   },
+   "threshold": 1.177652
+  },
+  {
+   "detected": 17,
+   "detected_by_type": {
+    "MONOTONE": "17/18"
+   },
+   "fitted": false,
+   "h": 4.0,
+   "injected": 18,
+   "key": "D3-",
+   "null_per_min": 0.0,
+   "null_regions": 0,
+   "reader_counts": {
+    "gettysburg_dj": 0,
+    "gettysburg_sa": 0,
+    "gettysburg_tg": 0
+   },
+   "threshold": 1.345888
+  },
+  {
+   "detected": 15,
+   "detected_by_type": {
+    "MONOTONE": "15/18"
+   },
+   "fitted": false,
+   "h": 4.5,
+   "injected": 18,
+   "key": "D3-",
+   "null_per_min": 0.0,
+   "null_regions": 0,
+   "reader_counts": {
+    "gettysburg_dj": 0,
+    "gettysburg_sa": 0,
+    "gettysburg_tg": 0
+   },
+   "threshold": 1.514124
+  },
+  {
+   "detected": 7,
+   "detected_by_type": {
+    "MONOTONE": "7/18"
+   },
+   "fitted": false,
+   "h": 5.0,
+   "injected": 18,
+   "key": "D3-",
+   "null_per_min": 0.0,
+   "null_regions": 0,
+   "reader_counts": {
+    "gettysburg_dj": 0,
+    "gettysburg_sa": 0,
+    "gettysburg_tg": 0
+   },
+   "threshold": 1.68236
+  },
+  {
+   "detected": 4,
+   "detected_by_type": {
+    "MONOTONE": "4/18"
+   },
+   "fitted": false,
+   "h": 5.5,
+   "injected": 18,
+   "key": "D3-",
+   "null_per_min": 0.0,
+   "null_regions": 0,
+   "reader_counts": {
+    "gettysburg_dj": 0,
+    "gettysburg_sa": 0,
+    "gettysburg_tg": 0
+   },
+   "threshold": 1.850596
+  },
+  {
+   "detected": 2,
+   "detected_by_type": {
+    "MONOTONE": "2/18"
+   },
+   "fitted": false,
+   "h": 6.0,
+   "injected": 18,
+   "key": "D3-",
+   "null_per_min": 0.0,
+   "null_regions": 0,
+   "reader_counts": {
+    "gettysburg_dj": 0,
+    "gettysburg_sa": 0,
+    "gettysburg_tg": 0
+   },
+   "threshold": 2.0188319999999997
+  },
+  {
+   "detected": 15,
+   "detected_by_type": {
+    "FADE": "15/18"
+   },
+   "fitted": false,
+   "h": 1.0,
+   "injected": 18,
+   "key": "D5-",
+   "null_per_min": 8.636246455271976,
+   "null_regions": 67,
+   "reader_counts": {
+    "gettysburg_dj": 20,
+    "gettysburg_sa": 17,
+    "gettysburg_tg": 30
+   },
+   "threshold": 2.727298
+  },
+  {
+   "detected": 15,
+   "detected_by_type": {
+    "FADE": "15/18"
+   },
+   "fitted": false,
+   "h": 1.5,
+   "injected": 18,
+   "key": "D5-",
+   "null_per_min": 5.02706883217324,
+   "null_regions": 39,
+   "reader_counts": {
+    "gettysburg_dj": 13,
+    "gettysburg_sa": 9,
+    "gettysburg_tg": 17
+   },
+   "threshold": 4.090947
+  },
+  {
+   "detected": 15,
+   "detected_by_type": {
+    "FADE": "15/18"
+   },
+   "fitted": false,
+   "h": 2.0,
+   "injected": 18,
+   "key": "D5-",
+   "null_per_min": 2.8357824181490074,
+   "null_regions": 22,
+   "reader_counts": {
+    "gettysburg_dj": 8,
+    "gettysburg_sa": 2,
+    "gettysburg_tg": 12
+   },
+   "threshold": 5.454596
+  },
+  {
+   "detected": 15,
+   "detected_by_type": {
+    "FADE": "15/18"
+   },
+   "fitted": false,
+   "h": 2.5,
+   "injected": 18,
+   "key": "D5-",
+   "null_per_min": 1.031193606599639,
+   "null_regions": 8,
+   "reader_counts": {
+    "gettysburg_dj": 2,
+    "gettysburg_sa": 2,
+    "gettysburg_tg": 4
+   },
+   "threshold": 6.818244999999999
+  },
+  {
+   "detected": 15,
+   "detected_by_type": {
+    "FADE": "15/18"
+   },
+   "fitted": false,
+   "h": 3.0,
+   "injected": 18,
+   "key": "D5-",
+   "null_per_min": 0.3866976024748647,
+   "null_regions": 3,
+   "reader_counts": {
+    "gettysburg_dj": 2,
+    "gettysburg_sa": 0,
+    "gettysburg_tg": 1
+   },
+   "threshold": 8.181894
+  },
+  {
+   "detected": 14,
+   "detected_by_type": {
+    "FADE": "14/18"
+   },
+   "fitted": false,
+   "h": 3.5,
+   "injected": 18,
+   "key": "D5-",
+   "null_per_min": 0.0,
+   "null_regions": 0,
+   "reader_counts": {
+    "gettysburg_dj": 0,
+    "gettysburg_sa": 0,
+    "gettysburg_tg": 0
+   },
+   "threshold": 9.545542999999999
+  },
+  {
+   "detected": 13,
+   "detected_by_type": {
+    "FADE": "13/18"
+   },
+   "fitted": true,
+   "h": 4.0,
+   "injected": 18,
+   "key": "D5-",
+   "null_per_min": 0.0,
+   "null_regions": 0,
+   "reader_counts": {
+    "gettysburg_dj": 0,
+    "gettysburg_sa": 0,
+    "gettysburg_tg": 0
+   },
+   "threshold": 10.909192
+  },
+  {
+   "detected": 12,
+   "detected_by_type": {
+    "FADE": "12/18"
+   },
+   "fitted": false,
+   "h": 4.5,
+   "injected": 18,
+   "key": "D5-",
+   "null_per_min": 0.0,
+   "null_regions": 0,
+   "reader_counts": {
+    "gettysburg_dj": 0,
+    "gettysburg_sa": 0,
+    "gettysburg_tg": 0
+   },
+   "threshold": 12.272841
+  },
+  {
+   "detected": 5,
+   "detected_by_type": {
+    "FADE": "5/18"
+   },
+   "fitted": false,
+   "h": 5.0,
+   "injected": 18,
+   "key": "D5-",
+   "null_per_min": 0.0,
+   "null_regions": 0,
+   "reader_counts": {
+    "gettysburg_dj": 0,
+    "gettysburg_sa": 0,
+    "gettysburg_tg": 0
+   },
+   "threshold": 13.636489999999998
+  },
+  {
+   "detected": 4,
+   "detected_by_type": {
+    "FADE": "4/18"
+   },
+   "fitted": false,
+   "h": 5.5,
+   "injected": 18,
+   "key": "D5-",
+   "null_per_min": 0.0,
+   "null_regions": 0,
+   "reader_counts": {
+    "gettysburg_dj": 0,
+    "gettysburg_sa": 0,
+    "gettysburg_tg": 0
+   },
+   "threshold": 15.000138999999999
+  },
+  {
+   "detected": 2,
+   "detected_by_type": {
+    "FADE": "2/18"
+   },
+   "fitted": false,
+   "h": 6.0,
+   "injected": 18,
+   "key": "D5-",
+   "null_per_min": 0.0,
+   "null_regions": 0,
+   "reader_counts": {
+    "gettysburg_dj": 0,
+    "gettysburg_sa": 0,
+    "gettysburg_tg": 0
+   },
+   "threshold": 16.363788
+  }
+ ],
+ "headline": {
+  "by_split_strict": [
+   {
+    "accounting": "all predictions counted",
+    "f1": 0.952,
+    "fn": 0,
+    "fp": 1,
+    "group": "D1+",
+    "levels": "headline (L2+L3)",
+    "precision": 0.909,
+    "recall": 1.0,
+    "split": "train",
+    "tp": 10
+   },
+   {
+    "accounting": "all predictions counted",
+    "f1": 0.667,
+    "fn": 2,
+    "fp": 6,
+    "group": "D1-",
+    "levels": "headline (L2+L3)",
+    "precision": 0.571,
+    "recall": 0.8,
+    "split": "train",
+    "tp": 8
+   },
+   {
+    "accounting": "all predictions counted",
+    "f1": 1.0,
+    "fn": 0,
+    "fp": 0,
+    "group": "D2+",
+    "levels": "headline (L2+L3)",
+    "precision": 1.0,
+    "recall": 1.0,
+    "split": "train",
+    "tp": 10
+   },
+   {
+    "accounting": "all predictions counted",
+    "f1": 1.0,
+    "fn": 0,
+    "fp": 0,
+    "group": "D2-",
+    "levels": "headline (L2+L3)",
+    "precision": 1.0,
+    "recall": 1.0,
+    "split": "train",
+    "tp": 10
+   },
+   {
+    "accounting": "all predictions counted",
+    "f1": 1.0,
+    "fn": 0,
+    "fp": 0,
+    "group": "D3-",
+    "levels": "headline (L2+L3)",
+    "precision": 1.0,
+    "recall": 1.0,
+    "split": "train",
+    "tp": 10
+   },
+   {
+    "accounting": "all predictions counted",
+    "f1": 0.952,
+    "fn": 0,
+    "fp": 1,
+    "group": "D4-",
+    "levels": "headline (L2+L3)",
+    "precision": 0.909,
+    "recall": 1.0,
+    "split": "train",
+    "tp": 10
+   },
+   {
+    "accounting": "all predictions counted",
+    "f1": 0.833,
+    "fn": 0,
+    "fp": 4,
+    "group": "D5-",
+    "levels": "headline (L2+L3)",
+    "precision": 0.714,
+    "recall": 1.0,
+    "split": "train",
+    "tp": 10
+   },
+   {
+    "accounting": "all predictions counted",
+    "f1": 1.0,
+    "fn": 0,
+    "fp": 0,
+    "group": "D6-",
+    "levels": "headline (L2+L3)",
+    "precision": 1.0,
+    "recall": 1.0,
+    "split": "train",
+    "tp": 10
+   },
+   {
+    "accounting": "all predictions counted",
+    "f1": 0.918,
+    "fn": 2,
+    "fp": 12,
+    "group": "all",
+    "levels": "headline (L2+L3)",
+    "precision": 0.867,
+    "recall": 0.975,
+    "split": "train",
+    "tp": 78
+   },
+   {
+    "accounting": "all predictions counted",
+    "f1": 0.889,
+    "fn": 0,
+    "fp": 1,
+    "group": "D1+",
+    "levels": "headline (L2+L3)",
+    "precision": 0.8,
+    "recall": 1.0,
+    "split": "val",
+    "tp": 4
+   },
+   {
+    "accounting": "all predictions counted",
+    "f1": 1.0,
+    "fn": 0,
+    "fp": 0,
+    "group": "D1-",
+    "levels": "headline (L2+L3)",
+    "precision": 1.0,
+    "recall": 1.0,
+    "split": "val",
+    "tp": 4
+   },
+   {
+    "accounting": "all predictions counted",
+    "f1": 0.8,
+    "fn": 0,
+    "fp": 2,
+    "group": "D2+",
+    "levels": "headline (L2+L3)",
+    "precision": 0.667,
+    "recall": 1.0,
+    "split": "val",
+    "tp": 4
+   },
+   {
+    "accounting": "all predictions counted",
+    "f1": 0.889,
+    "fn": 0,
+    "fp": 1,
+    "group": "D2-",
+    "levels": "headline (L2+L3)",
+    "precision": 0.8,
+    "recall": 1.0,
+    "split": "val",
+    "tp": 4
+   },
+   {
+    "accounting": "all predictions counted",
+    "f1": 0.8,
+    "fn": 0,
+    "fp": 2,
+    "group": "D3-",
+    "levels": "headline (L2+L3)",
+    "precision": 0.667,
+    "recall": 1.0,
+    "split": "val",
+    "tp": 4
+   },
+   {
+    "accounting": "all predictions counted",
+    "f1": 0.727,
+    "fn": 0,
+    "fp": 3,
+    "group": "D4-",
+    "levels": "headline (L2+L3)",
+    "precision": 0.571,
+    "recall": 1.0,
+    "split": "val",
+    "tp": 4
+   },
+   {
+    "accounting": "all predictions counted",
+    "f1": 0.5,
+    "fn": 2,
+    "fp": 2,
+    "group": "D5-",
+    "levels": "headline (L2+L3)",
+    "precision": 0.5,
+    "recall": 0.5,
+    "split": "val",
+    "tp": 2
+   },
+   {
+    "accounting": "all predictions counted",
+    "f1": 1.0,
+    "fn": 0,
+    "fp": 0,
+    "group": "D6-",
+    "levels": "headline (L2+L3)",
+    "precision": 1.0,
+    "recall": 1.0,
+    "split": "val",
+    "tp": 4
+   },
+   {
+    "accounting": "all predictions counted",
+    "f1": 0.822,
+    "fn": 2,
+    "fp": 11,
+    "group": "all",
+    "levels": "headline (L2+L3)",
+    "precision": 0.732,
+    "recall": 0.938,
+    "split": "val",
+    "tp": 30
+   },
+   {
+    "accounting": "all predictions counted",
+    "f1": 1.0,
+    "fn": 0,
+    "fp": 0,
+    "group": "D1+",
+    "levels": "sensitivity (L1)",
+    "precision": 1.0,
+    "recall": 1.0,
+    "split": "train",
+    "tp": 5
+   },
+   {
+    "accounting": "all predictions counted",
+    "f1": 0.8,
+    "fn": 1,
+    "fp": 1,
+    "group": "D1-",
+    "levels": "sensitivity (L1)",
+    "precision": 0.8,
+    "recall": 0.8,
+    "split": "train",
+    "tp": 4
+   },
+   {
+    "accounting": "all predictions counted",
+    "f1": 1.0,
+    "fn": 0,
+    "fp": 0,
+    "group": "D2+",
+    "levels": "sensitivity (L1)",
+    "precision": 1.0,
+    "recall": 1.0,
+    "split": "train",
+    "tp": 5
+   },
+   {
+    "accounting": "all predictions counted",
+    "f1": 1.0,
+    "fn": 0,
+    "fp": 0,
+    "group": "D2-",
+    "levels": "sensitivity (L1)",
+    "precision": 1.0,
+    "recall": 1.0,
+    "split": "train",
+    "tp": 5
+   },
+   {
+    "accounting": "all predictions counted",
+    "f1": 0.75,
+    "fn": 2,
+    "fp": 0,
+    "group": "D3-",
+    "levels": "sensitivity (L1)",
+    "precision": 1.0,
+    "recall": 0.6,
+    "split": "train",
+    "tp": 3
+   },
+   {
+    "accounting": "all predictions counted",
+    "f1": 0.333,
+    "fn": 4,
+    "fp": 0,
+    "group": "D4-",
+    "levels": "sensitivity (L1)",
+    "precision": 1.0,
+    "recall": 0.2,
+    "split": "train",
+    "tp": 1
+   },
+   {
+    "accounting": "all predictions counted",
+    "f1": 0.5,
+    "fn": 3,
+    "fp": 1,
+    "group": "D5-",
+    "levels": "sensitivity (L1)",
+    "precision": 0.667,
+    "recall": 0.4,
+    "split": "train",
+    "tp": 2
+   },
+   {
+    "accounting": "all predictions counted",
+    "f1": 0.0,
+    "fn": 5,
+    "fp": 0,
+    "group": "D6-",
+    "levels": "sensitivity (L1)",
+    "precision": null,
+    "recall": 0.0,
+    "split": "train",
+    "tp": 0
+   },
+   {
+    "accounting": "all predictions counted",
+    "f1": 0.746,
+    "fn": 15,
+    "fp": 2,
+    "group": "all",
+    "levels": "sensitivity (L1)",
+    "precision": 0.926,
+    "recall": 0.625,
+    "split": "train",
+    "tp": 25
+   },
+   {
+    "accounting": "all predictions counted",
+    "f1": 0.667,
+    "fn": 1,
+    "fp": 0,
+    "group": "D1+",
+    "levels": "sensitivity (L1)",
+    "precision": 1.0,
+    "recall": 0.5,
+    "split": "val",
+    "tp": 1
+   },
+   {
+    "accounting": "all predictions counted",
+    "f1": 0.5,
+    "fn": 1,
+    "fp": 1,
+    "group": "D1-",
+    "levels": "sensitivity (L1)",
+    "precision": 0.5,
+    "recall": 0.5,
+    "split": "val",
+    "tp": 1
+   },
+   {
+    "accounting": "all predictions counted",
+    "f1": 1.0,
+    "fn": 0,
+    "fp": 0,
+    "group": "D2+",
+    "levels": "sensitivity (L1)",
+    "precision": 1.0,
+    "recall": 1.0,
+    "split": "val",
+    "tp": 2
+   },
+   {
+    "accounting": "all predictions counted",
+    "f1": 1.0,
+    "fn": 0,
+    "fp": 0,
+    "group": "D2-",
+    "levels": "sensitivity (L1)",
+    "precision": 1.0,
+    "recall": 1.0,
+    "split": "val",
+    "tp": 2
+   },
+   {
+    "accounting": "all predictions counted",
+    "f1": 1.0,
+    "fn": 0,
+    "fp": 0,
+    "group": "D3-",
+    "levels": "sensitivity (L1)",
+    "precision": 1.0,
+    "recall": 1.0,
+    "split": "val",
+    "tp": 2
+   },
+   {
+    "accounting": "all predictions counted",
+    "f1": 0.0,
+    "fn": 2,
+    "fp": 0,
+    "group": "D4-",
+    "levels": "sensitivity (L1)",
+    "precision": null,
+    "recall": 0.0,
+    "split": "val",
+    "tp": 0
+   },
+   {
+    "accounting": "all predictions counted",
+    "f1": 0.0,
+    "fn": 2,
+    "fp": 0,
+    "group": "D5-",
+    "levels": "sensitivity (L1)",
+    "precision": null,
+    "recall": 0.0,
+    "split": "val",
+    "tp": 0
+   },
+   {
+    "accounting": "all predictions counted",
+    "f1": 0.0,
+    "fn": 2,
+    "fp": 0,
+    "group": "D6-",
+    "levels": "sensitivity (L1)",
+    "precision": null,
+    "recall": 0.0,
+    "split": "val",
+    "tp": 0
+   },
+   {
+    "accounting": "all predictions counted",
+    "f1": 0.64,
+    "fn": 8,
+    "fp": 1,
+    "group": "all",
+    "levels": "sensitivity (L1)",
+    "precision": 0.889,
+    "recall": 0.5,
+    "split": "val",
+    "tp": 8
+   }
+  ]
+ },
+ "sha256": {
+  "calibration/report.json": "5328879ba11917e0a00189ee6fa7b08bd76bbe6c5c345989ca6ba41f73f6f5f9",
+  "eval/results.json": "dbc1c28fcab2bd8139e47afd20fa154a39de04c3c963b2e0ad6e4870baf507db",
+  "models/detector.json": "5ae9c3c1f4e56b6353ddfe4cc7977be16105d26c769c422c82551fdb92470610"
+ },
+ "source": "dev_v9 (2026-10-02); eval/results.json, calibration/report.json, models/detector.json"
+}

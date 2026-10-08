@@ -1,0 +1,496 @@
+1
+00:00:00,000 --> 00:00:02,096
+Contrastive Voice compares a recording
+
+2
+00:00:02,156 --> 00:00:05,544
+with a reference reading of the same
+words.
+
+3
+00:00:05,604 --> 00:00:09,424
+It shows where the delivery departs, by
+how much,
+
+4
+00:00:09,484 --> 00:00:12,873
+and what that costs in a
+reference-relative score.
+
+5
+00:00:12,933 --> 00:00:19,340
+I will show the dataset, the stress tests,
+and the dashboard with a live analysis.
+
+6
+00:00:20,000 --> 00:00:23,045
+The reference recordings are public
+domain: nine
+
+7
+00:00:23,105 --> 00:00:26,595
+United States government speeches and ten
+LibriVox readings.
+
+8
+00:00:26,655 --> 00:00:29,256
+The source manifest records each download
+
+9
+00:00:29,316 --> 00:00:32,362
+address, checksum, licence basis and
+speaker split.
+
+10
+00:00:32,422 --> 00:00:37,242
+The build selects one passage of about
+thirty seconds from each
+
+11
+00:00:37,302 --> 00:00:41,235
+speech by matching recognised words to the
+official transcript.
+
+12
+00:00:41,295 --> 00:00:44,340
+That favours passages the aligner handles
+well.
+
+13
+00:00:45,000 --> 00:00:51,151
+The dataset is built in one Kaggle script
+kernel on two T4 graphics processors.
+
+14
+00:00:51,211 --> 00:00:54,256
+The runner checks the staged source
+hashes,
+
+15
+00:00:54,316 --> 00:00:57,362
+installs the locked environment, and runs
+four
+
+16
+00:00:57,422 --> 00:01:00,024
+stages: dataset, calibration, evaluation
+and gallery.
+
+17
+00:01:00,084 --> 00:01:05,347
+The final run took six hundred and
+fifty-three seconds, about eleven minutes.
+
+18
+00:01:05,407 --> 00:01:09,340
+The status file shows four of four stages
+complete.
+
+19
+00:01:10,000 --> 00:01:12,696
+The dataset holds one hundred and
+
+20
+00:01:12,756 --> 00:01:15,912
+twenty-one audio files, fifty-four point
+one minutes.
+
+21
+00:01:15,972 --> 00:01:22,343
+Nine speakers are split five for training,
+two for validation and two for test.
+
+22
+00:01:22,403 --> 00:01:26,018
+One hundred and two clips are generated:
+identity
+
+23
+00:01:26,078 --> 00:01:29,234
+controls, single-level clips, a ladder
+from one
+
+24
+00:01:29,294 --> 00:01:33,828
+small edit to a botched passage, and
+edited second readers.
+
+25
+00:01:33,888 --> 00:01:39,340
+Each label stores the edit type, level,
+word span and sample span.
+
+26
+00:01:40,000 --> 00:01:43,428
+These flaws are controlled acoustic edits,
+not
+
+27
+00:01:43,488 --> 00:01:48,411
+human errors, and nobody has listened to
+and rated them.
+
+28
+00:01:48,471 --> 00:01:53,394
+There are eight edit types at three
+levels: faster or
+
+29
+00:01:53,454 --> 00:01:56,882
+slower speech, dropped or inserted pauses,
+flattened
+
+30
+00:01:56,942 --> 00:02:00,869
+pitch, removed emphasis, a fade, and
+spectral smoothing.
+
+31
+00:02:00,929 --> 00:02:05,354
+On the page, black bars mark the injected
+edits,
+
+32
+00:02:05,414 --> 00:02:09,340
+and shaded regions mark what the detector
+flagged.
+
+33
+00:02:10,000 --> 00:02:12,846
+The examples form a spectrum of quality.
+
+34
+00:02:12,906 --> 00:02:15,337
+Identity runs every recipe with neutral
+
+35
+00:02:15,397 --> 00:02:18,658
+settings and scores one hundred with no
+flags.
+
+36
+00:02:18,718 --> 00:02:24,055
+From level one to level three the score
+falls from ninety-seven to eighty-five.
+
+37
+00:02:24,115 --> 00:02:29,037
+G five is the botched end: the whole
+passage is rushed and
+
+38
+00:02:29,097 --> 00:02:34,019
+flattened, with dropped pauses and fades,
+and it scores forty point two.
+
+39
+00:02:34,079 --> 00:02:37,340
+Listen to G five, then to the reference.
+
+40
+00:02:50,000 --> 00:02:53,312
+The test split has two speakers and was
+
+41
+00:02:53,372 --> 00:02:56,263
+evaluated once, after the design was
+frozen.
+
+42
+00:02:56,323 --> 00:02:59,635
+Of thirty-two edits at levels two and
+three,
+
+43
+00:02:59,695 --> 00:03:04,272
+twenty-nine are matched one to one with at
+least half overlap.
+
+44
+00:03:04,332 --> 00:03:07,223
+With five false flags and three misses,
+
+45
+00:03:07,283 --> 00:03:11,438
+strict event F one is zero point eight
+seven nine.
+
+46
+00:03:11,498 --> 00:03:17,340
+Matched region boundaries miss the label
+by up to zero point nine eight seconds.
+
+47
+00:03:18,000 --> 00:03:21,292
+The stress matrix changes only the
+recording channel.
+
+48
+00:03:21,352 --> 00:03:27,578
+On the test recordings, a six decibel gain
+change and MP3 coding add no regions.
+
+49
+00:03:27,638 --> 00:03:30,511
+White noise at twenty decibels
+signal-to-noise ratio
+
+50
+00:03:30,571 --> 00:03:34,702
+adds one pace flag, and a low-pass filter
+adds two.
+
+51
+00:03:34,762 --> 00:03:38,892
+Heavy compression, about ten decibels of
+gain reduction, is the
+
+52
+00:03:38,952 --> 00:03:44,340
+failure: it adds five false pause and
+volume flags in about one minute.
+
+53
+00:03:45,000 --> 00:03:49,916
+On edited test clips, twenty-nine edits
+are found before
+
+54
+00:03:49,976 --> 00:03:54,340
+stress, twenty-seven after noise, and
+twenty-four after compression.
+
+55
+00:03:55,000 --> 00:04:01,473
+This is level three, set A, compared with
+the recording it was edited from.
+
+56
+00:04:01,533 --> 00:04:06,607
+The delivery score is eighty-five point
+one, with six flagged regions.
+
+57
+00:04:06,667 --> 00:04:08,007
+I select Rushed.
+
+58
+00:04:08,067 --> 00:04:12,673
+The explanation names the words, gives the
+span in both
+
+59
+00:04:12,733 --> 00:04:16,873
+recordings, and says the speech took zero
+point eight
+
+60
+00:04:16,933 --> 00:04:21,540
+seven seconds against one point six two in
+the reference.
+
+61
+00:04:21,600 --> 00:04:24,340
+It costs four point one points.
+
+62
+00:04:25,000 --> 00:04:28,578
+Button A plays this span in the
+participant recording.
+
+63
+00:04:28,638 --> 00:04:32,215
+Button B plays the same words in the
+reference.
+
+64
+00:04:32,275 --> 00:04:38,278
+The black bar is the injected edit, and
+the shaded box is the flagged region.
+
+65
+00:04:38,338 --> 00:04:41,107
+The category cards filter the list, and
+
+66
+00:04:41,167 --> 00:04:44,340
+clicking a word in the transcript plays
+it.
+
+67
+00:04:55,000 --> 00:04:56,573
+Now a different speaker.
+
+68
+00:04:56,633 --> 00:05:01,882
+John Greenman reads the same passage, with
+an inserted pause and a fade.
+
+69
+00:05:01,942 --> 00:05:07,190
+The regime is R two, and its thresholds
+are wide because two good
+
+70
+00:05:07,250 --> 00:05:11,273
+readers differ a lot: twenty-two point
+eight decibels for volume.
+
+71
+00:05:11,333 --> 00:05:15,357
+Nothing is flagged and the score stays at
+one hundred.
+
+72
+00:05:15,417 --> 00:05:19,440
+The two edits are the last two of five
+listed
+
+73
+00:05:19,500 --> 00:05:22,298
+differences, behind three that are not
+edits.
+
+74
+00:05:22,358 --> 00:05:24,340
+The list is not scored.
+
+75
+00:05:25,000 --> 00:05:29,708
+On three check readers, eighteen edits
+were injected and one was flagged.
+
+76
+00:05:29,768 --> 00:05:34,078
+Fourteen of the fifteen that move away
+from the reference were
+
+77
+00:05:34,138 --> 00:05:38,448
+flagged or listed, but the list has five
+entries with or
+
+78
+00:05:38,508 --> 00:05:43,216
+without an edit, so it does not separate
+edits from reader differences.
+
+79
+00:05:43,276 --> 00:05:48,381
+Unedited reader pairs give six false
+regions in seven point seven six minutes.
+
+80
+00:05:48,441 --> 00:05:51,559
+For another speaker, a score of one
+hundred
+
+81
+00:05:51,619 --> 00:05:54,340
+means only that nothing crossed the
+thresholds.
+
+82
+00:05:55,000 --> 00:05:56,749
+Now a live upload.
+
+83
+00:05:56,809 --> 00:06:01,272
+I open Analyse your own recording and
+choose a file
+
+84
+00:06:01,332 --> 00:06:04,891
+from the dataset: John Greenman's reading
+with two
+
+85
+00:06:04,951 --> 00:06:08,962
+level-three edits, a slowed stretch and a
+flattened stretch.
+
+86
+00:06:09,022 --> 00:06:14,389
+I keep the bundled Reagan reference and
+its transcript, and press Analyse.
+
+87
+00:06:14,449 --> 00:06:18,008
+The stages run: decode, align, features,
+compare, detect.
+
+88
+00:06:18,068 --> 00:06:21,174
+Every upload is treated as a different
+
+89
+00:06:21,234 --> 00:06:24,340
+performance, so the R two thresholds
+apply.
+
+90
+00:06:25,000 --> 00:06:30,323
+The result is regime R two, with one
+flagged region: slower here, from
+
+91
+00:06:30,383 --> 00:06:36,534
+eleven point four to thirteen point five
+seconds, on the words up there that I.
+
+92
+00:06:36,594 --> 00:06:39,847
+That stretch is one hundred and
+fifty-three percent
+
+93
+00:06:39,907 --> 00:06:43,574
+longer than the reference at the reader's
+own tempo,
+
+94
+00:06:43,634 --> 00:06:47,715
+and the flag threshold is one hundred and
+fifty percent.
+
+95
+00:06:47,775 --> 00:06:50,613
+It costs one hundredth of a point.
+
+96
+00:06:50,673 --> 00:06:53,098
+The flattened stretch is not flagged.
+
+97
+00:06:53,158 --> 00:06:54,340
+Now both recordings.
+
+98
+00:07:10,000 --> 00:07:14,147
+On the test split, strict event F one is
+zero
+
+99
+00:07:14,207 --> 00:07:18,354
+point eight seven nine for edits of the
+same recording.
+
+100
+00:07:18,414 --> 00:07:21,719
+Detection across speakers is weak, heavy
+compression causes
+
+101
+00:07:21,779 --> 00:07:25,926
+false flags, and no listener has rated the
+synthetic flaws.
+
+102
+00:07:25,986 --> 00:07:30,133
+The repository holds the dataset, the
+evidence, the link from
+
+103
+00:07:30,193 --> 00:07:34,340
+each measurement to prior research, and
+commands to reproduce this.

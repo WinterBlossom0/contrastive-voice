@@ -1,0 +1,16 @@
+name: ci
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.12.3"
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
+      - run: uv sync --locked --extra cpu --group dev --group build
+      - name: unit tests
+        run: uv run --extra cpu pytest -q
+      - name: one-clip golden test (downloads the aligner checkpoint)
+        run: uv run --extra cpu pytest -q -m slow tests/test_smoke.py

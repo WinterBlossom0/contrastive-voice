@@ -1,0 +1,21 @@
+{
+  "id": "electroknight/cvoice-data",
+  "title": "cvoice-data",
+  "code_file": "fetch.py",
+  "language": "python",
+  "kernel_type": "script",
+  "is_private": true,
+  "enable_gpu": false,
+  "enable_tpu": false,
+  "enable_internet": true,
+  "dataset_sources": [
+    "tthieu0901/speechocean762",
+    "luizfelipebjcosta/libri-tts-train-clean-100",
+    "kynthesis/vctk-corpus",
+    "rtatman/speech-accent-archive",
+    "danimarch/libristutter-unchanged"
+  ],
+  "competition_sources": [],
+  "kernel_sources": [],
+  "model_sources": []
+}

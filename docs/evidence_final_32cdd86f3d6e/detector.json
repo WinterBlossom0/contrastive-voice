@@ -1,0 +1,185 @@
+{
+ "config_sha256": "32cdd86f3d6e42db33f23a2a02d9319f505396ead7373cc8fc5d21a748f42332",
+ "pipeline_version": "0.1.0",
+ "regimes": {
+  "R1": {
+   "enabled": [
+    "D1",
+    "D2",
+    "D3",
+    "D4",
+    "D5",
+    "D6"
+   ],
+   "h": {
+    "D1": 1.7,
+    "D2": 1.7,
+    "D3": 1.7,
+    "D4": 1.7,
+    "D5": 1.7,
+    "D6": 1.7
+   },
+   "name": "R1",
+   "null": {
+    "budget_per_dimension": null,
+    "false_per_minute_at_h": 0.0,
+    "minutes": 13.359,
+    "n_pairs": 30,
+    "regions_by_dimension": {
+     "D1": 0,
+     "D2": 0,
+     "D3": 0,
+     "D4": 0,
+     "D5": 0,
+     "D6": 0
+    },
+    "valid_units": {
+     "D1": 1968,
+     "D2": 312,
+     "D3": 1811,
+     "D4": 252,
+     "D5": 1968,
+     "D6": 1968
+    }
+   },
+   "null_median": {
+    "D1": 0.0,
+    "D2": 0.0,
+    "D3": 0.0,
+    "D4": 0.0,
+    "D5": 0.0,
+    "D6": 0.0
+   },
+   "scales": {
+    "D1": 0.09531,
+    "D2": 0.15,
+    "D3": 2.0,
+    "D4": 0.5,
+    "D5": 2.0,
+    "D6": 0.223144
+   },
+   "selection": "supervised operating-point selection"
+  },
+  "R2": {
+   "enabled": [
+    "D1",
+    "D2",
+    "D3",
+    "D5"
+   ],
+   "h": {
+    "D1": 5.6,
+    "D2": 2.65,
+    "D3": 3.05,
+    "D4": null,
+    "D5": 5.25,
+    "D6": null
+   },
+   "name": "R2",
+   "null": {
+    "budget_per_dimension": 0.125,
+    "false_per_minute_at_h": 0.22061527147934798,
+    "minutes": 13.598,
+    "n_pairs": 30,
+    "regions_by_dimension": {
+     "D1": 0,
+     "D2": 1,
+     "D3": 1,
+     "D5": 1
+    },
+    "valid_units": {
+     "D1": 1920,
+     "D2": 216,
+     "D3": 1704,
+     "D4": 158,
+     "D5": 1920,
+     "D6": 1920
+    }
+   },
+   "null_median": {
+    "D1": -0.003881,
+    "D2": 0.0,
+    "D3": -0.040069,
+    "D4": -0.465065,
+    "D5": 0.003101,
+    "D6": 0.001027
+   },
+   "scales": {
+    "D1": 0.163616,
+    "D2": 0.504084,
+    "D3": 3.475623,
+    "D4": 0.665613,
+    "D5": 4.335732,
+    "D6": 0.223144
+   }
+  }
+ },
+ "report": {
+  "R1": {
+   "budget_per_dimension": null,
+   "false_per_minute_at_h": 0.0,
+   "minutes": 13.359,
+   "n_pairs": 30,
+   "regions_by_dimension": {
+    "D1": 0,
+    "D2": 0,
+    "D3": 0,
+    "D4": 0,
+    "D5": 0,
+    "D6": 0
+   },
+   "valid_units": {
+    "D1": 1968,
+    "D2": 312,
+    "D3": 1811,
+    "D4": 252,
+    "D5": 1968,
+    "D6": 1968
+   }
+  },
+  "R2": {
+   "budget_per_dimension": 0.125,
+   "false_per_minute_at_h": 0.22061527147934798,
+   "minutes": 13.598,
+   "n_pairs": 30,
+   "regions_by_dimension": {
+    "D1": 0,
+    "D2": 1,
+    "D3": 1,
+    "D5": 1
+   },
+   "valid_units": {
+    "D1": 1920,
+    "D2": 216,
+    "D3": 1704,
+    "D4": 158,
+    "D5": 1920,
+    "D6": 1920
+   }
+  },
+  "alignment_device": "cuda",
+  "calibrated": true,
+  "gates_train": {
+   "n_clips": 50,
+   "violations": []
+  },
+  "gates_val": {
+   "n_clips": 20,
+   "violations": []
+  },
+  "manifest_sha256": "2a3ba01be0bc33fcb3c642c2a9c3d80b64d6f44b048e8de9597071382fdec637",
+  "pipeline_version": "0.1.0",
+  "pmax_factor": 0.645
+ },
+ "schema": 2,
+ "score": {
+  "pmax": {
+   "D1": 0.258,
+   "D2": 0.3225,
+   "D3": 0.258,
+   "D4": 0.3225,
+   "D5": 0.258,
+   "D6": 0.258
+  }
+ }
+}

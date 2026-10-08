@@ -1,0 +1,10 @@
+[
+ {"need":"prominence","checkpoint":"interactiveaudiolab/emphases: emphases/assets/checkpoints/checkpoint.pt","bytes_approx":3000000,"licence":"MIT","source":"https://github.com/interactiveaudiolab/emphases","status":"survey metadata; not loaded"},
+ {"need":"breath","checkpoint":"ydqmkkx/Respiro-en: respiro-en.pt","bytes":35377347,"licence":"MIT","source":"https://github.com/ydqmkkx/Respiro-en","status":"repository tree size verified 2026-10-02; not loaded"},
+ {"need":"creak","checkpoint":"bronichern/DeepFry: models/CREAK-220lr_0.001_decay_21_input_size_512_hidden_size_256_channels_512_normalize_False_measure_ff1_dropout_0.1_classes_3_.pth","bytes":20873889,"licence":"MIT (repository; third-party audio rights separate)","source":"https://github.com/bronichern/DeepFry","status":"repository tree size verified 2026-10-02; not loaded"},
+ {"need":"disfluency classes","checkpoint":"tiantiaf/wavlm-large-speech-flow","bytes_approx":1270000000,"licence":"OpenRAIL","source":"https://huggingface.co/tiantiaf/wavlm-large-speech-flow","status":"survey metadata; not loaded"},
+ {"need":"stutter classes","checkpoint":"vocametrix/wav2vec2-xlsr-53-stuttering-classification","bytes_approx":1260000000,"licence":"Apache-2.0","source":"https://huggingface.co/vocametrix/wav2vec2-xlsr-53-stuttering-classification","status":"survey metadata; not loaded"},
+ {"need":"phoneme CTC / phonetic rhythm / GOP","checkpoint":"facebook/wav2vec2-lv-60-espeak-cv-ft","bytes_approx":1260000000,"licence":"Apache-2.0","source":"https://huggingface.co/facebook/wav2vec2-lv-60-espeak-cv-ft","status":"survey metadata; not loaded; requires transformers outside the locked environment"},
+ {"need":"smaller phoneme CTC","checkpoint":"mostafaashahin/wav2vec2-base-timit-phoneme-arpa-39","bytes_approx":377000000,"licence":null,"source":"https://huggingface.co/mostafaashahin/wav2vec2-base-timit-phoneme-arpa-39","status":"survey found no model licence; not loaded"},
+ {"need":"absolute vocal effort","checkpoint":null,"bytes":null,"licence":null,"status":"survey found no pretrained checkpoint; would need AVID training, beyond this lab"}
+]

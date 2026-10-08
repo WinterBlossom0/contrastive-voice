@@ -1,0 +1,176 @@
+{
+ "bootstrap_seconds": 72.2,
+ "complete": true,
+ "cpu_count": 4,
+ "dataset_counts": {
+  "baselines": 9,
+  "files": 121,
+  "flawed": 102,
+  "minutes": 54.1,
+  "readers": 10
+ },
+ "detector": {
+  "config_sha256": "32cdd86f3d6e42db33f23a2a02d9319f505396ead7373cc8fc5d21a748f42332",
+  "gate_violations": {
+   "gates_train": 0,
+   "gates_val": 0
+  },
+  "h": {
+   "R1": {
+    "D1": 1.7,
+    "D2": 1.7,
+    "D3": 1.7,
+    "D4": 1.7,
+    "D5": 1.7,
+    "D6": 1.7
+   },
+   "R2": {
+    "D1": 5.6,
+    "D2": 2.65,
+    "D3": 3.05,
+    "D4": null,
+    "D5": 5.25,
+    "D6": null
+   }
+  },
+  "pmax_factor": 0.645
+ },
+ "device_plan": {
+  "devices": [
+   "cuda:0",
+   "cuda:1"
+  ],
+  "extra": "gpu",
+  "gpus": [
+   "Tesla T4",
+   "Tesla T4"
+  ],
+  "workers": 4
+ },
+ "environment": {
+  "numpy": "2.5.3",
+  "parselmouth": "0.4.7",
+  "python": "3.12.13",
+  "scipy": "1.18.1",
+  "torch": "2.10.0+cu126",
+  "torchaudio": "2.10.0+cu126"
+ },
+ "failed_stage": null,
+ "failed_stages": [],
+ "final_evaluation": true,
+ "parts": [
+  {
+   "bytes": 66363949,
+   "files": 99,
+   "name": "cvoice-build-part-001.zip",
+   "sha256": "379196d28e6f25ed080390cd449701a778f6be231c28e4787512a9235a8de8f2"
+  },
+  {
+   "bytes": 27894159,
+   "files": 171,
+   "name": "cvoice-build-part-002.zip",
+   "sha256": "be27ff225a3beea0e712a05f486afbaba25dd81918c2ea75da185b47b1fbba48"
+  }
+ ],
+ "schema": 1,
+ "stages": [
+  {
+   "clips": 140,
+   "clips_per_second": 0.97,
+   "gpu_memory_mib": [
+    {
+     "index": 0,
+     "total": 15360,
+     "used": 2655
+    },
+    {
+     "index": 1,
+     "total": 15360,
+     "used": 2659
+    }
+   ],
+   "jobs": {
+    "align": 121,
+    "call": 13,
+    "emit": 19,
+    "prepare": 19
+   },
+   "name": "dataset",
+   "ok": true,
+   "returncode": 0,
+   "seconds": 144.3
+  },
+  {
+   "clips": 118,
+   "clips_per_second": 1.913,
+   "gpu_memory_mib": [
+    {
+     "index": 0,
+     "total": 15360,
+     "used": 2403
+    },
+    {
+     "index": 1,
+     "total": 15360,
+     "used": 2571
+    }
+   ],
+   "jobs": {
+    "call": 30,
+    "prepare": 118
+   },
+   "name": "calibrate",
+   "ok": true,
+   "returncode": 0,
+   "seconds": 61.7
+  },
+  {
+   "clips": 491,
+   "clips_per_second": 1.449,
+   "gpu_memory_mib": [
+    {
+     "index": 0,
+     "total": 15360,
+     "used": 3349
+    },
+    {
+     "index": 1,
+     "total": 15360,
+     "used": 3727
+    }
+   ],
+   "jobs": {
+    "call": 383,
+    "prepare": 491
+   },
+   "name": "evaluate",
+   "ok": true,
+   "returncode": 0,
+   "seconds": 338.9
+  },
+  {
+   "clips": 14,
+   "clips_per_second": 0.803,
+   "gpu_memory_mib": [
+    {
+     "index": 0,
+     "total": 15360,
+     "used": 907
+    },
+    {
+     "index": 1,
+     "total": 15360,
+     "used": 3
+    }
+   ],
+   "jobs": {
+    "prepare": 14
+   },
+   "name": "gallery",
+   "ok": true,
+   "returncode": 0,
+   "seconds": 17.4
+  }
+ ],
+ "total_seconds": 652.7
+}

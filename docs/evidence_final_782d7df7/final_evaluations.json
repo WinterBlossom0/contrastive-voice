@@ -1,0 +1,44 @@
+{
+ "32cdd86f3d6e42db33f23a2a02d9319f505396ead7373cc8fc5d21a748f42332": {
+  "alignment_device": "cuda",
+  "detector_sha256": "5eaf3d855033f3198fdf1f779f6316940163b8ac18a58b80f942b7ae4269b179",
+  "history": [
+   {
+    "detector_sha256": "5eaf3d855033f3198fdf1f779f6316940163b8ac18a58b80f942b7ae4269b179",
+    "manifest_sha256": "2a3ba01be0bc33fcb3c642c2a9c3d80b64d6f44b048e8de9597071382fdec637",
+    "project_sha256": "b18bb8deafe87566eeef52fb2102de18534624d650c1c846abea339d17f81b07"
+   }
+  ],
+  "manifest_sha256": "2a3ba01be0bc33fcb3c642c2a9c3d80b64d6f44b048e8de9597071382fdec637",
+  "project_sha256": "b18bb8deafe87566eeef52fb2102de18534624d650c1c846abea339d17f81b07",
+  "runs": 1,
+  "splits": [
+   "train",
+   "val",
+   "test"
+  ]
+ },
+ "782d7df7589164fa7d06e10571369a28aaee6149834a346cfbe4d90e3832f092": {
+  "alignment_device": "cuda",
+  "detector_sha256": "d5935d3f8eeaf928a143b9b04db0c4250604a6c17f5336af87ef124c090758b6",
+  "history": [
+   {
+    "detector_sha256": "d5935d3f8eeaf928a143b9b04db0c4250604a6c17f5336af87ef124c090758b6",
+    "manifest_sha256": "d67c9cd95b46efb247f10167b57b8288be954efe7df48bc4cc2c786d4f04a50f",
+    "project_sha256": "883c5e617434936ea8c50a6cb5863a5ddde1995572d3fe017356cedc5d73fa79"
+   }
+  ],
+  "manifest_sha256": "d67c9cd95b46efb247f10167b57b8288be954efe7df48bc4cc2c786d4f04a50f",
+  "project_sha256": "883c5e617434936ea8c50a6cb5863a5ddde1995572d3fe017356cedc5d73fa79",
+  "r2_lockbox_modes": [
+   "single",
+   "consensus5"
+  ],
+  "runs": 1,
+  "splits": [
+   "train",
+   "val",
+   "test"
+  ]
+ }
+}

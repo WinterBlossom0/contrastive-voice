@@ -1,0 +1,15 @@
+{
+ "source": "Kaggle cvoice-lab v2 (2026-10-04), applied to DETECTOR_EXTENSION.md section 8; see build/work/design/LAB_DECISIONS.md",
+ "D7+": {"lab_pass": false, "reason": "word_duration_ratio LibriStutter clip 0.39 found at 0.10 false; orphan_voiced_gap 0.34 at 0.07"},
+ "D8+": {"lab_pass": false, "reason": "no real ending labels"},
+ "labels": {
+  "filled_pause": {"lab_pass": true, "precision": 0.54, "recall": 0.15, "evidence": "stability_run on PodcastFillers events, +-0.20 s"},
+  "natural_rush": {"lab_pass": true, "evidence": "speech_time_ratio EARS fast 0.54 found at 0.03 false, AUC 0.90", "product_measure": "D9 is the ln ratio of aligned word durations per five-word window (owner decision O1); the lab evidence measured speech_time_ratio (aligned span minus pauses), not the D9 measure"},
+  "repetition": {"lab_pass": false, "precision": 0.04, "evidence": "inserted_material LibriStutter events"},
+  "prolongation": {"lab_pass": false, "low_f0": true, "evidence": "stability_run LibriStutter events precision 0.02"},
+  "block": {"lab_pass": false, "evidence": "within_word_silence LibriStutter events precision 0"},
+  "low_effort": {"lab_pass": false, "evidence": "alpha_ratio AVID soft vs normal 0.07 found"},
+  "trailing_off": {"lab_pass": false, "evidence": "last_word_drop: no real labels; contrasts 0.05-0.25"},
+  "uneven_tempo": {"lab_pass": false, "evidence": "tempo_irregularity EARS fast 0.17, slow 0.35"}
+ }
+}

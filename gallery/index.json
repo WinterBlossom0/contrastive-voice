@@ -1,0 +1,347 @@
+{
+ "baseline": {
+  "audio": "audio/reagan_farewell_1989.wav",
+  "id": "reagan_farewell_1989",
+  "text": "You know, down the hall and up the stairs from this office is the part of the White House where the President and his family live. There are a few favorite windows I have up there that I like to stand and look out of early in the morning. The view is over the grounds here to the Washington Monument, and then the Mall and the Jefferson Memorial. But on mornings when the humidity is low, you can see past the Jefferson to the river, the Potomac, and the Virginia shore.",
+  "title": "Ronald Reagan: Farewell Address to the Nation"
+ },
+ "baselines": [
+  {
+   "audio": "audio/reagan_farewell_1989.wav",
+   "id": "reagan_farewell_1989",
+   "mode": "single",
+   "text": "You know, down the hall and up the stairs from this office is the part of the White House where the President and his family live. There are a few favorite windows I have up there that I like to stand and look out of early in the morning. The view is over the grounds here to the Washington Monument, and then the Mall and the Jefferson Memorial. But on mornings when the humidity is low, you can see past the Jefferson to the river, the Potomac, and the Virginia shore.",
+   "title": "Ronald Reagan: Farewell Address to the Nation"
+  },
+  {
+   "audio": "audio/gettysburg_amb.wav",
+   "consensus_k": 5,
+   "id": "gettysburg_address",
+   "mode": "bank",
+   "references": [
+    {
+     "audio": "audio/gettysburg_amb.wav",
+     "id": "gettysburg_amb",
+     "licence": "LibriVox public domain",
+     "licence_basis": "LibriVox voluntary public-domain dedication in the USA; historical source text is public domain. Inspect linked item metadata for its mark; missing metadata is not evidence of a mark.",
+     "licence_url": "https://archive.org/details/gettysburgaddress_150anniv_1311_librivox",
+     "reader": "Ann Boulais"
+    },
+    {
+     "audio": "audio/gettysburg_dl.wav",
+     "id": "gettysburg_dl",
+     "licence": "LibriVox public domain",
+     "licence_basis": "LibriVox voluntary public-domain dedication in the USA; historical source text is public domain. Inspect linked item metadata for its mark; missing metadata is not evidence of a mark.",
+     "licence_url": "https://archive.org/details/gettysburgaddress_150anniv_1311_librivox",
+     "reader": "David Lawrence"
+    },
+    {
+     "audio": "audio/gettysburg_fb.wav",
+     "id": "gettysburg_fb",
+     "licence": "LibriVox public domain",
+     "licence_basis": "LibriVox voluntary public-domain dedication in the USA; historical source text is public domain. Inspect linked item metadata for its mark; missing metadata is not evidence of a mark.",
+     "licence_url": "https://archive.org/details/gettysburgaddress_150anniv_1311_librivox",
+     "reader": "Frances Brown"
+    },
+    {
+     "audio": "audio/gettysburg_jn.wav",
+     "id": "gettysburg_jn",
+     "licence": "LibriVox public domain",
+     "licence_basis": "LibriVox voluntary public-domain dedication in the USA; historical source text is public domain. Inspect linked item metadata for its mark; missing metadata is not evidence of a mark.",
+     "licence_url": "https://archive.org/details/gettysburgaddress_150anniv_1311_librivox",
+     "reader": "Julia Niedermaier"
+    },
+    {
+     "audio": "audio/gettysburg_pc.wav",
+     "id": "gettysburg_pc",
+     "licence": "LibriVox public domain",
+     "licence_basis": "LibriVox voluntary public-domain dedication in the USA; historical source text is public domain. Inspect linked item metadata for its mark; missing metadata is not evidence of a mark.",
+     "licence_url": "https://archive.org/details/gettysburgaddress_150anniv_1311_librivox",
+     "reader": "Phil Chenevert"
+    },
+    {
+     "audio": "audio/gettysburg_wt.wav",
+     "id": "gettysburg_wt",
+     "licence": "LibriVox public domain",
+     "licence_basis": "LibriVox voluntary public-domain dedication in the USA; historical source text is public domain. Inspect linked item metadata for its mark; missing metadata is not evidence of a mark.",
+     "licence_url": "https://archive.org/details/gettysburgaddress_150anniv_1311_librivox",
+     "reader": "Winston Tharp"
+    }
+   ],
+   "text": "We are met on a great battlefield of that war. We have come to dedicate a portion of that field as a final resting place for those who here gave their lives that this nation might live. It is altogether fitting and proper that we should do this. But, in a larger sense, we cannot dedicate... we cannot consecrate... we cannot hallow this ground.",
+   "title": "Gettysburg Address (passage)"
+  }
+ ],
+ "default": "L3A",
+ "evaluation": "evaluation.json",
+ "items": [
+  {
+   "audio": "audio/identity.wav",
+   "baseline": "reagan_farewell_1989",
+   "description": "Every edit recipe run with null parameters: expected delivery index 100 and no acoustic departures.",
+   "group": "Reference",
+   "id": "identity",
+   "label": "Identity",
+   "n_flaws": 0,
+   "overall": 100.0,
+   "regime": "R1",
+   "result": "results/identity.json",
+   "title": "Identity (placebo chain)",
+   "truth": 0
+  },
+  {
+   "audio": "audio/L1A.wav",
+   "baseline": "reagan_farewell_1989",
+   "description": "Four injected recipe edits at level 1 (see the truth markers).",
+   "group": "Level 1",
+   "id": "L1A",
+   "label": "Set A",
+   "n_flaws": 2,
+   "overall": 97.91,
+   "regime": "R1",
+   "result": "results/L1A.json",
+   "title": "Level 1 recipe edits, set A",
+   "truth": 4
+  },
+  {
+   "audio": "audio/L1B.wav",
+   "baseline": "reagan_farewell_1989",
+   "description": "Four injected recipe edits at level 1 (see the truth markers).",
+   "group": "Level 1",
+   "id": "L1B",
+   "label": "Set B",
+   "n_flaws": 1,
+   "overall": 99.75,
+   "regime": "R1",
+   "result": "results/L1B.json",
+   "title": "Level 1 recipe edits, set B",
+   "truth": 4
+  },
+  {
+   "audio": "audio/L2A.wav",
+   "baseline": "reagan_farewell_1989",
+   "description": "Four injected recipe edits at level 2 (see the truth markers).",
+   "group": "Level 2",
+   "id": "L2A",
+   "label": "Set A",
+   "n_flaws": 5,
+   "overall": 95.58,
+   "regime": "R1",
+   "result": "results/L2A.json",
+   "title": "Level 2 recipe edits, set A",
+   "truth": 4
+  },
+  {
+   "audio": "audio/L2B.wav",
+   "baseline": "reagan_farewell_1989",
+   "description": "Four injected recipe edits at level 2 (see the truth markers).",
+   "group": "Level 2",
+   "id": "L2B",
+   "label": "Set B",
+   "n_flaws": 3,
+   "overall": 93.99,
+   "regime": "R1",
+   "result": "results/L2B.json",
+   "title": "Level 2 recipe edits, set B",
+   "truth": 4
+  },
+  {
+   "audio": "audio/L3A.wav",
+   "baseline": "reagan_farewell_1989",
+   "description": "Four injected recipe edits at level 3 (see the truth markers).",
+   "group": "Level 3",
+   "id": "L3A",
+   "label": "Set A",
+   "n_flaws": 6,
+   "overall": 86.11,
+   "regime": "R1",
+   "result": "results/L3A.json",
+   "title": "Level 3 recipe edits, set A",
+   "truth": 4
+  },
+  {
+   "audio": "audio/L3B.wav",
+   "baseline": "reagan_farewell_1989",
+   "description": "Four injected recipe edits at level 3 (see the truth markers).",
+   "group": "Level 3",
+   "id": "L3B",
+   "label": "Set B",
+   "n_flaws": 4,
+   "overall": 82.28,
+   "regime": "R1",
+   "result": "results/L3B.json",
+   "title": "Level 3 recipe edits, set B",
+   "truth": 4
+  },
+  {
+   "audio": "audio/G1.wav",
+   "baseline": "reagan_farewell_1989",
+   "description": "One level-1 recipe edit.",
+   "group": "Ladder",
+   "id": "G1",
+   "label": "G1",
+   "n_flaws": 1,
+   "overall": 99.91,
+   "regime": "R1",
+   "result": "results/G1.json",
+   "title": "Ladder G1",
+   "truth": 1
+  },
+  {
+   "audio": "audio/G3.wav",
+   "baseline": "reagan_farewell_1989",
+   "description": "Three level-2 recipe edits.",
+   "group": "Ladder",
+   "id": "G3",
+   "label": "G3",
+   "n_flaws": 3,
+   "overall": 98.8,
+   "regime": "R1",
+   "result": "results/G3.json",
+   "title": "Ladder G3",
+   "truth": 3
+  },
+  {
+   "audio": "audio/G5.wav",
+   "baseline": "reagan_farewell_1989",
+   "description": "Whole-passage rush and flat pitch, dropped pauses, fades.",
+   "group": "Ladder",
+   "id": "G5",
+   "label": "G5",
+   "n_flaws": 17,
+   "overall": 48.94,
+   "regime": "R1",
+   "result": "results/G5.json",
+   "title": "Ladder G5 (botched)",
+   "truth": 9
+  },
+  {
+   "audio": "audio/greenman.wav",
+   "baseline": "reagan_farewell_1989",
+   "description": "A different performance of the same text: regime R2, no injected recipe edits; the flags are reference departures.",
+   "group": "Other performance",
+   "id": "greenman",
+   "label": "Greenman",
+   "n_flaws": 0,
+   "overall": 100.0,
+   "regime": "R2",
+   "result": "results/greenman.json",
+   "title": "Unedited Greenman reading vs the Reagan recording",
+   "truth": 0
+  },
+  {
+   "audio": "audio/greenman_edited.wav",
+   "baseline": "reagan_farewell_1989",
+   "description": "Two recipe edits, a pause inside a phrase and a volume drop, on a different speaker's reading: regime R2.",
+   "group": "Other performance",
+   "id": "greenman_edited",
+   "label": "Greenman edited",
+   "n_flaws": 2,
+   "overall": 97.4,
+   "regime": "R2",
+   "result": "results/greenman_edited.json",
+   "title": "Edited Greenman reading vs Reagan",
+   "truth": 2
+  },
+  {
+   "audio": "audio/greenman_botched.wav",
+   "baseline": "reagan_farewell_1989",
+   "description": "Whole-passage rush and flat pitch, dropped pauses, fades, on a different speaker: regime R2.",
+   "group": "Other performance",
+   "id": "greenman_botched",
+   "label": "Greenman botched",
+   "n_flaws": 3,
+   "overall": 73.6,
+   "regime": "R2",
+   "result": "results/greenman_botched.json",
+   "title": "Botched Greenman reading vs Reagan",
+   "truth": 8
+  },
+  {
+   "audio": "audio/channel_mp3.wav",
+   "baseline": "reagan_farewell_1989",
+   "description": "The identity clip after an MP3 round trip: expected silent.",
+   "group": "Channel",
+   "id": "channel_mp3",
+   "label": "MP3 64 kbit/s",
+   "n_flaws": 0,
+   "overall": 100.0,
+   "regime": "R1",
+   "result": "results/channel_mp3.json",
+   "title": "Channel condition: MP3 64 kbit/s",
+   "truth": 0
+  },
+  {
+   "audio": "audio/natural_rush.wav",
+   "baseline": "eisenhower_farewell_1961",
+   "description": "4 edits injected; evaluated: natural rush (found), word repetition (not scored). 2 excluded from evaluation, because the realised change failed the label checks: low effort, rising ending. 7 findings lie on the excluded low effort edit and cost 9.28 points of the delivery index; the evaluation does not count them as false. 3 findings match no injected edit and cost 0.21 points of the delivery index. The truth markers under the transcript name the finding that the evaluation matches to each edit.",
+   "focus": "d9-009",
+   "group": "New flaw families",
+   "id": "natural_rush",
+   "label": "Natural rushing",
+   "n_flaws": 11,
+   "overall": 90.34,
+   "regime": "R1",
+   "result": "results/natural_rush.json",
+   "title": "Natural-rushing edit: a finding with that label (Dwight D. Eisenhower, level 3)",
+   "truth": 4
+  },
+  {
+   "audio": "audio/r2_listed.wav",
+   "baseline": "reagan_farewell_1989",
+   "description": "8 edits injected; evaluated: word repetition (1 not scored, 1 listed entry), sound repetition (2 not scored), rhyme prolongation (1 not scored, 1 listed entry), onset prolongation (2 listed entry). 2 findings match no injected edit and cost 1.12 points of the delivery index; they are differences between the two readers, not an injected edit. Listed entries are departures shown without flags or points.",
+   "focus": "x11",
+   "group": "Other performance",
+   "id": "r2_listed",
+   "label": "Listed entries",
+   "n_flaws": 2,
+   "overall": 98.88,
+   "regime": "R2",
+   "result": "results/r2_listed.json",
+   "title": "Edited reading vs the reference: listed, not scored entries (John Greenman, level 3)",
+   "truth": 8
+  },
+  {
+   "audio": "audio/r2_consensus.wav",
+   "baseline": "gettysburg_amb",
+   "description": "3 edits injected; evaluated: natural rush (listed entry), word repetition (not scored), low effort (found). 1 finding matches no injected edit (over the whole passage) and cost 3.99 points of the delivery index; it is a difference between the two readers, not an injected edit. Compared with the word-by-word median of 5 of the 6 bank readings (reference mode consensus5); the truth markers name the finding that the evaluation matches to each edit.",
+   "focus": "d5-002",
+   "group": "Other performance",
+   "id": "r2_consensus",
+   "label": "Median of five",
+   "n_flaws": 2,
+   "overall": 94.25,
+   "regime": "R2",
+   "result": "results/r2_consensus.json",
+   "title": "Edited reading vs the median of five readers (Drew Johnson, level 3)",
+   "truth": 3
+  }
+ ],
+ "left_out": [
+  {
+   "id": "disfluency",
+   "label": "Disfluency",
+   "reason": "no train or val clip has an injected block, onset prolongation, rhyme prolongation, sound repetition or word repetition edit that the evaluation matches to a word-time (D7) finding"
+  },
+  {
+   "id": "hesitation",
+   "label": "Hesitation group",
+   "reason": "no train or val clip has an injected hesitation or word by word edit that the evaluation matches to a finding group with the edit's name"
+  },
+  {
+   "id": "low_effort",
+   "label": "Low vocal effort",
+   "reason": "no train or val clip has an injected low effort edit that the evaluation matches to a finding labelled low vocal effort"
+  }
+ ],
+ "provenance": {
+  "alignment_device": "cpu",
+  "command": "python -m cvoice.gallery --dataset build/work/kaggle_runs/last_run/x/data/dataset --models models/detector.json --cache build/work/agents/final_scratch/gcache --eval build/work/kaggle_runs/last_run/x/eval --out build/work/agents/final_scratch/gallery_build2 --first-final docs/evidence_final_32cdd86f3d6e/results.json --note 'rebuilt on CPU after the final evaluation with the frozen detector d5935d3f from the last-run dataset'",
+  "dataset_manifest_sha256": "d67c9cd95b46efb247f10167b57b8288be954efe7df48bc4cc2c786d4f04a50f",
+  "detector_sha256": "d5935d3f8eeaf928a143b9b04db0c4250604a6c17f5336af87ef124c090758b6",
+  "eval_results_sha256": "49a306d9cf9f94bac1a441de8ddeeb386586bde166ef92defbc0a37f942100b1",
+  "note": "rebuilt on CPU after the final evaluation with the frozen detector d5935d3f from the last-run dataset"
+ },
+ "schema": 1,
+ "stress_matrix": "stress_matrix.json"
+}
