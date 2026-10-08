@@ -9,7 +9,7 @@
 <link rel="icon" href="data:,">
 <link rel="preload" href="vendor/fonts/AtkinsonHyperlegibleNext-Regular.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="vendor/fonts/Sora-Bold.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="style.css?v=2026-10-08f">
+<link rel="stylesheet" href="style.css?v=2026-10-08i">
 <script defer src="https://cdn.jsdelivr.net/npm/plotly.js-cartesian-dist-min@4.1.1/plotly-cartesian.min.js"
         integrity="sha384-zc4SwKObGL/W0M3RUI09UPWjlgIZHfbwMgcZO6713mRh78tfUmIQKhzCyE2LIiUg" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/wavesurfer.js@8.0.1/dist/wavesurfer.min.js"
@@ -18,7 +18,7 @@
         integrity="sha384-Tk81r51AIztO5k+iOj/eOq9ZEGD2XVkPnZR8QVxzq1dkyEmsBSCjYpdCoeD/AZQ9" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/wavesurfer.js@8.0.1/dist/plugins/timeline.min.js"
         integrity="sha384-2l5/6KGTIt5kr+AcoXrcOzSiDUedbqv1LlHsFtQ5/ABj0cbzhpA2w6bCvc4Ns2vk" crossorigin="anonymous"></script>
-<script defer src="app.js?v=2026-10-08f"></script>
+<script defer src="app.js?v=2026-10-08i"></script>
 </head>
 <body class="intro">
 <svg width="0" height="0" class="defs" aria-hidden="true" focusable="false">
@@ -32,155 +32,158 @@
 </svg>
 
 <header class="top">
-  <a class="brand" href="#" aria-label="Contrastive Voice">
+  <a class="brand" href="#" aria-label="Contrastive Voice, top of the page">
     <svg class="mark" viewBox="0 0 40 28" width="34" height="24" aria-hidden="true">
       <path class="mark-ref" d="M1 15 C5 15 6 5 10 5 S15 23 19 23 S24 9 28 9 S34 17 39 17"/>
       <path class="mark-you" d="M1 13 C4 13 6 20 9 20 S14 4 18 4 S22 25 27 25 S34 11 39 11"/>
     </svg>
-    <h1>Contrastive Voice</h1>
+    <span class="wordmark">Contrastive Voice</span>
   </a>
-  <nav class="next-steps" aria-label="Try a recording and review robustness">
-    <a class="jump" href="#upload" id="jump-upload">Analyse your own recording</a>
-    <a href="#evaluation" id="jump-evaluation" hidden>How well it works</a>
-    <a href="#stress" id="jump-stress" hidden>Stress matrix</a>
+  <nav class="top-actions" aria-label="Main">
+    <details id="picker-menu" class="picker">
+      <summary><span id="picker-title">Try an example</span></summary>
+      <div class="picker-panel">
+        <div id="chips"></div>
+        <details id="more-examples"><summary>More examples</summary><div id="chips-more"></div></details>
+      </div>
+    </details>
+    <a class="primary-btn" href="#upload" id="jump-upload">Analyse your reading</a>
   </nav>
 </header>
 
+<div class="player" role="region" aria-label="Player">
+  <div class="player-in">
+    <button type="button" id="play-all" class="play-btn" disabled>Play recording</button>
+    <div class="ab-toggle" role="group" aria-label="Listen to">
+      <button type="button" id="ab-you" class="ab-opt" aria-pressed="true">Yours</button>
+      <button type="button" id="ab-ref" class="ab-opt" aria-pressed="false">Reference</button>
+    </div>
+    <span id="clock" class="clock">Loading audio…</span>
+    <div id="player-progress" class="player-progress" aria-hidden="true"><i></i></div>
+    <p class="player-now"><span class="player-label">Finding</span> <span id="player-finding">-</span></p>
+  </div>
+</div>
+
 <div id="alert" role="alert" hidden></div>
 
-<nav id="picker" aria-labelledby="picker-title">
-  <div class="shelf-head">
-    <h2 id="picker-title">Examples</h2>
-    <details id="left-out" hidden><summary></summary><ul id="left-out-list" class="note"></ul></details>
-  </div>
-  <div id="chips" class="shelf"></div>
-</nav>
-
 <main>
-<section class="hero" aria-label="This recording">
-  <div class="track-title">
-    <p class="kicker"><span id="regime-badge" class="regime-badge" hidden></span><span id="picker-current">Loading example</span></p>
-    <p id="picker-note" class="example-note" aria-live="polite"></p>
+<section class="value" aria-label="What it does for you">
+  <div class="value-item">
+    <svg class="value-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12 C6 12 7 5 10 5 S13 19 16 19 S19 12 21 12"/><path class="dim" d="M3 15 C6 15 7 9 10 9 S13 21 16 21 S19 15 21 15"/></svg>
+    <p><b>Practise against a reference.</b> Read a speech or text and compare it with a reference reading of the same words: your best take, a coach's, or a well-known speaker's.</p>
   </div>
-  <section id="ledger" aria-label="Scores">
-    <div class="overall">
-      <div class="ring-wrap">
-        <svg class="ring" viewBox="0 0 120 120" aria-hidden="true">
-          <circle class="ring-track" cx="60" cy="60" r="52"/>
-          <circle class="ring-glow" id="ring-glow" cx="60" cy="60" r="52"/>
-          <circle class="ring-value" id="ring-value" cx="60" cy="60" r="52"/>
-        </svg>
-        <div class="ring-text">
-          <p class="fig" id="overall-fig">-</p>
-          <p class="ring-label">Delivery score</p>
-        </div>
-      </div>
-      <div class="overall-meta">
-        <p class="sub-h">Relative to this reference, out of 100</p>
-        <p class="fix-line" id="overall-fix"></p>
-        <p class="sub" id="regime"></p>
-        <p class="sub" id="reference-mode" hidden><span class="badge"></span></p>
-        <details id="detection-note" hidden><summary>How flags are decided</summary><p class="sub"></p></details>
-      </div>
-    </div>
-    <div class="dims">
-      <h2 class="dims-h">Dimensions <span class="sub-h">select one to filter the findings</span></h2>
-      <div id="cards" class="cards"></div>
-    </div>
-  </section>
+  <div class="value-item">
+    <svg class="value-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7 H20 M4 12 H14 M4 17 H17"/><path class="flagline" d="M4 20 H11"/></svg>
+    <p><b>See and hear exactly where.</b> The words you rushed, dragged, paused at wrongly, flattened or let fade are marked in your text, and you hear yours and the reference side by side.</p>
+  </div>
+  <div class="value-item">
+    <svg class="value-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19 V13 M12 19 V8 M19 19 V4"/></svg>
+    <p><b>Fix the biggest first.</b> Each finding comes with a concrete fix, ranked by how many points it costs.</p>
+  </div>
+</section>
 
-  <section id="timeline" class="glass" aria-labelledby="timeline-title">
-    <div class="tl-head">
-      <h2 id="timeline-title">Where this reading departs</h2>
-      <p class="tl-hint note">Reference above, this recording below, on one time scale. Select a band to open its finding; click a word to hear it.</p>
+<section id="ledger" class="summary" aria-labelledby="summary-line">
+  <div class="sum-head">
+    <div class="ring-wrap">
+      <svg class="ring" viewBox="0 0 120 120" aria-hidden="true">
+        <circle class="ring-track" cx="60" cy="60" r="52"/>
+        <circle class="ring-glow" id="ring-glow" cx="60" cy="60" r="52"/>
+        <circle class="ring-value" id="ring-value" cx="60" cy="60" r="52"/>
+      </svg>
+      <div class="ring-text">
+        <p class="fig" id="overall-fig">-</p>
+        <p class="ring-label">Delivery score</p>
+      </div>
     </div>
+    <div class="sum-text">
+      <p class="kicker"><span id="picker-current">Loading example</span><span id="regime-badge" class="regime-badge" hidden></span></p>
+      <h1 id="summary-line" class="summary-line">Comparing your reading with the reference</h1>
+      <p class="sub" id="reference-mode" hidden><span class="badge"></span></p>
+    </div>
+  </div>
+  <div id="top-cards" class="top-cards"></div>
+  <button type="button" id="see-all" class="text-btn" hidden>See all findings</button>
+</section>
+
+<div class="main-grid">
+  <section id="text-view" class="panel" aria-labelledby="text-title">
+    <h2 id="text-title">Your text</h2>
+    <p class="note">Highlighted words have a finding. Select one to read it; select any other word to hear it.</p>
+    <p id="whole-note" class="note" hidden>The selected finding concerns the whole passage.</p>
+    <p id="transcript" class="transcript"></p>
+    <h3 class="tl-title">Time view <span class="sub-h">the reference above, your reading below</span></h3>
     <div class="tl-stage">
       <div id="wave-ref" class="wave wave-ref" aria-hidden="true"></div>
       <div id="tl-host" class="tl-host"></div>
       <div id="wave" class="wave wave-you"></div>
+      <div id="tl-tip" class="tl-tip" hidden></div>
     </div>
-    <div id="tl-tip" class="tl-tip" hidden></div>
     <p id="wave-msg" class="note"></p>
   </section>
-</section>
+  <section id="explain" class="explain panel" aria-label="Selected finding" aria-live="polite"></section>
+</div>
 
-<section id="clip-wrap" aria-label="Whole-clip findings and differences" hidden>
-  <h2>Whole-clip findings and differences</h2>
-  <div id="clip-cards"></div>
-</section>
-
-<div class="findings">
-  <section id="explain" class="explain glass" aria-label="Selected finding" aria-live="polite"></section>
-  <aside class="side glass" aria-label="Findings and reference differences">
-    <div class="side-head">
-      <h2>Flagged regions <span id="flaw-count"></span></h2>
-      <button type="button" id="clear-filter" hidden>Show all</button>
-    </div>
-    <div class="finding-filters">
-      <label>Dimension<select id="dimension-filter" aria-controls="flaws differences listed"></select></label>
-      <label>Pattern<select id="pattern-filter" aria-controls="flaws differences listed"></select></label>
-    </div>
-    <ol id="flaws" class="flaws"></ol>
-    <section id="differences-wrap" hidden>
-      <h2>Largest differences from the reference (not scored)</h2>
-      <ul id="differences" class="flaws differences"></ul>
+<section id="all-findings" class="fold">
+  <h2><button type="button" class="fold-toggle" id="all-findings-toggle" aria-expanded="false" aria-controls="all-findings-body">All findings <span id="flaw-count"></span></button></h2>
+  <div class="fold-body" id="all-findings-body" inert>
+    <section id="clip-wrap" aria-label="Findings over the whole passage" hidden>
+      <h3>Over the whole passage</h3>
+      <div id="clip-cards"></div>
     </section>
-    <details id="listed-wrap" hidden>
-      <summary>Listed, not scored <span id="listed-count"></span></summary>
-      <p id="listed-note" class="note"></p>
-      <ul id="listed" class="flaws differences"></ul>
-    </details>
-  </aside>
-  <div class="work">
-    <section class="stage glass" aria-label="Dimension charts and transcript">
-      <div class="stage-head">
-        <h2>Dimension by dimension</h2>
-        <button type="button" id="all-dimensions" class="plain" aria-pressed="false" aria-controls="chart">Show all dimensions</button>
+    <aside class="side" aria-label="Findings list">
+      <div class="side-head">
+        <div class="finding-filters">
+          <label>Measure<select id="dimension-filter" aria-controls="flaws differences listed"></select></label>
+          <label>Pattern<select id="pattern-filter" aria-controls="flaws differences listed"></select></label>
+        </div>
+        <button type="button" id="clear-filter" hidden>Show all</button>
       </div>
-      <p class="note">Pitch, level and the dimensions with a flag or a selected finding. Hover a chart to read the values.</p>
+      <ol id="flaws" class="flaws"></ol>
+      <section id="differences-wrap" hidden>
+        <h3>Largest differences from the reference</h3>
+        <p class="note">Shown for comparison; they do not change the score.</p>
+        <ul id="differences" class="flaws differences"></ul>
+      </section>
+      <details id="listed-wrap" hidden>
+        <summary>More differences <span id="listed-count"></span></summary>
+        <p id="listed-note" class="note"></p>
+        <ul id="listed" class="flaws differences"></ul>
+      </details>
+    </aside>
+  </div>
+</section>
+
+<section id="measures" class="fold">
+  <h2><button type="button" class="fold-toggle" id="measures-toggle" aria-expanded="false" aria-controls="measures-body">All measurements</button></h2>
+  <div class="fold-body" id="measures-body" inert>
+    <p class="note">Each measure scores out of 100. Select one to show only its findings.</p>
+    <div id="cards" class="cards"></div>
+    <div class="work">
+      <section class="stage" aria-label="Measurement charts">
+        <div class="stage-head">
+          <h3>Charts over time</h3>
+          <button type="button" id="all-dimensions" class="plain" aria-pressed="false" aria-controls="chart">Show all measures</button>
+        </div>
       <div class="legend" aria-label="Chart key">
         <span><i class="sw sw-ref"></i><span id="key-ref">Reference rendition</span></span>
         <span><i class="sw sw-you"></i>This recording</span>
         <span><i class="sw sw-tol"></i>Tolerance band</span>
         <span><i class="sw sw-flag"></i>Flagged region (dotted, dashed, solid by severity)</span>
         <span id="key-difference" hidden><i class="sw sw-difference"></i>Selected difference (not scored)</span>
-        <span id="key-truth" hidden><i class="sw sw-truth"></i>Injected edit</span>
-        <span id="key-excluded" hidden><i class="sw sw-excluded"></i>Injected edit excluded from evaluation</span>
         <span><i class="sw sw-stress"></i>Stress point</span>
         <span id="key-group" hidden><i class="sw sw-group"></i>Finding group (shared penalty)</span>
         <span id="key-subword" hidden><i class="sw sw-subword"></i>Sub-word evidence span (hatched)</span>
       </div>
-      <div id="chart-host"><div id="chart"></div><div id="cursor"></div></div>
-      <h2 class="transcript-h">Transcript</h2>
-      <p class="note">Click a word to hear it. Underlines mark flagged words, with the same dotted, dashed or solid outline as in the charts.</p>
-      <p id="whole-note" class="note" hidden>This finding concerns the whole passage.</p>
-      <p id="transcript" class="transcript"></p>
-      <div id="truth-matches" aria-label="Injected edits and matching findings"></div>
-    </section>
+        <div id="chart-host"><div id="chart"></div><div id="cursor"></div></div>
+      </section>
+    </div>
   </div>
-</div>
-
-<section id="notices-wrap" aria-label="Notes on this analysis">
-  <h2>Notes on this analysis</h2>
-  <ul id="notices" class="notices"></ul>
 </section>
 
-<div class="more">
-  <details id="evaluation" class="glass" hidden>
-    <summary>How well it works</summary>
-    <div id="evaluation-body"></div>
-  </details>
-
-  <details id="stress" class="glass" hidden>
-    <summary>Stress matrix: how much the output moves when only the recording conditions change</summary>
-    <p id="stress-summary" class="note"></p>
-    <div class="scroll"><table id="stress-table"></table></div>
-  </details>
-
-  <details id="upload" class="glass">
-    <summary>Analyse your own recording</summary>
+<section class="upload-wrap" aria-label="Analyse your reading">
+  <details id="upload" class="panel">
+    <summary>Analyse your reading</summary>
     <p id="upload-note" class="note"></p>
-    <p id="upload-lockbox" class="note" hidden></p>
     <form id="form" novalidate>
       <fieldset id="fields">
         <label>Your recording
@@ -199,31 +202,20 @@
         <label>or load the transcript from a text file
           <input type="file" id="f-text-file" accept=".txt,text/plain">
         </label>
-        <p class="note wide">An uploaded recording is compared as a different performance (regime R2). Its analysis states the reference mode (one reading, or the median of five readings of a bundled bank) and reports which dimensions are scored, listed or displayed. Limits: <span id="limits"></span>.</p>
+        <p class="note wide">Your recording is compared as a different speaker from the reference reading. Upload limits: <span id="limits"></span>.</p>
         <button type="submit" id="submit">Analyse</button>
       </fieldset>
     </form>
     <ol id="stages" class="stages" aria-label="Analysis stages" hidden></ol>
     <p id="stage-msg" role="status" class="note"></p>
   </details>
-</div>
+</section>
 </main>
 
 <footer>
-  <p>Deviations are relative to the reference: one rendition, or the word-by-word median of five readings of a bundled bank. Read the analysis notes for timing resolution and scoring limits. The flaws in the examples are controlled acoustic edits, and no human ratings back the scores. Typefaces: Sora and Atkinson Hyperlegible Next (SIL Open Font License, vendor/fonts).</p>
+  <p><a id="report-link" href="https://github.com/WinterBlossom0/contrastive-voice/blob/main/docs/technical.md">Technical report (method, evaluation, limits)</a></p>
+  <p>Scores are relative to the reference reading. Typefaces: Sora and Atkinson Hyperlegible Next (SIL Open Font License, vendor/fonts).</p>
 </footer>
 
-<div class="player" role="region" aria-label="Player">
-  <div class="player-in">
-    <button type="button" id="play-all" class="play-btn" disabled>Play recording</button>
-    <div class="ab-toggle" role="group" aria-label="Listen to">
-      <button type="button" id="ab-you" class="ab-opt" aria-pressed="true">This recording</button>
-      <button type="button" id="ab-ref" class="ab-opt" aria-pressed="false">Reference</button>
-    </div>
-    <span id="clock" class="clock">Loading audio…</span>
-    <div id="player-progress" class="player-progress" aria-hidden="true"><i></i></div>
-    <p class="player-now"><span class="player-label">Selected</span> <span id="player-finding">-</span></p>
-  </div>
-</div>
 </body>
 </html>

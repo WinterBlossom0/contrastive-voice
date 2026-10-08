@@ -16,10 +16,10 @@ const POLL_MS = 500;
 const BOTH_GAP_MS = 350;                 // ms of silence between the two spans of "Play both"
 const TL_GUTTER_PX = 118;                // px; the timeline's track labels on a wide screen
 const TL_NARROW_PX = 620;                // px; below this width the track labels sit above and below the tracks
-const TL_TRACK_PX = 28, TL_LINK_PX = 66, TL_LABEL_PX = 20;   // px; word track, ribbon zone between the tracks, label row
+const TL_TRACK_PX = 18, TL_LINK_PX = 74, TL_LABEL_PX = 20;   // px; word track, ribbon zone between the tracks, label row
 const TL_MIN_SPAN_PX = 4;                // px; a shorter span (a pause point) is widened to stay visible and clickable
-const TL_MARK_H = 18, TL_MARK_GAP = 3;   // px; height of a band number and the gap kept between two numbers
-const TL_WORD_FONT = 11;                 // px; must equal .tl-word text in style.css
+const TL_MARK_H = 22, TL_MARK_GAP = 3;   // px; height of a band number and the gap kept between two numbers
+const TL_MARK_FONT = 13;                 // px; must equal .tl-mk text in style.css
 const SVG_NS = "http://www.w3.org/2000/svg";
 const RING_C = 2 * Math.PI * 52;         // circumference of the score ring (r 52 in index.html)
 const COUNT_MS = 1000;                   // ms of the score count-up on the first load
@@ -47,14 +47,14 @@ const ROWS = {  // heading (wide, narrow), dimension, kind of drawing
   stress: { t: "Stress points: words that carry stress", s: "Stress", h: 52 },
   emphasis: { t: "Emphasis: stress-point difference at the reference's stress words", s: "Emphasis", h: 76, dim: "D4", bars: true },
   volume: { t: "Volume: level difference, below 0 is quieter", s: "Volume (dB)", h: 84, dim: "D5" },
-  clarity: { t: "Clarity (spectral-change proxy): ln ratio of spectral change", s: "Clarity proxy (ln)", h: 84, dim: "D6" },
+  clarity: { t: "Clarity: ln ratio of spectral change", s: "Clarity proxy (ln)", h: 84, dim: "D6" },
   speech_tempo: { t: "Speech tempo: ln ratio of aligned word time (pauses not included), below 0 is faster", s: "Speech tempo (ln)", h: 84, dim: "D9" },
   word_time: { t: "Word time: ln ratio at your overall tempo", s: "Word time (ln)", h: 90, dim: "D7", markers: true },
   ending: { t: "Ending: final pitch-change difference", s: "Ending (st)", h: 90, dim: "D8", markers: true },
 };
 const ROW_OF_DIM = { D1: "pace", D2: "pauses", D3: "pitch_range", D4: "emphasis", D5: "volume", D6: "clarity", D7: "word_time", D8: "ending", D9: "speech_tempo" };
 const ALSO_ROW = { D3: "pitch", D5: "energy", D8: "pitch" };   // the contour row a delta row summarises
-const UNIT = { ln: "ln ratio", s: "s", p: "p-units", dB: "dB", st: "st", count: "", words: "words" };
+const UNIT = { ln: "ln ratio", s: "s", p: "stress units", dB: "dB", st: "st", count: "", words: "words" };
 const VALUE_UNIT = { D1: "s", D2: "s", D3: "st", D4: "", D5: "dB", D6: "", D7: "s", D8: "st", D9: "s" };   // unit of the baseline / participant values
 const TYPE_TEXT = {
   RUSH: "Rushed", DRAG: "Dragged", PAUSE_DROPPED: "Missing pause", PAUSE_INTRUSIVE: "Pause inside a phrase", MONOTONE: "Flat pitch",
@@ -74,10 +74,28 @@ const PATTERN_TEXT = {
 const REGULARISED = new Set(["D3", "D7"]);
 // A whole-passage ratio value (participant / reference): the quantity, then the meaning of a value below 1 and above 1.
 const WHOLE_RATIO = { D1: ["speech time", "faster", "slower"], D3: ["pitch range", "narrower", "wider"] };
-const TRUTH_TEXT = { MISPLACED_EMPHASIS: "Misplaced emphasis", REPEATED_CONTOUR: "Repeated pitch contour" };
 const CANDIDATE_TEXT = "Automatic label; low precision on real speech; listen to the span.";
 const SYNTHETIC_TEXT = "Synthetic-only family; unvalidated on real speech.";   // explain.SYNTHETIC_ONLY_CLAUSE
-const OWN_EVIDENCE = { D9: "word_time_ln" };   // the evidence row that holds the finding's own measured difference
+const OWN_EVIDENCE = { D9: "word_time_ln" };
+// One plain name per measure group; the result JSON's brief words are Cadence, Pauses, Tone, Volume and Clarity.
+const GROUP_NAME = { Cadence: "Pace", Tone: "Pitch range", Clarity: "Clarity" };
+const groupLabel = (word) => GROUP_NAME[word] || word;
+const SUB_NAME = { D3: "Pitch range", D6: "Clarity" };
+// Bundled examples named by what a listener hears, in order of how clearly they show the tool; the first ones open the menu and
+// the rest sit under "More examples". Items without an entry show their group and label.
+const EXAMPLES = [
+  ["L3A", "Rushed in the middle, then fading"], ["L3B", "A pause mid-phrase and mumbled words"], ["G5", "Rushed and flat all the way through"],
+  ["natural_rush", "Speeding up mid-sentence"], ["L2A", "A fade and a skipped pause, milder"], ["L2B", "A pause mid-phrase and a dragged opening, milder"],
+  ["greenman_edited", "Another speaker, with a pause mid-phrase"], ["identity", "The reference itself: nothing to fix"],
+  ["greenman", "A natural reading of the same text by another speaker"],
+  ["greenman_botched", "Another speaker, flat throughout"], ["r2_consensus", "Against five readers: a narrow pitch range"],
+  ["G3", "Slightly rushed and flat in places"], ["L1A", "One skipped pause"], ["L1B", "A short pause mid-phrase"], ["G1", "One slightly rushed phrase"],
+  ["r2_listed", "Another speaker, with repeated words and sounds"], ["channel_mp3", "The reference through MP3 compression"],
+];
+const EXAMPLE_NAME = Object.fromEntries(EXAMPLES);
+const FEATURED_COUNT = 9;
+const exampleName = (it) => EXAMPLE_NAME[it.id] || `${it.group}, ${it.label}`;
+const TOP_N = 3;   // the evidence row that holds the finding's own measured difference
 
 // ---------------------------------------------------------------------------------------------------- helpers
 const $ = (s) => document.querySelector(s);
@@ -88,7 +106,6 @@ const signed = (v, d = 2) => (v == null ? "-" : (v > 0 ? "+" : v < 0 ? "−" : "
 const span = (s) => !s ? "whole passage" : s[0].toFixed(2) === s[1].toFixed(2) ? `at ${s[0].toFixed(2)} s` : `${s[0].toFixed(2)}–${s[1].toFixed(2)} s`;
 const sevStyle = (v) => SEVERITY_STYLES.find((x) => v < x[0]) || SEVERITY_STYLES[2];
 const wholePassage = (f) => f.context === "whole passage" || f.words == null;
-const onSpan = (f, p) => !wholePassage(f) && f.p[1] >= p[0] && f.p[0] <= p[1];   // a local finding overlaps the span p (s)
 // Beside a whole-clip tempo finding a local pace flag is relative to the speaker's own overall tempo, not a second tempo verdict.
 const typeText = (f) => f.dimension === "D1" && (f.type === "RUSH" || f.type === "DRAG") && S.result.flaws.some((x) => x.type.startsWith("TEMPO"))
   ? (f.type === "RUSH" ? "Faster than the rest of your reading" : "Slower than the rest of your reading") : TYPE_TEXT[f.type] || f.type;
@@ -111,7 +128,7 @@ const synthetic = (f) => (f.text || "").toLowerCase().includes(SYNTHETIC_TEXT.to
 // Scores and multiples are shown at their stored 2 decimals: a second rounding makes them disagree with points_lost and the text.
 const scoreText = (v) => v == null ? "n/a" : num(v, 2);
 const multipleText = (v) => v == null ? "-" : `×${num(v, 2)}`;
-const patternText = (p) => PATTERN_TEXT[p] || TYPE_TEXT[p] || p || "No pattern label";
+const patternText = (p) => PATTERN_TEXT[p] || TYPE_TEXT[p] || p || "Other findings";
 const groupName = (f) => f.group_pattern ? patternText(f.group_pattern) : "Finding";
 // The pattern has its own chip (patternTags), so the title names the measured departure.
 const findingText = (f) => f.type ? typeText(f) : f.label || f.brief_word || f.dimension;
@@ -179,27 +196,14 @@ function showAlert(msg) {
 // ---------------------------------------------------------------------------------------------------- state
 const S = { result: null, sel: null, filter: null, rid: 0, limits: null, ws: null, regions: null, ref: new Audio(),
   refTimer: null, bothTimer: null, tl: null, chart: null, hasLibs: false, selKind: "flaw", allDimensions: false, openId: 0,
-  mediaId: 0, youReady: false, refReady: false, countId: 0, counted: false, side: "you", wsRef: null, playId: 0, priority: null, pattern: null, evaluation: null };
+  mediaId: 0, youReady: false, refReady: false, countId: 0, counted: false, side: "you", wsRef: null, playId: 0, priority: null, pattern: null };
 
 function differences() { return S.result.regime === "R2" && Array.isArray(S.result.differences) ? S.result.differences : []; }
 function selected() { return (S.selKind === "difference" ? differences() : S.result.flaws)[S.sel]; }
 function mediaSpan(f, who) { return f[who === "you" ? "p" : "b"] || [0, S.result[who === "you" ? "participant" : "baseline"].duration]; }
-/** Badge and sentence for the result's reference mode, or null when the result does not state one. */
-function referenceMode(r) {
-  const d = r.detection || {};
-  if (!d.reference_mode) return null;
-  const spare = d.references_available > d.reference_count ? ` of ${d.references_available} available` : "";
-  if (d.reference_mode === "consensus5") {
-    return { badge: `Reference: median of ${d.reference_count} readings${spare}`,
-      text: `Consensus mode: word and window features are the median of ${d.reference_count} reference readings${spare}; the audio, waveform and reference word times are the first reading.` };
-  }
-  return { badge: "Reference: one reading",
-    text: d.references_available > 1 ? `Single-reference mode: ${d.references_available} readings were given, fewer than consensus mode needs.` : "Single-reference mode: one reference reading." };
-}
 
 function noRegions(r) {
-  return r.regime === "R2" ? "No region exceeds the calibrated threshold for a different speaker. The threshold is wide because two competent readers differ a lot; see the largest differences below."
-    : "No region exceeds its tolerance.";
+  return r.regime === "R2" ? "Nothing crosses the threshold set for a different speaker." : "Nothing crosses its threshold: this reading matches the reference.";
 }
 
 // ---------------------------------------------------------------------------------------------------- scores
@@ -215,16 +219,6 @@ function thresholdText(row, compact = false) {
   const parts = [below != null ? [compact ? "<" : "below", ln ? factor(-below) : "−" + plain(below)] : null,
     above != null ? [compact ? ">" : "above", ln ? factor(above) : "+" + plain(above)] : null].filter(Boolean).map((x) => x.join(" "));
   return compact ? parts.join(" or ") : parts.join(", ") + (ln ? "" : ` ${UNIT[row.unit] || row.unit}`);
-}
-
-/** The "How flags are decided" text. A note without a threshold statement (the pipeline writes one only in R2) gets the local
-    thresholds of the result's rows, the values that the chart headings state. */
-function detectionNote(r) {
-  const note = typeof r.scores.detection_note === "string" ? r.scores.detection_note.trim() : "";
-  if (/Flag thresholds/.test(note)) return note;
-  const label = (row) => r.scores.dims.find((d) => d.key === ROWS[row.key]?.dim)?.label || row.key;
-  const local = r.rows.filter((row) => ROWS[row.key]?.dim && thresholdText(row)).map((row) => `${label(row)} ${thresholdText(row)}`);
-  return [note, local.length ? `Local flag thresholds for reference departures: ${local.join("; ")}.` : ""].filter(Boolean).join(" ");
 }
 
 function dimGroups(r) {
@@ -257,9 +251,53 @@ function showScore(o) {
 
 /** The regime and reference mode as a short badge beside the example name. */
 function regimeBadge(r) {
-  const d = r.detection || {};
-  const mode = d.reference_mode === "consensus5" ? `, median of ${d.reference_count} readings` : d.reference_mode ? ", one reference reading" : "";
-  return `${r.regime} ${r.regime === "R1" ? "same performance" : "different performance"}${mode}`;
+  return r.regime === "R1" ? "Same speaker as the reference" : "Different speaker from the reference";
+}
+
+/** The counted findings that cost the most points, largest first; ties keep time order. */
+function topFindings(r) {
+  return r.flaws.map((f, i) => [f, i]).filter(([f]) => f.counted !== false && shownLoss(f.points_lost))
+    .sort((a, b) => b[0].points_lost - a[0].points_lost || a[1] - b[1]).slice(0, TOP_N);
+}
+
+/** A stored ratio in words where it is close to a simple fraction, else the ratio itself. */
+function ratioWords(x) {
+  const near = [[0.25, "about a quarter of"], [1 / 3, "about a third of"], [0.5, "about half"], [2, "about twice"]].find(([v]) => Math.abs(x - v) <= 0.05 * v);
+  return near ? near[1] : `${num(x, 2)} times`;
+}
+
+/** One line of what happened, in plain words, from the stored values only. */
+function plainLine(f) {
+  if (unevenTempo(f)) return `Typical word-to-word factor ${spreadFactor(f)}`;
+  const q = WHOLE_RATIO[f.dimension];
+  if (wholeRatio(f) && q) return `Your ${q[0]} is ${ratioWords(f.participant)} the reference's${f.participant === 1 ? "" : `: ${f.participant < 1 ? q[1] : q[2]}`}`;
+  // Levels in dB are relative to each speaker's median, so the stored difference says more than the two levels.
+  if (f.unit === "dB" && f.delta != null) return `About ${num(Math.abs(f.delta), 1)} dB ${f.delta < 0 ? "quieter" : "louder"} than the reference`;
+  const v = (x) => withUnit(x, valUnit(f));
+  return `${v(f.participant)} in your reading, ${v(f.baseline)} in the ${referenceText(f)}`;
+}
+
+function quotedWords(r, f) {
+  return wholePassage(f) ? "The whole passage" : `‘${r.words.slice(f.words[0], f.words[1] + 1).map((w) => w.w).join(" ")}’`;
+}
+
+function renderSummary(r) {
+  const top = topFindings(r), mode = r.detection?.reference_mode, against = MODE_TEXT[mode] && mode !== "single" ? `the ${MODE_TEXT[mode]}` : "the reference reading";
+  $("#summary-line").textContent = !r.flaws.length ? noRegions(r)
+    : top.length === 1 ? `Compared with ${against}, one finding costs you the most points.`
+    : top.length ? `Compared with ${against}, these ${top.length} findings cost you the most points.`
+    : `Compared with ${against}, every finding costs less than 0.01 points.`;
+  $("#top-cards").replaceChildren(...top.map(([f, i], rank) => el("article", { class: "top-card", "data-finding": f.id, "data-i": i },
+    el("button", { type: "button", class: "card-open", "data-i": i, "data-kind": "flaw", "aria-pressed": "false", onclick: () => select(i, { scroll: true }) },
+      el("span", { class: "rank", text: `${rank + 1}` }), el("span", { class: "card-title" }, dimIcon(f.dimension), findingText(f)),
+      el("span", { class: "card-pts", text: findingPts(f) })),
+    el("p", { class: "card-words", text: quotedWords(r, f) }),
+    el("p", { class: "card-line", text: plainLine(f) }),
+    f.fix ? el("p", { class: "card-fix", text: f.fix }) : null,
+    el("button", { type: "button", class: "listen-btn", "data-audio": "both", onclick: () => listen(i) }, "Listen", el("span", { class: "sub-h", text: " yours, then the reference" })))));
+  const n = r.flaws.length + differences().length;
+  $("#see-all").hidden = !n;
+  $("#see-all").textContent = `See all ${n} ${n === 1 ? "finding" : "findings"}`;
 }
 
 function renderLedger(r) {
@@ -267,53 +305,44 @@ function renderLedger(r) {
   showScore(o);
   $("#regime-badge").textContent = regimeBadge(r);
   $("#regime-badge").hidden = false;
-  const note = detectionNote(r);
-  $("#detection-note p").textContent = note;
-  $("#detection-note").hidden = !note;
-  $("#regime").textContent = r.regime === "R1" ? "Regime R1: the same performance as the reference."
-    : "Regime R2: a different performance from the reference.";
-  const mode = referenceMode(r);
-  $("#reference-mode").hidden = !mode;
-  $("#reference-mode .badge").textContent = mode ? mode.badge : "";
-  $("#reference-mode .badge").title = mode ? mode.text : "";
+  // Only a combined reference needs saying; one reading is the default.
+  const consensus = r.detection?.reference_mode === "consensus5";
+  $("#reference-mode").hidden = !consensus;
+  $("#reference-mode .badge").textContent = consensus ? `Compared with ${r.detection.reference_count} readings of the same text` : "";
   $("#key-ref").textContent = r.detection?.reference_mode === "consensus5" ? `Reference: median of ${r.detection.reference_count} readings` : "Reference rendition";
+  renderSummary(r);
   const cards = $("#cards");
   cards.replaceChildren();
   for (const g of dimGroups(r)) {
     const scored = g.dims.filter((d) => d.scored);
-    const value = scored.length ? scored.reduce((a, d) => a + d.score, 0) / scored.length : null;
+    if (!scored.length) continue;   // only measures that score are shown; the notes name the others
+    const value = scored.reduce((a, d) => a + d.score, 0) / scored.length;
     const keys = g.dims.map((d) => d.key);
     const n = r.flaws.filter((f) => keys.includes(f.dimension)).length;
-    const reason = value == null ? g.dims.find((d) => d.note)?.note : null;
     const card = el("button", { type: "button", class: "card", "aria-pressed": "false", "data-dims": keys.join(",") },
-      el("div", { class: "word", text: keys.includes("D6") ? "Clarity (spectral-change proxy)" : g.word }),
-      el("div", { class: value == null ? "fig unscored" : "fig", text: value == null ? `Not scored (${r.regime})` : num(value, 1) }),
-      reason ? el("div", { class: "reason", text: reason[0].toUpperCase() + reason.slice(1) + "." }) : null,
-      el("div", { class: "bar" }, el("i", { style: `width:${value == null ? 0 : Math.max(0, Math.min(100, value))}%` })),
-      el("div", { class: "lines" }, ...g.dims.map((d) => el("div", { class: "line", title: `${d.note || ""} Coverage: ${num(d.coverage * 100, 0)}%.` },
-        el("span", { text: d.key === "D6" ? "Spectral change" : d.label }), el("span", { text: d.scored ? num(d.score, 1) : "not scored" })))),
-      el("div", { class: n ? "count flagged" : "count", text: n ? `${n} flagged ${n === 1 ? "region" : "regions"}` : "No flagged regions" }));
+      el("div", { class: "word", text: groupLabel(g.word) }),
+      el("div", { class: "fig", text: num(value, 1) }),
+      el("div", { class: "bar" }, el("i", { style: `width:${Math.max(0, Math.min(100, value))}%` })),
+      scored.length > 1 ? el("div", { class: "lines" }, ...scored.map((d) => el("div", { class: "line", title: `${d.note || ""} Coverage: ${num(d.coverage * 100, 0)}%.` },
+        el("span", { text: SUB_NAME[d.key] || d.label }), el("span", { text: num(d.score, 1) })))) : null,
+      n ? el("div", { class: "count flagged", text: `${n} ${n === 1 ? "finding" : "findings"}` }) : null);
     card.addEventListener("click", () => setFilter(S.filter && S.filter.join() === keys.join() ? null : keys));
     cards.append(card);
   }
 }
 
-function renderFix() {
-  const f = selected();
-  $("#overall-fix").textContent = S.selKind === "flaw" && f && f.overall_if_fixed != null ? `Score with this penalty removed: ${scoreText(f.overall_if_fixed)}` : "";
-}
 
 function renderFilters(r) {
   const dimension = $("#dimension-filter"), pattern = $("#pattern-filter");
-  dimension.replaceChildren(el("option", { value: "", text: "All dimensions" }));
+  dimension.replaceChildren(el("option", { value: "", text: "All measures" }));
   for (const g of dimGroups(r)) {
-    if (g.dims.length > 1) dimension.append(el("option", { value: g.dims.map((d) => d.key).join(","), text: g.word }));
-    dimension.append(...g.dims.map((d) => el("option", { value: d.key, text: `${d.key} · ${d.label}` })));
+    if (g.dims.length > 1) dimension.append(el("option", { value: g.dims.map((d) => d.key).join(","), text: `${groupLabel(g.word)}, all` }));
+    dimension.append(...g.dims.map((d) => el("option", { value: d.key, text: SUB_NAME[d.key] || d.label })));
   }
   const patterns = new Set([...r.flaws, ...differences()].flatMap((f) => [f.pattern, f.group_pattern]).filter(Boolean));
   pattern.replaceChildren(el("option", { value: "", text: "All patterns" }),
     ...[...patterns].sort().map((p) => el("option", { value: p, text: patternText(p) })),
-    el("option", { value: "unlabelled", text: "No pattern label" }));
+    el("option", { value: "unlabelled", text: "Other findings" }));
 }
 
 function setFilter(keys) {
@@ -391,7 +420,7 @@ function renderFlawList() {
         "data-kind": "flaw", onclick: () => select(i) },
         el("span", { class: "n", text: `#${i + 1}` }), el("span", { class: "t" }, dimIcon(f.dimension), findingText(f)),
         el("span", { class: "pts", text: f.counted === false ? "shared" : findingPts(f) }),
-        el("span", { class: "m" }, el("span", { text: `${f.brief_word}, ${wholePassage(f) ? "whole passage" : span(f.p)}` }),
+        el("span", { class: "m" }, el("span", { text: `${groupLabel(f.brief_word)}, ${wholePassage(f) ? "whole passage" : span(f.p)}` }),
           el("i", { class: `dash ${st[2]}`, "aria-label": `Severity: ${st[2]}` }))), patternTags(f));
   };
   const groupItem = (members) => {
@@ -407,7 +436,7 @@ function renderFlawList() {
   const minor = (members) => !saturated(counted(members)[0]) && (counted(members)[0].points_lost ?? 1) < 0.05;
   list.append(...shown.filter((members) => !minor(members)).map(groupItem));
   const folded = shown.filter(minor);
-  if (folded.length) list.append(el("li", {}, el("details", {}, el("summary", { text: `Minor departures (${folded.length}), under 0.05 points` }),
+  if (folded.length) list.append(el("li", {}, el("details", {}, el("summary", { text: `Small findings (${folded.length}), under 0.05 points each` }),
     el("ul", { class: "flaws" }, ...folded.map(groupItem)))));
 }
 
@@ -509,11 +538,9 @@ function renderExplain() {
   $("#player-finding").textContent = !f ? "-" : diff ? findingText(f) : `#${S.sel + 1} ${findingText(f)}`;
   box.classList.toggle("neutral", diff);
   if (!f) {
-    box.append(el("h3", { text: "Listen and compare" }),
-      el("p", { class: "empty", text: r.flaws.length ? "Select a region to read the explanation." : noRegions(r) }));
+    box.append(el("h3", { text: "Your reading" }), el("p", { class: "empty", text: r.flaws.length ? "Select a finding to read it." : noRegions(r) }));
     return;
   }
-  const words = wholePassage(f) ? "whole passage" : r.words.slice(f.words[0], f.words[1] + 1).map((w) => w.w).join(" ");
   const valueUnit = valUnit(f), deltaUnit = UNIT[f.unit] || f.unit || "";
   const ratio = f.unit !== "ln" || f.delta == null ? "" : REGULARISED.has(f.dimension) && valUnit(f) !== "×"
     ? ` (${factor(f.delta)} after the same small constant is added to both values)` : ` (${factor(f.delta)})`;
@@ -530,41 +557,40 @@ function renderExplain() {
     }
     fact(dl, "Difference", `${signed(f.delta)} ${deltaUnit}${ratio}`);
   }
-  if (diff) {
-  } else {
+  if (!diff) {
     fact(dl, "Points lost", f.points_lost == null ? "-" : !shownLoss(f.points_lost) ? "<0.01" : num(f.points_lost, 2));
     if (saturated(f)) fact(dl, `${dimText(f)}, points lost in total`, num(f.dimension_points_lost, 2));
     else if (zeroLoss(f)) fact(dl, `${dimText(f)} loss carried by`, `#${lossCarrier(f) + 1} (${ptsText(r.flaws[lossCarrier(f)].points_lost)})`);
-    fact(dl, "Score with this penalty removed", f.overall_if_fixed == null ? "-" : scoreText(f.overall_if_fixed));
-    fact(dl, "Multiple of the flag threshold", multipleText(f.tolerance_multiple));
-    fact(dl, "Flagged beyond", f.threshold == null ? "-" : unevenTempo(f) ? thresholdFactor(f) : `${f.delta < 0 ? "−" : "+"}${num(f.threshold, 2)} ${deltaUnit}`);
+    fact(dl, "Score if fixed", f.overall_if_fixed == null ? "-" : scoreText(f.overall_if_fixed));
+    fact(dl, "Times the flag threshold", multipleText(f.tolerance_multiple));
+    fact(dl, "Flag threshold", f.threshold == null ? "-" : unevenTempo(f) ? thresholdFactor(f) : `${f.delta < 0 ? "−" : "+"}${num(f.threshold, 2)} ${deltaUnit}`);
   }
   const pts = diff ? null : f.counted === false ? "shared" : findingPts(f);
-  const listen = (who, key, title, at) => el("button", { type: "button", class: `ab ${who}`, "data-audio": who, "aria-label": `Play ${title.toLowerCase()}, ${at}`,
-    onclick: () => playSpan(who, mediaSpan(f, who)) }, el("span", { class: "ab-key", text: key }), el("span", {}, el("span", { class: "ab-name", text: title }),
-      el("span", { class: "ab-span", text: at })));
+  const why = diff ? "Shown for comparison with the reference; it does not change the score."
+    : f.tolerance_multiple != null ? `It counts because it is ${multipleText(f.tolerance_multiple)} the flag threshold for this measure.` : "";
   box.append(
     el("div", { class: "ex-head" },
       el("div", {},
         el("h3", {}, diff ? null : el("span", { class: "ex-num", text: `#${S.sel + 1}` }), diff ? null : " ", findingText(f)),
-        diff ? el("p", { class: "ex-status", text: f.status === "listed" ? "Listed, not scored: no point penalty" : "Reference difference, not scored" }) : null,
+        el("p", { class: "ex-status", text: `${groupLabel(f.brief_word)}, ${wholePassage(f) ? "whole passage" : span(f.p)}` }),
         patternTags(f)),
-      pts ? el("p", { class: "ex-pts" }, pts, el("small", { text: f.counted === false ? "penalty carried by the group" : "from the delivery score" })) : null),
-    el("p", { class: "ex-words", text: wholePassage(f) ? "Whole passage" : `‘${words}’` }),
-    el("div", { class: "ex-listen" }, listen("you", "A", "This recording", span(f.p)), listen("ref", "B", "Reference", span(f.b)),
-      el("button", { type: "button", class: "ab both", "data-audio": "both", onclick: () => playBoth(f), text: "Play both" })),
+      pts ? el("p", { class: "ex-pts" }, pts, el("small", { text: f.counted === false ? "carried by the group" : "from your score" })) : null),
+    el("p", { class: "ex-words", text: quotedWords(r, f) }),
+    el("p", { class: "ex-what", text: plainLine(f) }),
+    why ? el("p", { class: "ex-why", text: why }) : null,
     diff ? null : thresholdGauge(f),
-    dl,
-    el("p", { class: "what", text: (f.candidate ? f.text.replace(CANDIDATE_TEXT, "").trim() : f.text) || "" }));
+    el("button", { type: "button", class: "listen-btn", "data-audio": "both", onclick: () => listen(S.sel, S.selKind) }, "Listen",
+      el("span", { class: "sub-h", text: ` yours ${span(f.p)}, then the reference ${span(f.b)}` })));
   if (!diff && f.fix) box.append(el("p", { class: "fix" }, el("b", { text: "How to fix" }), f.fix));
   if (f.candidate) box.append(el("p", { class: "candidate-note", text: CANDIDATE_TEXT }));
   if (f.group) {
     const members = r.flaws.filter((x) => f.group.includes(x.id));
-    box.append(el("p", { class: "group-note", text: `${groupName(f)} group: ${members.length} findings share one penalty. ${f.counted === false ? "This member adds no points lost; the counted member carries the group's penalty." : "The score with this penalty removed removes the whole group's penalty."}` }),
+    box.append(el("p", { class: "group-note", text: `${groupName(f)} group: ${members.length} findings share one penalty. ${f.counted === false ? "This member adds no points lost; the counted member carries the group's penalty." : "The score if fixed removes the whole group's penalty."}` }),
       el("div", { class: "group-links" }, ...members.map((member) => el("button", { type: "button", class: "plain",
         onclick: () => select(r.flaws.indexOf(member)), text: `#${r.flaws.indexOf(member) + 1} ${findingText(member)}` }))));
   }
-  const detail = el("details", { class: "measure-details" }, el("summary", { text: "Measurements and context" }));
+  const detail = el("details", { class: "measure-details" }, el("summary", { text: "Details" }), dl,
+    el("p", { class: "what", text: (f.candidate ? f.text.replace(CANDIDATE_TEXT, "").trim() : f.text) || "" }));
   if (f.evidence?.length) {
     const evidence = el("dl", { class: "facts evidence" });
     // The finding's own measure shows the Difference row's factor: a second rounding of the stored value can differ by 0.01.
@@ -575,7 +601,7 @@ function renderExplain() {
   if (f.span_kind) detail.append(el("p", { class: "measure", text: `Evidence span: ${f.span_kind}.` }));
   if (f.context) detail.append(el("p", { class: "measure", text: f.context }));
   if (!diff) {
-    if (f.overall_if_fixed != null) detail.append(el("p", { class: "measure", text: "The score above removes this penalty arithmetically; it does not predict the score of a new recording." }));
+    if (f.overall_if_fixed != null) detail.append(el("p", { class: "measure", text: "The score if fixed removes this finding's points arithmetically; it does not predict the score of a new recording." }));
     if (f.measure) detail.append(el("p", { class: "measure", text: `Measured as: ${f.measure}.` }));
     if (f.why && f.dimension !== "D6") detail.append(el("blockquote", { class: "why", text: f.why }));
   }
@@ -613,9 +639,8 @@ function select(i, { scroll = false, kind = "flaw", reveal = true } = {}) {
   const btn = document.querySelector(kind === "difference" ? `#differences ${selector}, #listed ${selector}` : `#flaws ${selector}`);
   if (btn?.closest("details")) btn.closest("details").open = true;
   if (reveal) revealInSide(btn);
-  if (scroll) btn?.scrollIntoView({ block: "nearest" });
+  if (scroll) $("#explain").scrollIntoView({ block: "nearest" });
   renderExplain();
-  renderFix();
   markWords();
   markTimeline();
   if (S.chart && before !== rowDefs(S.result).map((d) => d.key).join()) drawChart();
@@ -629,82 +654,28 @@ function select(i, { scroll = false, kind = "flaw", reveal = true } = {}) {
 function renderTranscript(r) {
   const box = $("#transcript");
   box.replaceChildren();
-  const wordStyle = new Array(r.words.length).fill(null);
-  r.flaws.forEach((f) => {
+  const wordStyle = new Array(r.words.length).fill(null), wordFinding = new Array(r.words.length).fill(-1);
+  r.flaws.forEach((f, k) => {
     if (wholePassage(f)) return;   // clip-level: no word run to underline
     const st = sevStyle(f.severity ?? 0);
-    for (let i = f.words[0]; i <= f.words[1]; i++) if (!wordStyle[i] || SEVERITY_STYLES.indexOf(st) > SEVERITY_STYLES.indexOf(wordStyle[i])) wordStyle[i] = st;
+    for (let i = f.words[0]; i <= f.words[1]; i++) {
+      if (wordFinding[i] < 0 || (f.points_lost ?? 0) > (r.flaws[wordFinding[i]].points_lost ?? 0)) wordFinding[i] = k;
+      if (!wordStyle[i] || SEVERITY_STYLES.indexOf(st) > SEVERITY_STYLES.indexOf(wordStyle[i])) wordStyle[i] = st;
+    }
   });
   r.words.forEach((w, i) => {
+    const k = wordFinding[i];
+    if (k >= 0 && wordFinding[i - 1] !== k) box.append(dimIcon(r.flaws[k].dimension) || "");
     const b = el("button", { type: "button", class: "w" + (wordStyle[i] ? ` f-${wordStyle[i][1]}` : ""), "data-i": i, text: w.w });
-    b.dataset.audio = "you";
-    b.addEventListener("click", () => playSpan("you", [w.p[0], w.p[1] + 0.25]));
+    if (k >= 0) {
+      b.setAttribute("aria-label", `${w.w}: finding #${k + 1} ${findingText(r.flaws[k])}`);
+      b.addEventListener("click", () => select(k, { scroll: true }));
+    } else {
+      b.dataset.audio = "you";
+      b.addEventListener("click", () => playSpan("you", [w.p[0], w.p[1] + 0.25]));
+    }
     box.append(b, " ");
   });
-  $("#truth-matches").replaceChildren(...truthEdits(r).map(renderTruthEdit));
-}
-
-/** Injected edits with their matched findings and listed differences. A gallery truth carries the evaluator's match
-    (`finding`, `difference`). Truths of one labelled edit (the boundaries of a word-by-word edit) form one entry. */
-function truthEdits(r) {
-  const edits = [];
-  for (const t of r.truth || []) {
-    const flaws = [r.flaws.findIndex((f) => f.id === t.finding)].filter((i) => i >= 0);
-    const diff = t.difference == null ? -1 : differences().findIndex((d) => d.id === t.difference);
-    const shared = (t.duplicate_findings || []).map((id) => r.flaws.findIndex((f) => f.id === id)).filter((i) => i >= 0);
-    const unit = { flaws, diff, sameChange: !!t.same_change, shared };
-    const last = edits[edits.length - 1];
-    const same = last && t.words && last.t.type === t.type && last.t.words?.join() === t.words.join();
-    if (same) last.units.push(unit);
-    else edits.push({ t, units: [unit] });
-  }
-  return edits;
-}
-
-/** The truth's detector_status (pipeline.detector_status). */
-function truthStatus(t) {
-  return t.detector_status;
-}
-
-/** Why an edit of this dimension cannot have a flag in this result, or null when it can. */
-function noFlagReason(t) {
-  const status = truthStatus(t), label = S.result.scores.dims.find((d) => d.key === t.dimension)?.label || t.dimension;
-  if (status === "enabled") return null;
-  if (status === "no detector") return `No detector for this edit: ${label} is displayed only in regime ${S.result.regime}`;
-  const noEntry = differences().some((d) => d.status === "listed") ? "; no listed entry matches it" : "";
-  return `No flag possible: ${label} is listed, not scored, in regime ${S.result.regime}${noEntry}`;
-}
-
-/** The expected detection of a level-1 edit, from the evaluation summary when the gallery has one (gallery.level_one_text). */
-const levelOneText = () => " " + (S.evaluation?.texts?.level_one || "Level 1 is the smallest edit size.");
-
-function renderTruthEdit({ t, units }) {
-  const name = TYPE_TEXT[t.type] || PATTERN_TEXT[t.type] || TRUTH_TEXT[t.type] || t.type;
-  const found = [...new Set(units.flatMap((u) => u.flaws))].sort((a, b) => a - b);
-  const listed = [...new Set(units.filter((u) => !u.flaws.length && u.diff >= 0).map((u) => u.diff))];
-  const missed = units.filter((u) => !u.flaws.length && u.diff < 0).length;
-  const shared = [...new Set(units.flatMap((u) => u.shared))].filter((i) => !found.includes(i)).sort((a, b) => a - b);
-  const findingButton = (i) => el("button", { type: "button", class: "plain", onclick: () => select(i, { scroll: true }), text: `Finding #${i + 1}` });
-  const findingButtons = (list) => list.flatMap((i, k) => k ? [", ", findingButton(i)] : [findingButton(i)]);
-  // An excluded edit failed the label checks, so the evaluation neither matches nor counts it; a flag on it is not a false flag.
-  const missText = t.excluded ? `Excluded from evaluation (${t.excluded.join("; ")})` : noFlagReason(t) ||
-    (units.length > 1 ? `${missed} of ${units.length} boundaries without a matching flag` : "No matching flag");
-  // An excluded edit's findings come from the evaluation's own rule (gallery on_edit: events.on_shortfall); the span test is only a hint.
-  const near = t.excluded && t.on_edit ? t.on_edit.map((id) => S.result.flaws.findIndex((f) => f.id === id)).filter((i) => i >= 0 && !found.includes(i))
-    : S.result.flaws.map((f, i) => [f, i]).filter(([f, i]) => onSpan(f, t.p) && !found.includes(i) && !shared.includes(i) &&
-      (t.excluded || f.dimension === t.dimension)).map(([, i]) => i);
-  const nearText = !missed || !near.length ? null : t.excluded ? " Flags on this excluded edit (not counted as false): "
-    : noFlagReason(t) ? null : " Partly covered by ";
-  return el("span", { class: "truth-edit" }, el("span", { class: "note", text: `Injected ${name}: ` }),
-    ...findingButtons(found),
-    units.some((u) => u.sameChange && u.flaws.length) ? el("span", { class: "note", text: " (found by a region of the same change)" }) : null,
-    ...(shared.length ? [el("span", { class: "note", text: " Same change, not counted again: " }),
-      ...findingButtons(shared)] : []),
-    ...listed.map((i) => el("button", { type: "button", class: "plain", onclick: () => select(i, { scroll: true, kind: "difference" }),
-      text: `${differences()[i].status === "listed" ? "Listed entry" : "Difference"} (not scored)` })),
-    missed ? el("span", { class: "note", text: missText + (t.level === 1 && !t.excluded && !noFlagReason(t) ? "." + levelOneText() : "") }) : null,
-    ...(nearText ? [el("span", { class: "note", text: nearText }), ...findingButtons(near),
-      t.excluded ? null : el("span", { class: "note", text: " (overlap below the match rule: time IoU 0.5)" })] : []));
 }
 
 function markWords() {
@@ -780,16 +751,17 @@ function drawTimeline() {
     return svgEl("g", { class: `tl-word ${who}`, onclick: () => playSpan(who, [w[key][0], w[key][1] + 0.25]),
       onpointerenter: (e) => showTip(e.currentTarget, `${w.w}  ${span(w[key])}`), onpointerleave: hideTip },
       svgEl("rect", { x: x0, y: top, width: wide, height: TL_TRACK_PX, rx: 4 }),
-      textWidth(w.w, TL_WORD_FONT) + 6 <= wide ? svgEl("text", { x: x0 + 3, y: top + TL_TRACK_PX / 2, "dominant-baseline": "central", text: w.w }) : null);
+      );
   }));
   svg.append(track("ref", "b", refTop), track("you", "p", youTop));
   const bands = svgEl("g", {}), markers = svgEl("g", {}), placed = [];
   r.flaws.forEach((f, i) => {
     if (wholePassage(f)) return;   // listed and explained in the whole-clip cards, not painted over both readings
-    const band = bandParts(f), text = `#${i + 1}`, w = textWidth(text, TL_WORD_FONT) + 12;
+    const band = bandParts(f), text = findingText(f), w = textWidth(text, TL_MARK_FONT) + 16;
     const cx = Math.min(Math.max((band.b0 + band.b1 + band.p0 + band.p1) / 4, gutter + w / 2), width - w / 2);
     // A number takes the middle row of the ribbon zone, else the row above or below where it does not touch another number.
-    const rows = [band.mid, band.mid - TL_MARK_H - TL_MARK_GAP, band.mid + TL_MARK_H + TL_MARK_GAP];
+    const rows = [band.mid - (TL_MARK_H + TL_MARK_GAP) / 2, band.mid + (TL_MARK_H + TL_MARK_GAP) / 2, band.mid - 1.5 * (TL_MARK_H + TL_MARK_GAP),
+      band.mid + 1.5 * (TL_MARK_H + TL_MARK_GAP)];
     const free = (y) => !placed.some((m) => m.y === y && cx - w / 2 < m.x1 + TL_MARK_GAP && cx + w / 2 > m.x0 - TL_MARK_GAP);
     const y = rows.find(free) ?? rows[0];
     placed.push({ y, x0: cx - w / 2, x1: cx + w / 2 });
@@ -863,7 +835,7 @@ function rowDefs(r) {
   const defs = [], dims = new Set(r.flaws.map((f) => f.dimension));
   const f = selected();
   if (f) dims.add(f.dimension);
-  for (const x of [...differences(), ...(r.truth || [])]) dims.add(x.dimension);   // a listed difference or injected edit earns its row
+  for (const x of differences()) dims.add(x.dimension);   // a listed difference earns its row
   for (const row of r.rows) {
     if (!S.allDimensions && !ROWS[row.key]?.frame && !dims.has(ROWS[row.key]?.dim)) continue;
     if (row.key === "emphasis" && r.stress) defs.push({ key: "stress", row: { key: "stress", unit: "" } });
@@ -1058,11 +1030,6 @@ function chartModel(r) {
       return shapes.length - 1;
     });
     groupShapes.push({ indices, ids: members.map(([f]) => f.id) });
-  }
-  for (const t of r.truth || []) {   // injected truth (gallery clips): a thick rule on the row's top edge, dotted when excluded
-    if (!rowAxis[ROW_OF_DIM[t.dimension]]) continue;
-    shapes.push({ type: "line", xref: "x", yref: `${rowAxis[ROW_OF_DIM[t.dimension]]} domain`, x0: t.p[0], x1: t.p[1], y0: 1, y1: 1,
-      line: { color: c.ink, width: 4, dash: t.excluded ? "dot" : "solid" }, layer: "above" });
   }
   layout.xaxis = { anchor: axisId(n - 1), range: [0, r.participant.duration], gridcolor: c.rule, showline: false, zeroline: false,
     ticks: "outside", tickcolor: c.rule, tickfont: { color: c.ink2, size: 10.5 }, hoverformat: ".2f",
@@ -1285,9 +1252,22 @@ function padSpan([a, b]) {
   return need > 0 ? [Math.max(0, a - need / 2), b + need / 2] : [a, b];
 }
 
+/** Select a finding and play it in the player: your span, then the reference span. */
+function listen(i, kind = "flaw") {
+  if (S.sel !== i || S.selKind !== kind) select(i, { kind });
+  playBoth(selected());
+}
+
+function showSide(who) {
+  S.side = who;
+  $("#ab-you").setAttribute("aria-pressed", String(who === "you"));
+  $("#ab-ref").setAttribute("aria-pressed", String(who === "ref"));
+}
+
 async function playSpan(who, s) {
   if (!(who === "you" ? S.youReady : S.refReady)) return;
   stopAll();
+  showSide(who);
   const token = S.mediaId, playId = S.playId, ws = S.ws, ref = S.ref, m = S.result.map;
   const current = () => token === S.mediaId && playId === S.playId;
   const [a, end] = padSpan(s), b = Math.min(end, who === "you" ? ws.getDuration() : ref.duration);
@@ -1319,15 +1299,14 @@ async function playBoth(f) {
   S.bothTimer = setTimeout(() => { if (playId === S.playId) playSpan("ref", mediaSpan(f, "ref")); }, (b - a) * 1000 + BOTH_GAP_MS);
 }
 
-// ---------------------------------------------------------------------------------------------------- render
-function renderNotices(r) {
-  const ul = $("#notices");
-  ul.replaceChildren(...r.notices.map((t) => el("li", { text: t || "" })));
-  if (r.regime === "R2" && S.evaluation?.texts?.r2_lockbox) ul.append(el("li", { text: S.evaluation.texts.r2_lockbox }));
-  ul.append(...r.scores.dims.filter((d) => d.note || d.coverage < 1).map((d) => el("li", {
-    text: `${d.label}: ${d.note ? d.note + ". " : ""}Measurable coverage: ${num(d.coverage * 100, 0)}%.` })));
+/** A collapsed section keeps its content laid out (the charts keep their width) at zero height, and inert. */
+function setFold(fold, open) {
+  fold.classList.toggle("open", open);
+  fold.querySelector(".fold-toggle").setAttribute("aria-expanded", String(open));
+  fold.querySelector(".fold-body").inert = !open;
 }
 
+// ---------------------------------------------------------------------------------------------------- render
 /**
  * [index, kind, focused] of the item a page opens on: the gallery item's `focus` id, else the costliest finding, else
  * the first difference. focused is true only for the `focus` id.
@@ -1351,8 +1330,6 @@ function render(r, base, focus = null) {
   $("#all-dimensions").setAttribute("aria-pressed", "false");
   $("#all-dimensions").textContent = "Show all dimensions";
   $("#clear-filter").hidden = true;
-  $("#key-truth").hidden = !(r.truth && r.truth.length);
-  $("#key-excluded").hidden = !(r.truth || []).some((t) => t.excluded);
   $("#key-group").hidden = !r.flaws.some((f) => f.group);
   $("#key-subword").hidden = ![...r.flaws, ...differences()].some((f) => f.span_kind === "sub-word");
   $("#listed-wrap").open = false;   // one panel element and one list column serve every example
@@ -1363,7 +1340,6 @@ function render(r, base, focus = null) {
   renderDifferenceList();
   renderClipCards();
   renderTranscript(r);
-  renderNotices(r);
   drawTimeline();
   loadMedia(r, base);
   const [first, kind, focused] = initialSelection(r, focus);
@@ -1396,26 +1372,15 @@ function coverArt(id) {
 }
 
 function buildChips(index) {
-  const chips = $("#chips");
-  chips.replaceChildren();
-  const groups = [];
-  for (const it of index.items) {
-    let g = groups.find((x) => x.name === it.group);
-    if (!g) groups.push(g = { name: it.group, items: [] });
-    g.items.push(it);
-  }
-  const oneReference = index.items.every((it) => !it.baseline || it.baseline === index.baseline.id);
-  $("#picker-title").textContent = oneReference ? `Examples from ${index.baseline.title}` : "Examples";
-  for (const g of groups) {
-    chips.append(el("div", { class: "group" }, el("span", { class: "gname", text: g.name }),
-      el("div", { class: "chips" }, ...g.items.map((it) => el("button", { type: "button", class: "chip", "aria-pressed": "false", "data-id": it.id,
-        title: it.title, onclick: () => openExample(it) }, el("span", { class: "art", "aria-hidden": "true" }, coverArt(it.id)),
-        el("span", { class: "name", text: it.label }), el("span", { class: "score", text: scoreText(it.overall) }))))));
-  }
-  const left = index.left_out || [];
-  $("#left-out").hidden = !left.length;
-  $("#left-out summary").textContent = `${left.length} planned ${left.length === 1 ? "example" : "examples"} left out with this detector`;
-  $("#left-out-list").replaceChildren(...left.map((x) => el("li", { text: `${x.label}: ${x.reason}.` })));
+  const chip = (it) => el("button", { type: "button", class: "chip", "aria-pressed": "false", "data-id": it.id, title: it.title, onclick: () => openExample(it) },
+    el("span", { class: "art", "aria-hidden": "true" }, coverArt(it.id)), el("span", { class: "name", text: exampleName(it) }),
+    el("span", { class: "score", text: scoreText(it.overall) }));
+  const ranked = EXAMPLES.map(([id]) => index.items.find((it) => it.id === id)).filter(Boolean);
+  const featured = ranked.slice(0, FEATURED_COUNT);
+  const rest = [...ranked.slice(FEATURED_COUNT), ...index.items.filter((it) => !ranked.includes(it))];
+  $("#chips").replaceChildren(...(featured.length ? featured : rest).map(chip));
+  $("#chips-more").replaceChildren(...(featured.length ? rest : []).map(chip));
+  $("#more-examples").hidden = !featured.length || !rest.length;
 }
 
 /** The hero's title names the open example. */
@@ -1424,14 +1389,14 @@ function showPicked(name) {
 }
 
 async function openExample(it) {
+  $("#picker-menu").open = false;
   const request = ++S.openId;
   invalidateMedia();
   try {
     const r = await getJSON("gallery/" + it.result);
     if (request !== S.openId) return;
     document.querySelectorAll(".chip").forEach((c) => c.setAttribute("aria-pressed", String(c.dataset.id === it.id)));
-    showPicked(`${it.group}, ${it.label}`);
-    $("#picker-note").textContent = `${it.title}. ${it.description}`;
+    showPicked(exampleName(it));
     showAlert("");
     render(r, "gallery/", it.focus);
   } catch (e) {
@@ -1439,129 +1404,8 @@ async function openExample(it) {
   }
 }
 
-/** An uncertainty block of evaluate (uncertainty.cluster_summary): a 95% interval, or the value of each cluster (recording or
- * speaker) when there are too few clusters for an interval. An interval with equal bounds has no spread, so the pooled Wilson
- * interval (gallery.with_wilson) is shown instead. `scale` 100 shows a fraction as percent. */
-function intervalText(iv, value, digits = 2, scale = 1) {
-  if (value == null) return "-";
-  const point = num(scale * value, digits), bound = (v) => num(scale * v, digits);
-  if (Array.isArray(iv?.ci95) && iv.ci95[0] != null) {
-    if (iv.ci95[0] === iv.ci95[1] && iv.wilson95) return `${point} (no spread across recordings; pooled Wilson 95% ${bound(iv.wilson95[0])} to ${bound(iv.wilson95[1])})`;
-    return `${point} [${bound(iv.ci95[0])}, ${bound(iv.ci95[1])}]`;
-  }
-  if (iv?.per_cluster && iv.unit === "speaker") return `${point} (per speaker ${Object.values(iv.per_cluster).map((v) => v == null ? "-" : bound(v)).join(", ")}; no interval)`;
-  if (Array.isArray(iv?.range) && iv.range[0] != null) return `${point} (range ${bound(iv.range[0])} to ${bound(iv.range[1])}, no interval)`;
-  return point;
-}
-
-const foundCounts = (r) => r.flaws_found_before == null || r.flaws_found_after == null ? "-" : `${r.flaws_found_before} → ${r.flaws_found_after}`;
-
-const keptText = (iv) => `${iv.retained} of ${iv.found}: ${intervalText(iv, iv.fraction, 0, 100)}`;
-
-function retention(r) {
-  const iv = r.retention_interval;
-  if (!iv) return "-";
-  return iv.found ? keptText(iv) : "none found before";
-}
-
-/** Per flag key: regions added per minute and detections kept, each with its interval. */
-function byKey(r) {
-  const keys = [...new Set([...Object.keys(r.added_by_key || {}), ...Object.keys(r.retention_by_key || {})])].sort();
-  if (!keys.length) return "-";
-  return keys.map((k) => {
-    const added = r.added_by_key?.[k], kept = r.retention_by_key?.[k];
-    const parts = [added ? `added ${intervalText(added, added.rate)}/min` : null, kept?.found ? `kept ${keptText(kept)} %` : null];
-    return `${k}: ${parts.filter(Boolean).join("; ")}`;
-  }).join(" · ");
-}
-
-function renderStress(rows) {
-  const scopes = [...new Set(rows.map((r) => r.interval_scope).filter(Boolean))].map((t) =>
-    `${[...new Set(rows.filter((r) => r.interval_scope === t).map((r) => r.split))].join(", ")}: ${t}`);
-  const shares = [...new Set(rows.filter((r) => r.key_share_per_min != null).map((r) => `${r.regime} ${num(r.key_share_per_min, 3)}`))];
-  const cols = [
-    ["Population", (r) => r.split], ["Condition", (r) => r.condition], ["Regime", (r) => r.regime],
-    ["Reference mode", (r) => r.reference_mode ?? "-"],
-    ["Recordings", (r) => r.recordings ?? "-", "num"], ["Seeds", (r) => Array.isArray(r.seeds) ? r.seeds.join(", ") : "-"],
-    ["Exposure, all seeds (min)", (r) => num(r.minutes, 1), "num"],
-    ["Regions added per min", (r) => intervalText(r.added_interval, r.added_per_min), "num"],
-    ["Regions removed per min", (r) => intervalText(r.removed_interval, r.removed_per_min), "num"],
-    ["Largest score change (points)", (r) => num(r.max_abs_delta_score, 2) + (r.missing_score_pairs ? ` (${r.missing_score_pairs} pairs unmeasured)` : ""), "num"],
-    ["Flaws found before → after", foundCounts, "num"],
-    ["Detections kept (%)", retention, "num"],
-    ["By flag key", byKey],
-    ["Limits: what this condition breaks", (r) => r.limits?.length ? r.limits.join("; ") : "none"],
-  ];
-  const t = $("#stress-table");
-  t.replaceChildren(el("thead", {}, el("tr", {}, ...cols.map(([h, , c]) => el("th", { text: h, class: c || "" })))),
-    el("tbody", {}, ...rows.map((r) => el("tr", {}, ...cols.map(([, value, c]) => el("td", { text: String(value(r) ?? "-"), class: c || "" }))))));
-  const broken = rows.filter((r) => r.limits?.length).length;
-  const modes = new Set(rows.filter((r) => r.regime === "R2").map((r) => r.reference_mode));
-  $("#stress-summary").textContent = [
-    "Each row is the measured change under one recording condition; no pass rule applies.",
-    rows.some((r) => "limits" in r) ? `${broken} of ${rows.length} rows break at least one flag key (column Limits).` : "Limits are not computed for this matrix.",
-    shares.length ? `A key breaks when the 95% lower bound of its added local regions per minute (the rate where no interval exists) is above its share of the false-region budget (per minute: ${shares.join(", ")}), or when the 95% upper bound of its kept detections (the fraction where no interval exists) is below 95 %.` : "",
-    modes.size && !modes.has("consensus5") ? "R2 rows use the single-reference mode; the consensus5 mode has no stress coverage." : "",
-    scopes.length ? `Intervals (${scopes.join("; ")}).` : ""].filter(Boolean).join(" ");
-  $("#stress").hidden = false;
-  $("#jump-stress").hidden = false;
-}
-
-// ---------------------------------------------------------------------------------------------------- evaluation
+// Reference modes in plain words; the same text as gallery.MODE_TEXT (tests/test_app.py compares them).
 const MODE_TEXT = { single: "one reference", consensus5: "median of five references" };
-const METHOD_TEXT = { "detector (pre-registered)": "with the reference (the detector), pre-registered accounting: all predictions counted",
-  detector: "with the reference (the detector), one detection per change", "reference_free (detector h)": "without a reference, at the detector's h",
-  "reference_free (own scales and h)": "without a reference, own scales and h fitted on train (computed after the final evaluation)" };
-const methodText = (m) => METHOD_TEXT[m] || m.replace(/^reference_free \(train-chosen h=([\d.]+)\)$/, "without a reference, at h $1 chosen on train");
-const counts = (c) => [c.tp, c.fp, c.fn].map((v) => num(v, 0)).join(" / ");
-const spread = (c) => c.f1_ci95?.[0] != null ? `95% interval ${num(c.f1_ci95[0], 3)} to ${num(c.f1_ci95[1], 3)}`
-  : c.f1_range ? `per speaker ${num(c.f1_range[0], 3)} to ${num(c.f1_range[1], 3)}, no interval` : "";
-const withSpread = (c) => spread(c) ? `${num(c.f1, 3)} (${spread(c)})` : num(c.f1, 3);
-
-function evaluationTable(id, head, rows) {
-  return el("div", { class: "scroll" }, el("table", { id },
-    el("thead", {}, el("tr", {}, ...head.map((h) => el("th", { text: h })))),
-    el("tbody", {}, ...rows.map((row) => el("tr", {}, ...row.map((v) => el("td", { text: v })))))));
-}
-
-/** The "How well it works" panel: the final run's measured numbers (gallery/evaluation.json, gallery.evaluation_summary). */
-function renderEvaluation(ev) {
-  const test = ev.r1.find((r) => r.split === "test");
-  $("#evaluation > summary").textContent = `How well it works: test F1 ${num(test.preregistered.f1, 3)} (pre-registered accounting), ` +
-    `${num(test.count_once.f1, 3)} (one detection per change)`;
-  const r1 = ev.r1.map((r) => [r.split, String(r.speakers), counts(r.preregistered), withSpread(r.preregistered),
-    `${counts(r.count_once)}; ${num(r.count_once.same_change_duplicates, 0)}`, withSpread(r.count_once)]);
-  const first = ev.first_final;
-  if (first) r1.push([`test, earlier final evaluation (detector ${first.config_sha256.slice(0, 12)})`, "-", counts(first), num(first.f1, 3), "-", "-"]);
-  const lockbox = ev.lockbox.map((m) => [MODE_TEXT[m.mode] || m.mode, num(m.rate, 3), num(m.pooled_rate, 3), num(m.upper95, 3), num(m.budget, 2),
-    m.budget_status, Object.entries(m.by_source).map(([k, v]) => `${k} ${num(v, 3)}`).join(", "), num(m.whole_clip_flags_per_clip, 3),
-    `${num(m.comparison_minutes, 1)} min, ${m.comparisons} comparisons, ${m.readers} readers`]);
-  $("#evaluation-body").replaceChildren(
-    el("p", { class: "note" }, `${ev.scope}. `, el("a", { href: "#evaluation-limits", text: "Read the limits" }), "."),
-    el("h3", { text: "Synthetic edits, same speaker (R1), levels 2 and 3" }),
-    el("p", { class: "note", text: `Pre-registered accounting first: ${ev.accounting.preregistered}. Beside it: ${ev.accounting.count_once}.` }),
-    evaluationTable("evaluation-r1", ["Split", "Speakers", "Pre-registered: TP / FP / FN", "F1", "One per change: TP / FP / FN; duplicates", "F1"], r1),
-    el("h3", { text: "No edits (R1 identity and placebo clips)" }),
-    evaluationTable("evaluation-null", ["Clips", "False flags", "Minutes", "95% upper bound per minute (rule of three)"],
-      ev.r1_null.map((r) => [r.population, num(r.false_flags, 0), num(r.minutes, 2), num(r.rule_of_three, 2)])),
-    el("h3", { text: "Without the reference reading (baseline)" }),
-    el("p", { class: "note", text: "The detector is given first under the pre-registered accounting; every other row counts one detection per change, an accounting adopted after the plan." }),
-    evaluationTable("evaluation-baseline", ["Split", "Method", "TP / FP / FN", "Same-change duplicates", "F1"],
-      ev.reference_free.map((r) => [r.split, methodText(r.method), counts(r), r.same_change_duplicates == null ? "counted in FP" : num(r.same_change_duplicates, 0), num(r.f1, 3)])),
-    ...(ev.reference_free_note ? [el("p", { class: "note", text: ev.reference_free_note })] : []),
-    el("h3", { text: "Different speakers (R2): held-out lockbox readers, measured once" }),
-    evaluationTable("evaluation-lockbox", ["Reference", "False regions per comparison-minute (source-weighted)", "Pooled", "Upper 95%", "Budget",
-      "Budget status", "By source", "Whole-clip false flags per clip", "Exposure"], lockbox),
-    ...ev.lockbox.map((m) => el("p", { class: "note", text: `${MODE_TEXT[m.mode] || m.mode}: ${m.budget_note}` })),
-    el("h3", { id: "evaluation-limits", text: "Limits" }),
-    el("ul", { class: "note" }, ...ev.limits.map((t) => el("li", { text: t }))),
-    el("p", { class: "note", text: `Source: eval/results.json and models/final_evaluations.json of the final run (detector configuration ${ev.config_sha256.slice(0, 12)}). ` +
-      "The pre-registered counts, their per-speaker values and the own-scales baseline are computed after the final evaluation from the saved " +
-      "outputs (python -m cvoice.addendum, python -m cvoice.gallery evaluation)." }));
-  if (ev.texts?.r2_lockbox) { $("#upload-lockbox").textContent = ev.texts.r2_lockbox; $("#upload-lockbox").hidden = false; }
-  $("#evaluation").hidden = false;
-  $("#jump-evaluation").hidden = false;
-}
 
 // ---------------------------------------------------------------------------------------------------- upload
 function disableUpload(reason) {
@@ -1670,8 +1514,6 @@ async function poll(id) {
       S.openId += 1;
       document.querySelectorAll(".chip").forEach((c) => c.setAttribute("aria-pressed", "false"));
       showPicked("Your analysis");
-      const mode = referenceMode(r);
-      $("#picker-note").textContent = `Your analysis (regime R2).${mode ? " " + mode.text : ""}`;
       render(r, "");
       $("#ledger").scrollIntoView({ block: "start" });
       return;
@@ -1683,6 +1525,11 @@ async function poll(id) {
 // ---------------------------------------------------------------------------------------------------- start
 async function init() {
   $("#jump-upload").addEventListener("click", () => { $("#upload").open = true; });
+  for (const fold of document.querySelectorAll(".fold")) fold.querySelector(".fold-toggle").addEventListener("click", () => setFold(fold, !fold.classList.contains("open")));
+  $("#see-all").addEventListener("click", () => { setFold($("#all-findings"), true); $("#all-findings").scrollIntoView({ block: "start" }); });
+  const menu = $("#picker-menu");
+  document.addEventListener("click", (e) => { if (menu.open && !menu.contains(e.target)) menu.open = false; });
+  menu.addEventListener("keydown", (e) => { if (e.key === "Escape" && menu.open) { menu.open = false; menu.querySelector("summary").focus(); } });
   $("#clear-filter").addEventListener("click", () => { S.pattern = null; $("#pattern-filter").value = ""; setFilter(null); });
   $("#dimension-filter").addEventListener("change", (e) => setFilter(e.target.value ? e.target.value.split(",") : null));
   $("#pattern-filter").addEventListener("change", (e) => setPattern(e.target.value || null));
@@ -1692,15 +1539,13 @@ async function init() {
   setTimeout(() => document.body.classList.remove("intro"), INTRO_MS);
   // The page keeps room for the fixed player bar, whose height changes when it wraps at phone width.
   const player = $(".player-in");
-  new ResizeObserver(() => document.documentElement.style.setProperty("--player-h", `${player.offsetHeight}px`)).observe(player);
+  new ResizeObserver(() => document.documentElement.style.setProperty("--player-h", `${player.offsetHeight}px`)).observe(player.parentElement);
   $("#all-dimensions").addEventListener("click", () => {
     S.allDimensions = !S.allDimensions;
     $("#all-dimensions").setAttribute("aria-pressed", String(S.allDimensions));
     $("#all-dimensions").textContent = S.allDimensions ? "Show relevant dimensions" : "Show all dimensions";
     drawChart();
   });
-  $("#jump-stress").addEventListener("click", () => { $("#stress").open = true; });
-  $("#jump-evaluation").addEventListener("click", () => { $("#evaluation").open = true; });
   let resizeTimer = 0;
   addEventListener("resize", () => {
     clearTimeout(resizeTimer);
@@ -1721,15 +1566,6 @@ async function init() {
   }
   buildChips(index);
   setupUpload(index);
-  if (index.stress_matrix) getJSON("gallery/" + index.stress_matrix).then(renderStress).catch(() => {});
-  if (index.evaluation) {
-    try {
-      S.evaluation = await getJSON("gallery/" + index.evaluation);
-      renderEvaluation(S.evaluation);
-    } catch (e) {
-      showAlert(`The evaluation summary could not be loaded (${e.message}).`);
-    }
-  }
   await openExample(index.items.find((i) => i.id === index.default) || index.items[0]);
 }
 
