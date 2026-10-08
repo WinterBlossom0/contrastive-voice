@@ -24,7 +24,6 @@ const SVG_NS = "http://www.w3.org/2000/svg";
 const RING_C = 2 * Math.PI * 52;         // circumference of the score ring (r 52 in index.html)
 const COUNT_MS = 1000;                   // ms of the score count-up on the first load
 const INTRO_MS = 1400;                   // ms after which the draw-in animation class is removed
-const SIGNATURE = ["#7c5cff", "#e04ac6", "#ffb547"];   // must equal #g-signature in index.html
 // Simple line icons per dimension key, as SVG path data on a 20 x 20 grid.
 const DIM_ICON = {
   D1: "M4 16 L10 3 L16 16 M7 10 H13", D7: "M4 16 L10 3 L16 16 M7 10 H13", D9: "M4 16 L10 3 L16 16 M7 10 H13",
@@ -1165,7 +1164,7 @@ function updateWaveRegions() {
   const add = (f, i, kind) => {
     const p = mediaSpan(f, "you"), duration = S.ws.getDuration();
     const reg = S.regions.addRegion({ start: Math.min(p[0], duration), end: Math.min(Math.max(p[1], p[0] + 0.05), duration), drag: false, resize: false,
-      color: rgba(css(kind === "flaw" ? "--flag" : "--neutral"), 0.26) });   // the timeline bands above carry the numbers
+      color: rgba(css(kind === "flaw" ? "--flag" : "--neutral"), 0.16) });   // the timeline bands above carry the numbers
     reg.findingIndex = i; reg.findingKind = kind;
   };
   S.result.flaws.forEach((f, i) => { if (!wholePassage(f)) add(f, i, "flaw"); });   // a whole-passage finding has no region to mark
@@ -1225,17 +1224,9 @@ function loadMedia(r, base) {
   ws.load(base + r.participant.audio).catch(failed);
 }
 
-/** A left-to-right signature gradient across the recording waveform; unplayed bars at reduced opacity. */
-function waveColors() {
-  const width = Math.max($("#wave").clientWidth, 1) * devicePixelRatio, ctx = document.createElement("canvas").getContext("2d");
-  const gradient = (alpha) => {
-    const g = ctx.createLinearGradient(0, 0, width, 0);
-    SIGNATURE.forEach((c, k) => g.addColorStop(k / (SIGNATURE.length - 1), rgba(c, alpha)));
-    return g;
-  };
-  return { waveColor: gradient(0.5), progressColor: gradient(1), cursorColor: "#ffffff" };
-}
-const refWaveColors = () => ({ waveColor: rgba(css("--ref"), 0.6), progressColor: css("--ref-text") });
+/** This recording in the accent at moderate opacity; heard bars at full accent. */
+const waveColors = () => ({ waveColor: rgba(css("--you"), 0.5), progressColor: css("--you-text"), cursorColor: css("--ink") });
+const refWaveColors = () => ({ waveColor: "rgba(163,163,171,0.32)", progressColor: "rgba(163,163,171,0.7)" });   // the reference stays neutral
 
 function showReferenceAt(tb) {
   if (S.wsRef && S.wsRef.getDuration() > 0) S.wsRef.setTime(Math.min(tb, S.wsRef.getDuration()));
@@ -1392,22 +1383,16 @@ async function getJSON(url) {
   return res.json();
 }
 
-const ART_PAIRS = [["#7c5cff", "#e04ac6"], ["#e04ac6", "#ffb547"], ["#14a6b8", "#7c5cff"], ["#ff6f91", "#ffb547"], ["#5b8cff", "#14a6b8"], ["#a855f7", "#ff6f91"]];
-
-/** Generated cover art for an example: a gradient tile with a mini waveform, both seeded by the example id. */
+/** Generated cover art for an example: a mini waveform on a flat tile, seeded by the example id. */
 function coverArt(id) {
   let seed = 0;
   for (const ch of id) seed = (seed * 31 + ch.charCodeAt(0)) >>> 0;
   const random = () => { seed = (seed * 1103515245 + 12345) >>> 0; return seed / 2 ** 32; };
-  const [a, b] = ART_PAIRS[seed % ART_PAIRS.length], gid = `art-${id.replace(/[^\w-]/g, "_")}`;
   const bars = Array.from({ length: 9 }, (_, k) => {
     const h = 6 + random() * 24;
-    return svgEl("rect", { x: 5 + k * 4, y: 22 - h / 2, width: 2.2, height: h, rx: 1.1, fill: "rgba(255,255,255,0.88)" });
+    return svgEl("rect", { x: 5 + k * 4, y: 22 - h / 2, width: 2.2, height: h, rx: 1.1, fill: css("--you-text") });
   });
-  return svgEl("svg", { viewBox: "0 0 44 44" },
-    svgEl("defs", {}, svgEl("linearGradient", { id: gid, x1: 0, y1: 0, x2: 1, y2: 1 },
-      svgEl("stop", { offset: 0, "stop-color": a }), svgEl("stop", { offset: 1, "stop-color": b }))),
-    svgEl("rect", { width: 44, height: 44, fill: `url(#${gid})` }), ...bars);
+  return svgEl("svg", { viewBox: "0 0 44 44" }, svgEl("rect", { width: 44, height: 44, fill: css("--panel") }), ...bars);
 }
 
 function buildChips(index) {
