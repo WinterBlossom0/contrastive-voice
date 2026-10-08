@@ -23,7 +23,7 @@ const TL_MARK_FONT = 13;                 // px; must equal .tl-mk text in style.
 const SVG_NS = "http://www.w3.org/2000/svg";
 const RING_C = 2 * Math.PI * 52;         // circumference of the score ring (r 52 in index.html)
 const COUNT_MS = 1000;                   // ms of the score count-up on the first load
-const INTRO_MS = 1400;                   // ms after which the draw-in animation class is removed
+const INTRO_MS = 2500;                   // ms of the first-load sequence: waveforms draw in, then the bands light one by one
 // Simple line icons per dimension key, as SVG path data on a 20 x 20 grid.
 const DIM_ICON = {
   D1: "M4 16 L10 3 L16 16 M7 10 H13", D7: "M4 16 L10 3 L16 16 M7 10 H13", D9: "M4 16 L10 3 L16 16 M7 10 H13",
@@ -95,7 +95,11 @@ const EXAMPLES = [
 const EXAMPLE_NAME = Object.fromEntries(EXAMPLES);
 const FEATURED_COUNT = 9;
 const exampleName = (it) => EXAMPLE_NAME[it.id] || `${it.group}, ${it.label}`;
-const TOP_N = 3;   // the evidence row that holds the finding's own measured difference
+const TOP_N = 3;
+const TICK_MS = 380;                     // ms of the points tick when an example opens
+const BAND_STEPS = 7;                    // intro: at most this many band steps (style.css .intro .tl-band: 1 s, then 0.16 s each)
+const FIX_COUNT_WORDS = ["", "Your biggest fix", "Your two biggest fixes", "Your three biggest fixes"];
+const reducedMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;   // the evidence row that holds the finding's own measured difference
 
 // ---------------------------------------------------------------------------------------------------- helpers
 const $ = (s) => document.querySelector(s);
@@ -196,7 +200,7 @@ function showAlert(msg) {
 // ---------------------------------------------------------------------------------------------------- state
 const S = { result: null, sel: null, filter: null, rid: 0, limits: null, ws: null, regions: null, ref: new Audio(),
   refTimer: null, bothTimer: null, tl: null, chart: null, hasLibs: false, selKind: "flaw", allDimensions: false, openId: 0,
-  mediaId: 0, youReady: false, refReady: false, countId: 0, counted: false, side: "you", wsRef: null, playId: 0, priority: null, pattern: null };
+  mediaId: 0, youReady: false, refReady: false, inSpan: new Set(), listenAt: null, audio: null, sources: new WeakMap(), levelOn: false, countId: 0, counted: false, side: "you", wsRef: null, playId: 0, priority: null, pattern: null };
 
 function differences() { return S.result.regime === "R2" && Array.isArray(S.result.differences) ? S.result.differences : []; }
 function selected() { return (S.selKind === "difference" ? differences() : S.result.flaws)[S.sel]; }
@@ -244,6 +248,7 @@ function showScore(o) {
     if (run !== S.countId) return;
     const k = Math.min(1, (now - start) / COUNT_MS);
     fig.textContent = k < 1 ? num(o * (1 - (1 - k) ** 3), 2) : scoreText(o);
+    fig.classList.toggle("ticking", k < 1);
     if (k < 1) requestAnimationFrame(step);
   };
   requestAnimationFrame(step);
@@ -264,6 +269,26 @@ function topFindings(r) {
 function ratioWords(x) {
   const near = [[0.25, "about a quarter of"], [1 / 3, "about a third of"], [0.5, "about half"], [2, "about twice"]].find(([v]) => Math.abs(x - v) <= 0.05 * v);
   return near ? near[1] : `${num(x, 2)} times`;
+}
+
+/**
+ * Counts each points figure up to its stored text in TICK_MS, then writes the exact stored text; the "ticking" class marks
+ * the figures that are still moving, so a reader of the page can wait for the final values.
+ */
+function tickPoints(nodes) {
+  if (reducedMotion() || !S.tickOn) return;
+  for (const node of nodes) {
+    const text = node.firstChild?.nodeType === 3 ? node.firstChild : null, match = text?.data.match(/(\d+\.\d{2})/);
+    if (!match) continue;
+    const target = +match[1], start = performance.now(), final = text.data;
+    node.classList.add("ticking");
+    const step = (now) => {
+      const k = Math.min(1, (now - start) / TICK_MS);
+      text.data = k < 1 ? final.replace(match[1], (target * (1 - (1 - k) ** 3)).toFixed(2)) : final;
+      if (k < 1) requestAnimationFrame(step); else node.classList.remove("ticking");
+    };
+    requestAnimationFrame(step);
+  }
 }
 
 /** One line of what happened, in plain words, from the stored values only. */
@@ -287,14 +312,18 @@ function renderSummary(r) {
     : top.length === 1 ? `Compared with ${against}, one finding costs you the most points.`
     : top.length ? `Compared with ${against}, these ${top.length} findings cost you the most points.`
     : `Compared with ${against}, every finding costs less than 0.01 points.`;
-  $("#top-cards").replaceChildren(...top.map(([f, i], rank) => el("article", { class: "top-card", "data-finding": f.id, "data-i": i },
+  $("#fixes-title").textContent = FIX_COUNT_WORDS[top.length] || "Your biggest fixes";
+  $(".fixes").hidden = !top.length;
+  $("#top-cards").replaceChildren(...top.map(([f, i], rank) => el("article", { class: rank ? "top-card" : "top-card lead", "data-finding": f.id, "data-i": i, "data-peek": i },
     el("button", { type: "button", class: "card-open", "data-i": i, "data-kind": "flaw", "aria-pressed": "false", onclick: () => select(i, { scroll: true }) },
       el("span", { class: "rank", text: `${rank + 1}` }), el("span", { class: "card-title" }, dimIcon(f.dimension), findingText(f)),
       el("span", { class: "card-pts", text: findingPts(f) })),
     el("p", { class: "card-words", text: quotedWords(r, f) }),
     el("p", { class: "card-line", text: plainLine(f) }),
+    rank ? null : thresholdGauge(f),
     f.fix ? el("p", { class: "card-fix", text: f.fix }) : null,
-    el("button", { type: "button", class: "listen-btn", "data-audio": "both", onclick: () => listen(i) }, "Listen", el("span", { class: "sub-h", text: " yours, then the reference" })))));
+    el("button", { type: "button", class: "listen-btn", "data-audio": "both", "data-listen": i, onclick: () => listen(i) }, "Listen", el("span", { class: "sub-h", text: " yours, then the reference" })))));
+  tickPoints(document.querySelectorAll("#top-cards .card-pts"));
   const n = r.flaws.length + differences().length;
   $("#see-all").hidden = !n;
   $("#see-all").textContent = `See all ${n} ${n === 1 ? "finding" : "findings"}`;
@@ -417,7 +446,7 @@ function renderFlawList() {
     const st = sevStyle(f.severity ?? 0);
     return el("li", { class: "finding-item", "data-finding": f.id },
       el("button", { type: "button", class: "finding-select", "aria-pressed": String(S.selKind === "flaw" && S.sel === i), "data-i": i,
-        "data-kind": "flaw", onclick: () => select(i) },
+        "data-kind": "flaw", "data-peek": i, onclick: () => select(i) },
         el("span", { class: "n", text: `#${i + 1}` }), el("span", { class: "t" }, dimIcon(f.dimension), findingText(f)),
         el("span", { class: "pts", text: f.counted === false ? "shared" : findingPts(f) }),
         el("span", { class: "m" }, el("span", { text: `${groupLabel(f.brief_word)}, ${wholePassage(f) ? "whole passage" : span(f.p)}` }),
@@ -535,6 +564,9 @@ function evidenceValue(e) {
 function renderExplain() {
   const box = $("#explain"), r = S.result, f = selected(), diff = S.selKind === "difference";
   box.replaceChildren();
+  box.classList.remove("slide");
+  void box.offsetWidth;   // restart the slide on every new selection
+  box.classList.add("slide");
   $("#player-finding").textContent = !f ? "-" : diff ? findingText(f) : `#${S.sel + 1} ${findingText(f)}`;
   box.classList.toggle("neutral", diff);
   if (!f) {
@@ -579,9 +611,10 @@ function renderExplain() {
     el("p", { class: "ex-what", text: plainLine(f) }),
     why ? el("p", { class: "ex-why", text: why }) : null,
     diff ? null : thresholdGauge(f),
-    el("button", { type: "button", class: "listen-btn", "data-audio": "both", onclick: () => listen(S.sel, S.selKind) }, "Listen",
+    el("button", { type: "button", class: "listen-btn", "data-audio": "both", ...(diff ? {} : { "data-listen": S.sel }), onclick: () => listen(S.sel, S.selKind) }, "Listen",
       el("span", { class: "sub-h", text: ` yours ${span(f.p)}, then the reference ${span(f.b)}` })));
   if (!diff && f.fix) box.append(el("p", { class: "fix" }, el("b", { text: "How to fix" }), f.fix));
+  tickPoints(box.querySelectorAll(".ex-pts"));
   if (f.candidate) box.append(el("p", { class: "candidate-note", text: CANDIDATE_TEXT }));
   if (f.group) {
     const members = r.flaws.filter((x) => f.group.includes(x.id));
@@ -639,7 +672,7 @@ function select(i, { scroll = false, kind = "flaw", reveal = true } = {}) {
   const btn = document.querySelector(kind === "difference" ? `#differences ${selector}, #listed ${selector}` : `#flaws ${selector}`);
   if (btn?.closest("details")) btn.closest("details").open = true;
   if (reveal) revealInSide(btn);
-  if (scroll) $("#explain").scrollIntoView({ block: "nearest" });
+  if (scroll) revealSelection();
   renderExplain();
   markWords();
   markTimeline();
@@ -648,6 +681,14 @@ function select(i, { scroll = false, kind = "flaw", reveal = true } = {}) {
   updateWaveRegions();
   const f = selected();
   if (S.youReady && f) S.ws.setTime(mediaSpan(f, "you")[0]);
+}
+
+/** On a wide screen the panel sits beside the text, so the words scroll into view; on a narrow one the panel does. */
+function revealSelection() {
+  const f = selected(), behavior = reducedMotion() ? "auto" : "smooth";
+  const word = f && !wholePassage(f) ? document.querySelector(`#transcript .w[data-i="${f.words[0]}"]`) : null;
+  if (matchMedia("(min-width: 1061px)").matches && word) word.scrollIntoView({ block: "nearest", behavior });
+  else $("#explain").scrollIntoView({ block: "nearest", behavior });
 }
 
 // ---------------------------------------------------------------------------------------------------- transcript
@@ -668,6 +709,7 @@ function renderTranscript(r) {
     if (k >= 0 && wordFinding[i - 1] !== k) box.append(dimIcon(r.flaws[k].dimension) || "");
     const b = el("button", { type: "button", class: "w" + (wordStyle[i] ? ` f-${wordStyle[i][1]}` : ""), "data-i": i, text: w.w });
     if (k >= 0) {
+      b.dataset.peek = k;
       b.setAttribute("aria-label", `${w.w}: finding #${k + 1} ${findingText(r.flaws[k])}`);
       b.addEventListener("click", () => select(k, { scroll: true }));
     } else {
@@ -692,14 +734,38 @@ function markWords() {
   });
 }
 
-function markPlaying(tp) {
-  const ws = S.result.words;
-  if (!ws.length) return;
+/** Karaoke: the word at time t of the playing reading (who: "you" or "ref") lights up and the words before it dim. */
+function markPlaying(t, who = "you") {
+  const ws = S.result.words, key = who === "ref" ? "b" : "p";
+  if (!ws.length || !ws[0][key]) return;
   let lo = 0, hi = ws.length - 1;
-  while (lo < hi) { const m = (lo + hi + 1) >> 1; if (ws[m].p[0] <= tp) lo = m; else hi = m - 1; }
-  document.querySelectorAll("#transcript .w").forEach((b) => b.removeAttribute("aria-current"));
-  const b = document.querySelector(`#transcript .w[data-i="${lo}"]`);
-  if (b && tp >= ws[lo].p[0] && tp <= ws[lo].p[1] + 0.2) b.setAttribute("aria-current", "true");
+  while (lo < hi) { const m = (lo + hi + 1) >> 1; if (ws[m][key][0] <= t) lo = m; else hi = m - 1; }
+  const on = t >= ws[lo][key][0] && t <= ws[lo][key][1] + 0.2;
+  document.querySelectorAll("#transcript .w").forEach((b) => {
+    const i = +b.dataset.i;
+    if (i === lo && on) b.setAttribute("aria-current", "true"); else b.removeAttribute("aria-current");
+    b.classList.toggle("spoken", i < lo);
+  });
+  pulseEntered(who === "ref" ? interp(t, S.result.map.b, S.result.map.p) : t);
+}
+
+/** When the playhead enters a flagged span, that finding's card, list entry and band pulse once. */
+function pulseEntered(tp) {
+  const now = new Set(S.result.flaws.map((f, i) => [f, i]).filter(([f]) => !wholePassage(f) && tp >= f.p[0] && tp <= f.p[1]).map(([, i]) => i));
+  for (const i of now) {
+    if (S.inSpan.has(i)) continue;
+    document.querySelectorAll(`.top-card[data-i="${i}"], #flaws button[data-i="${i}"][data-kind="flaw"], .tl-band[data-i="${i}"], .tl-mk[data-i="${i}"]`).forEach((n) => {
+      n.classList.remove("pulse");
+      void n.getBoundingClientRect();   // restart the animation on a repeated entry
+      n.classList.add("pulse");
+    });
+  }
+  S.inSpan = now;
+}
+
+function clearKaraoke() {
+  document.querySelectorAll("#transcript .w").forEach((b) => { b.removeAttribute("aria-current"); b.classList.remove("spoken"); });
+  S.inSpan = new Set();
 }
 
 // ---------------------------------------------------------------------------------------------------- timeline
@@ -755,6 +821,7 @@ function drawTimeline() {
   }));
   svg.append(track("ref", "b", refTop), track("you", "p", youTop));
   const bands = svgEl("g", {}), markers = svgEl("g", {}), placed = [];
+  const order = r.flaws.map((f, i) => i).filter((i) => !wholePassage(r.flaws[i]));   // intro order: by time
   r.flaws.forEach((f, i) => {
     if (wholePassage(f)) return;   // listed and explained in the whole-clip cards, not painted over both readings
     const band = bandParts(f), text = findingText(f), w = textWidth(text, TL_MARK_FONT) + 16;
@@ -766,9 +833,9 @@ function drawTimeline() {
     const y = rows.find(free) ?? rows[0];
     placed.push({ y, x0: cx - w / 2, x1: cx + w / 2 });
     const pick = () => select(i, { scroll: true });
-    bands.append(svgEl("g", { class: "tl-band", "data-i": i, onclick: pick, "aria-hidden": "true" },
+    bands.append(svgEl("g", { class: "tl-band", "data-i": i, "data-peek": i, style: `--seq:${Math.min(order.indexOf(i), BAND_STEPS)}`, onclick: pick, "aria-hidden": "true" },
       svgEl("title", { text: `#${i + 1} ${findingText(f)}` }), ...band.parts));
-    markers.append(svgEl("g", { class: "tl-mk", "data-i": i, tabindex: 0, role: "button", "aria-pressed": "false",
+    markers.append(svgEl("g", { class: "tl-mk", "data-i": i, "data-peek": i, style: `--seq:${Math.min(order.indexOf(i), BAND_STEPS)}`, tabindex: 0, role: "button", "aria-pressed": "false",
       "aria-label": `#${i + 1} ${findingText(f)}: this recording ${span(f.p)}${f.b ? `, reference ${span(f.b)}` : ""}`,
       onclick: pick, onkeydown: (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(); } } },
       svgEl("rect", { x: cx - w / 2, y: y - TL_MARK_H / 2, width: w, height: TL_MARK_H, rx: TL_MARK_H / 2 }),
@@ -813,8 +880,28 @@ function moveTimelineCursor(tp, tb) {
   }
 }
 
+/** Linked highlighting: one finding's words and band stay bright while the other flagged words and bands fade. */
+function peek(i) {
+  const on = i != null && i !== "";
+  document.body.classList.toggle("peeking", on);
+  document.querySelectorAll(".peek").forEach((n) => n.classList.remove("peek"));
+  if (!on) return;
+  const f = S.result?.flaws[+i];
+  if (!f) return;
+  document.querySelectorAll(`.tl-band[data-i="${i}"], .tl-mk[data-i="${i}"], .top-card[data-i="${i}"]`).forEach((n) => n.classList.add("peek"));
+  if (!wholePassage(f)) for (let w = f.words[0]; w <= f.words[1]; w++) document.querySelector(`#transcript .w[data-i="${w}"]`)?.classList.add("peek");
+}
+
+function linkPeek() {
+  const target = (e) => e.target.closest?.("[data-peek]");
+  for (const [enter, leave] of [["pointerover", "pointerout"], ["focusin", "focusout"]]) {
+    document.addEventListener(enter, (e) => { const t = target(e); if (t) peek(t.dataset.peek); });
+    document.addEventListener(leave, (e) => { const t = target(e); if (t && !t.contains(e.relatedTarget)) peek(null); });
+  }
+}
+
 function showTip(target, text) {
-  const tip = $("#tl-tip"), box = target.getBoundingClientRect(), host = $("#timeline").getBoundingClientRect();
+  const tip = $("#tl-tip"), box = target.getBoundingClientRect(), host = $(".tl-stage").getBoundingClientRect();
   tip.textContent = text;
   tip.hidden = false;
   const left = Math.min(Math.max(box.left + box.width / 2 - host.left - tip.offsetWidth / 2, 8), host.width - tip.offsetWidth - 8);
@@ -1122,6 +1209,7 @@ function invalidateMedia() {
   $("#clock").textContent = "Loading audio…";
   $("#cursor").style.display = "none";
   hideTimelineCursor();
+  clearKaraoke();
   updatePlayback();
 }
 
@@ -1195,6 +1283,54 @@ function loadMedia(r, base) {
 const waveColors = () => ({ waveColor: rgba(css("--you"), 0.5), progressColor: css("--you-text"), cursorColor: css("--ink") });
 const refWaveColors = () => ({ waveColor: "rgba(163,163,171,0.32)", progressColor: "rgba(163,163,171,0.7)" });   // the reference stays neutral
 
+/** The analyser of the playing element, made once per element; null where Web Audio is missing or the element is taken. */
+function analyserFor(media) {
+  if (!media || reducedMotion()) return null;
+  if (S.sources.has(media)) return S.sources.get(media);
+  let node = null;
+  try {
+    S.audio = S.audio || new AudioContext();
+    const source = S.audio.createMediaElementSource(media);
+    node = S.audio.createAnalyser();
+    node.fftSize = 256;
+    node.smoothingTimeConstant = 0.75;
+    source.connect(node);
+    node.connect(S.audio.destination);
+  } catch {
+    node = null;   // no Web Audio, or the element already feeds another graph: no level effect
+  }
+  S.sources.set(media, node);
+  return node;
+}
+
+/** While audio plays, its live level drives --level (0 to 1) for the wordmark and the ring glow, and the five meter bars. */
+function watchLevel(on) {
+  S.levelOn = on;
+  if (!on) {
+    document.documentElement.style.setProperty("--level", "0");
+    document.querySelectorAll(".meter i").forEach((bar) => { bar.style.transform = ""; });
+    return;
+  }
+  const media = !S.ref.paused ? S.ref : S.ws?.getMediaElement?.();
+  const node = analyserFor(media);
+  if (!node) return;
+  S.audio.resume?.();
+  const wave = new Uint8Array(node.fftSize), bins = new Uint8Array(node.frequencyBinCount), bars = [...document.querySelectorAll(".meter i")];
+  let level = 0;
+  const frame = () => {
+    if (!S.levelOn) return;
+    node.getByteTimeDomainData(wave);
+    let sum = 0;
+    for (const v of wave) sum += ((v - 128) / 128) ** 2;
+    level = 0.8 * level + 0.2 * Math.min(1, Math.sqrt(sum / wave.length) * 6);   // RMS, scaled so speech reaches about 1
+    document.documentElement.style.setProperty("--level", level.toFixed(3));
+    node.getByteFrequencyData(bins);
+    bars.forEach((bar, k) => { bar.style.transform = `scaleY(${(0.15 + 0.85 * bins[2 + k * 6] / 255).toFixed(3)})`; });
+    requestAnimationFrame(frame);
+  };
+  requestAnimationFrame(frame);
+}
+
 function showReferenceAt(tb) {
   if (S.wsRef && S.wsRef.getDuration() > 0) S.wsRef.setTime(Math.min(tb, S.wsRef.getDuration()));
 }
@@ -1207,6 +1343,9 @@ function showProgress(who, share) {
 }
 
 function setPlaying(on) {
+  if (!on && !S.bothTimer) S.listenAt = null;
+  markListening();
+  watchLevel(on);
   const btn = $("#play-all");
   btn.classList.toggle("playing", on);
   btn.textContent = on ? "Pause" : S.side === "you" ? "Play recording" : "Play reference";
@@ -1241,8 +1380,10 @@ function setSide(side) {
 
 function stopAll() {
   S.playId += 1;
+  S.listenAt = null;
   clearTimeout(S.refTimer);
   clearTimeout(S.bothTimer);
+  S.bothTimer = null;
   S.ref.pause();
   if (S.ws) S.ws.pause();
 }
@@ -1255,7 +1396,13 @@ function padSpan([a, b]) {
 /** Select a finding and play it in the player: your span, then the reference span. */
 function listen(i, kind = "flaw") {
   if (S.sel !== i || S.selKind !== kind) select(i, { kind });
-  playBoth(selected());
+  playBoth(selected()).then(() => { S.listenAt = `${kind}:${i}`; markListening(); });
+}
+
+/** The Listen button of the finding that plays shows playing bars instead of its arrow. */
+function markListening() {
+  const playing = !!S.ws?.isPlaying() || !S.ref.paused;
+  document.querySelectorAll("[data-listen]").forEach((b) => b.classList.toggle("playing", playing && S.listenAt === `flaw:${b.dataset.listen}`));
 }
 
 function showSide(who) {
@@ -1280,7 +1427,7 @@ async function playSpan(who, s) {
     const tick = () => {
       if (current() && !ref.paused) {
         const tp = interp(ref.currentTime, m.b, m.p);
-        moveCursor(tp); markPlaying(tp); moveTimelineCursor(tp, ref.currentTime); showReferenceAt(ref.currentTime);
+        moveCursor(tp); markPlaying(ref.currentTime, "ref"); moveTimelineCursor(tp, ref.currentTime); showReferenceAt(ref.currentTime);
         $("#clock").textContent = `Reference ${ref.currentTime.toFixed(2)} / ${ref.duration.toFixed(2)} s`;
         showProgress("ref", ref.currentTime / ref.duration);
         requestAnimationFrame(tick);
@@ -1296,7 +1443,12 @@ async function playSpan(who, s) {
 async function playBoth(f) {
   await playSpan("you", mediaSpan(f, "you"));
   const playId = S.playId, [a, b] = padSpan(mediaSpan(f, "you"));
-  S.bothTimer = setTimeout(() => { if (playId === S.playId) playSpan("ref", mediaSpan(f, "ref")); }, (b - a) * 1000 + BOTH_GAP_MS);
+  S.bothTimer = setTimeout(() => {
+    S.bothTimer = null;
+    if (playId !== S.playId) return;
+    const at = S.listenAt;
+    playSpan("ref", mediaSpan(f, "ref")).then(() => { S.listenAt = at; markListening(); });
+  }, (b - a) * 1000 + BOTH_GAP_MS);
 }
 
 /** A collapsed section keeps its content laid out (the charts keep their width) at zero height, and inert. */
@@ -1388,6 +1540,17 @@ function showPicked(name) {
   $("#picker-current").textContent = name;
 }
 
+/** Fades the page content out and in around a content change; reduced motion swaps at once. */
+async function crossFade(change) {
+  const main = document.querySelector("main");
+  if (reducedMotion() || !S.result) { change(); return; }
+  main.classList.add("fading");
+  await new Promise((resolve) => setTimeout(resolve, 140));
+  S.tickOn = true;
+  change();
+  requestAnimationFrame(() => main.classList.remove("fading"));
+}
+
 async function openExample(it) {
   $("#picker-menu").open = false;
   const request = ++S.openId;
@@ -1398,7 +1561,7 @@ async function openExample(it) {
     document.querySelectorAll(".chip").forEach((c) => c.setAttribute("aria-pressed", String(c.dataset.id === it.id)));
     showPicked(exampleName(it));
     showAlert("");
-    render(r, "gallery/", it.focus);
+    await crossFade(() => render(r, "gallery/", it.focus));
   } catch (e) {
     if (request === S.openId) { $("#clock").textContent = "Audio unavailable"; showAlert(`The example could not be loaded: ${e.message}`); }
   }
@@ -1534,9 +1697,11 @@ async function init() {
   $("#dimension-filter").addEventListener("change", (e) => setFilter(e.target.value ? e.target.value.split(",") : null));
   $("#pattern-filter").addEventListener("change", (e) => setPattern(e.target.value || null));
   $("#play-all").addEventListener("click", togglePlay);
+  linkPeek();
   $("#ab-you").addEventListener("click", () => setSide("you"));
   $("#ab-ref").addEventListener("click", () => setSide("ref"));
   setTimeout(() => document.body.classList.remove("intro"), INTRO_MS);
+  if (reducedMotion()) document.body.classList.remove("intro");
   // The page keeps room for the fixed player bar, whose height changes when it wraps at phone width.
   const player = $(".player-in");
   new ResizeObserver(() => document.documentElement.style.setProperty("--player-h", `${player.offsetHeight}px`)).observe(player.parentElement);

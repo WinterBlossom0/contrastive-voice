@@ -9,7 +9,7 @@
 <link rel="icon" href="data:,">
 <link rel="preload" href="vendor/fonts/AtkinsonHyperlegibleNext-Regular.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="vendor/fonts/Sora-Bold.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="style.css?v=2026-10-08i">
+<link rel="stylesheet" href="style.css?v=2026-10-08k">
 <script defer src="https://cdn.jsdelivr.net/npm/plotly.js-cartesian-dist-min@4.1.1/plotly-cartesian.min.js"
         integrity="sha384-zc4SwKObGL/W0M3RUI09UPWjlgIZHfbwMgcZO6713mRh78tfUmIQKhzCyE2LIiUg" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/wavesurfer.js@8.0.1/dist/wavesurfer.min.js"
@@ -18,7 +18,7 @@
         integrity="sha384-Tk81r51AIztO5k+iOj/eOq9ZEGD2XVkPnZR8QVxzq1dkyEmsBSCjYpdCoeD/AZQ9" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/wavesurfer.js@8.0.1/dist/plugins/timeline.min.js"
         integrity="sha384-2l5/6KGTIt5kr+AcoXrcOzSiDUedbqv1LlHsFtQ5/ABj0cbzhpA2w6bCvc4Ns2vk" crossorigin="anonymous"></script>
-<script defer src="app.js?v=2026-10-08i"></script>
+<script defer src="app.js?v=2026-10-08k"></script>
 </head>
 <body class="intro">
 <svg width="0" height="0" class="defs" aria-hidden="true" focusable="false">
@@ -58,6 +58,7 @@
       <button type="button" id="ab-you" class="ab-opt" aria-pressed="true">Yours</button>
       <button type="button" id="ab-ref" class="ab-opt" aria-pressed="false">Reference</button>
     </div>
+    <span class="meter" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
     <span id="clock" class="clock">Loading audio…</span>
     <div id="player-progress" class="player-progress" aria-hidden="true"><i></i></div>
     <p class="player-now"><span class="player-label">Finding</span> <span id="player-finding">-</span></p>
@@ -67,64 +68,58 @@
 <div id="alert" role="alert" hidden></div>
 
 <main>
-<section class="value" aria-label="What it does for you">
-  <div class="value-item">
-    <svg class="value-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12 C6 12 7 5 10 5 S13 19 16 19 S19 12 21 12"/><path class="dim" d="M3 15 C6 15 7 9 10 9 S13 21 16 21 S19 15 21 15"/></svg>
-    <p><b>Practise against a reference.</b> Read a speech or text and compare it with a reference reading of the same words: your best take, a coach's, or a well-known speaker's.</p>
-  </div>
-  <div class="value-item">
-    <svg class="value-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7 H20 M4 12 H14 M4 17 H17"/><path class="flagline" d="M4 20 H11"/></svg>
-    <p><b>See and hear exactly where.</b> The words you rushed, dragged, paused at wrongly, flattened or let fade are marked in your text, and you hear yours and the reference side by side.</p>
-  </div>
-  <div class="value-item">
-    <svg class="value-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19 V13 M12 19 V8 M19 19 V4"/></svg>
-    <p><b>Fix the biggest first.</b> Each finding comes with a concrete fix, ranked by how many points it costs.</p>
-  </div>
-</section>
-
-<section id="ledger" class="summary" aria-labelledby="summary-line">
-  <div class="sum-head">
-    <div class="ring-wrap">
-      <svg class="ring" viewBox="0 0 120 120" aria-hidden="true">
-        <circle class="ring-track" cx="60" cy="60" r="52"/>
-        <circle class="ring-glow" id="ring-glow" cx="60" cy="60" r="52"/>
-        <circle class="ring-value" id="ring-value" cx="60" cy="60" r="52"/>
-      </svg>
-      <div class="ring-text">
-        <p class="fig" id="overall-fig">-</p>
-        <p class="ring-label">Delivery score</p>
+<section class="hero" aria-labelledby="hero-title">
+  <h1 id="hero-title">Hear where your reading drifts from the reference.</h1>
+  <p class="value-line">Read a speech against a reference reading (your best take, a coach's, or a well-known speaker's), hear both side by side, and fix the words that cost you the most first.</p>
+  <div class="hero-grid">
+    <div id="ledger" class="sum-head" aria-labelledby="summary-line">
+      <div class="ring-wrap">
+        <svg class="ring" viewBox="0 0 120 120" aria-hidden="true">
+          <circle class="ring-track" cx="60" cy="60" r="52"/>
+          <circle class="ring-glow" id="ring-glow" cx="60" cy="60" r="52"/>
+          <circle class="ring-value" id="ring-value" cx="60" cy="60" r="52"/>
+        </svg>
+        <div class="ring-text">
+          <p class="fig" id="overall-fig">-</p>
+          <p class="ring-label">Delivery score</p>
+        </div>
+      </div>
+      <div class="sum-text">
+        <p class="kicker"><span id="picker-current">Loading example</span><span id="regime-badge" class="regime-badge" hidden></span></p>
+        <p id="summary-line" class="summary-line">Comparing your reading with the reference</p>
+        <p class="sub" id="reference-mode" hidden><span class="badge"></span></p>
       </div>
     </div>
-    <div class="sum-text">
-      <p class="kicker"><span id="picker-current">Loading example</span><span id="regime-badge" class="regime-badge" hidden></span></p>
-      <h1 id="summary-line" class="summary-line">Comparing your reading with the reference</h1>
-      <p class="sub" id="reference-mode" hidden><span class="badge"></span></p>
-    </div>
-  </div>
-  <div id="top-cards" class="top-cards"></div>
-  <button type="button" id="see-all" class="text-btn" hidden>See all findings</button>
-</section>
-
-<div class="main-grid">
-  <section id="text-view" class="panel" aria-labelledby="text-title">
-    <h2 id="text-title">Your text</h2>
-    <p class="note">Highlighted words have a finding. Select one to read it; select any other word to hear it.</p>
-    <p id="whole-note" class="note" hidden>The selected finding concerns the whole passage.</p>
-    <p id="transcript" class="transcript"></p>
-    <h3 class="tl-title">Time view <span class="sub-h">the reference above, your reading below</span></h3>
-    <div class="tl-stage">
+    <div class="hero-wave panel" aria-label="Your reading against the reference, over time">
+      <div class="tl-stage">
       <div id="wave-ref" class="wave wave-ref" aria-hidden="true"></div>
       <div id="tl-host" class="tl-host"></div>
       <div id="wave" class="wave wave-you"></div>
       <div id="tl-tip" class="tl-tip" hidden></div>
     </div>
-    <p id="wave-msg" class="note"></p>
+      <p id="wave-msg" class="note"></p>
+    </div>
+  </div>
+</section>
+
+<section class="fixes" aria-labelledby="fixes-title">
+  <h2 id="fixes-title">Your three biggest fixes</h2>
+  <div id="top-cards" class="top-cards"></div>
+  <button type="button" id="see-all" class="text-btn" hidden>See every finding</button>
+</section>
+
+<div class="main-grid">
+  <section id="text-view" class="panel" aria-labelledby="text-title">
+    <h2 id="text-title">Your text</h2>
+    <p class="note">Highlighted words have a finding: select one to read it. Select any other word to hear it.</p>
+    <p id="whole-note" class="note" hidden>The selected finding concerns the whole passage.</p>
+    <p id="transcript" class="transcript"></p>
   </section>
   <section id="explain" class="explain panel" aria-label="Selected finding" aria-live="polite"></section>
 </div>
 
 <section id="all-findings" class="fold">
-  <h2><button type="button" class="fold-toggle" id="all-findings-toggle" aria-expanded="false" aria-controls="all-findings-body">All findings <span id="flaw-count"></span></button></h2>
+  <h2><button type="button" class="fold-toggle" id="all-findings-toggle" aria-expanded="false" aria-controls="all-findings-body">Every finding <span id="flaw-count"></span></button></h2>
   <div class="fold-body" id="all-findings-body" inert>
     <section id="clip-wrap" aria-label="Findings over the whole passage" hidden>
       <h3>Over the whole passage</h3>
@@ -154,7 +149,7 @@
 </section>
 
 <section id="measures" class="fold">
-  <h2><button type="button" class="fold-toggle" id="measures-toggle" aria-expanded="false" aria-controls="measures-body">All measurements</button></h2>
+  <h2><button type="button" class="fold-toggle" id="measures-toggle" aria-expanded="false" aria-controls="measures-body">Every measurement</button></h2>
   <div class="fold-body" id="measures-body" inert>
     <p class="note">Each measure scores out of 100. Select one to show only its findings.</p>
     <div id="cards" class="cards"></div>
