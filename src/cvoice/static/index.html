@@ -5,8 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Contrastive Voice</title>
 <meta name="description" content="Compare a spoken delivery with a reference reading of the same words: where it departs, by how much, and what it costs.">
+<meta name="theme-color" content="#0b0a1a">
 <link rel="icon" href="data:,">
-<link rel="stylesheet" href="style.css">
+<link rel="preload" href="vendor/fonts/AtkinsonHyperlegibleNext-Regular.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="vendor/fonts/Sora-Bold.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="style.css?v=2026-10-08e">
 <script defer src="https://cdn.jsdelivr.net/npm/plotly.js-cartesian-dist-min@4.1.1/plotly-cartesian.min.js"
         integrity="sha384-zc4SwKObGL/W0M3RUI09UPWjlgIZHfbwMgcZO6713mRh78tfUmIQKhzCyE2LIiUg" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/wavesurfer.js@8.0.1/dist/wavesurfer.min.js"
@@ -15,47 +18,91 @@
         integrity="sha384-Tk81r51AIztO5k+iOj/eOq9ZEGD2XVkPnZR8QVxzq1dkyEmsBSCjYpdCoeD/AZQ9" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/wavesurfer.js@8.0.1/dist/plugins/timeline.min.js"
         integrity="sha384-2l5/6KGTIt5kr+AcoXrcOzSiDUedbqv1LlHsFtQ5/ABj0cbzhpA2w6bCvc4Ns2vk" crossorigin="anonymous"></script>
-<script defer src="app.js"></script>
+<script defer src="app.js?v=2026-10-08e"></script>
 </head>
-<body>
+<body class="intro">
+<svg width="0" height="0" class="defs" aria-hidden="true" focusable="false">
+  <defs>
+    <linearGradient id="g-signature" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#7c5cff"/><stop offset="0.55" stop-color="#e04ac6"/><stop offset="1" stop-color="#ffb547"/>
+    </linearGradient>
+    <filter id="f-glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="4" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+</svg>
+
 <header class="top">
-  <div>
+  <a class="brand" href="#" aria-label="Contrastive Voice">
+    <svg class="mark" viewBox="0 0 40 28" width="34" height="24" aria-hidden="true">
+      <path class="mark-ref" d="M1 15 C5 15 6 5 10 5 S15 23 19 23 S24 9 28 9 S34 17 39 17"/>
+      <path class="mark-you" d="M1 13 C4 13 6 20 9 20 S14 4 18 4 S22 25 27 25 S34 11 39 11"/>
+    </svg>
     <h1>Contrastive Voice</h1>
-    <p class="lede">Set a spoken delivery beside a reference reading of the same words. See where it departs, by how much, and what that costs in points.</p>
-  </div>
+  </a>
+  <nav class="next-steps" aria-label="Try a recording and review robustness">
+    <a class="jump" href="#upload" id="jump-upload">Analyse your own recording</a>
+    <a href="#evaluation" id="jump-evaluation" hidden>How well it works</a>
+    <a href="#stress" id="jump-stress" hidden>Stress matrix</a>
+  </nav>
 </header>
 
 <div id="alert" role="alert" hidden></div>
 
-<nav id="picker" aria-label="Example recordings">
-  <p class="picker-title" id="picker-title">Examples</p>
-  <div id="chips"></div>
-  <details id="left-out" hidden><summary></summary><ul id="left-out-list" class="note"></ul></details>
-  <p id="picker-note" class="note" aria-live="polite"></p>
-</nav>
-
-<section id="ledger" aria-label="Scores">
-  <div class="cell overall">
-    <h2>Delivery score (relative to this reference)</h2>
-    <p class="fig" id="overall-fig">-</p>
-    <details id="detection-note" hidden><summary>How flags are decided</summary><p class="sub"></p></details>
-    <p class="sub" id="overall-fix"></p>
-    <p class="sub" id="regime"></p>
-    <p class="sub" id="reference-mode" hidden><span class="badge"></span></p>
+<nav id="picker" aria-labelledby="picker-title">
+  <div class="shelf-head">
+    <h2 id="picker-title">Examples</h2>
+    <details id="left-out" hidden><summary></summary><ul id="left-out-list" class="note"></ul></details>
   </div>
-  <div id="cards" class="cards"></div>
-</section>
-
-<nav class="next-steps" aria-label="Try a recording and review robustness">
-  <a class="jump" href="#upload" id="jump-upload">Analyse your own recording</a>
-  <a href="#evaluation" id="jump-evaluation" hidden>How well it works: measured accuracy and false flags</a>
-  <a href="#stress" id="jump-stress" hidden>Stress matrix: how the output moves when only the recording conditions change</a>
+  <div id="chips" class="shelf"></div>
 </nav>
 
-<details id="evaluation" hidden>
-  <summary>How well it works</summary>
-  <div id="evaluation-body"></div>
-</details>
+<main>
+<section class="hero" aria-label="This recording">
+  <div class="track-title">
+    <p class="kicker"><span id="regime-badge" class="regime-badge" hidden></span><span id="picker-current">Loading example</span></p>
+    <p id="picker-note" class="example-note" aria-live="polite"></p>
+  </div>
+  <section id="ledger" aria-label="Scores">
+    <div class="overall">
+      <div class="ring-wrap">
+        <svg class="ring" viewBox="0 0 120 120" aria-hidden="true">
+          <circle class="ring-track" cx="60" cy="60" r="52"/>
+          <circle class="ring-glow" id="ring-glow" cx="60" cy="60" r="52"/>
+          <circle class="ring-value" id="ring-value" cx="60" cy="60" r="52"/>
+        </svg>
+        <div class="ring-text">
+          <p class="fig" id="overall-fig">-</p>
+          <p class="ring-label">Delivery score</p>
+        </div>
+      </div>
+      <div class="overall-meta">
+        <p class="sub-h">Relative to this reference, out of 100</p>
+        <p class="fix-line" id="overall-fix"></p>
+        <p class="sub" id="regime"></p>
+        <p class="sub" id="reference-mode" hidden><span class="badge"></span></p>
+        <details id="detection-note" hidden><summary>How flags are decided</summary><p class="sub"></p></details>
+      </div>
+    </div>
+    <div class="dims">
+      <h2 class="dims-h">Dimensions <span class="sub-h">select one to filter the findings</span></h2>
+      <div id="cards" class="cards"></div>
+    </div>
+  </section>
+
+  <section id="timeline" class="glass" aria-labelledby="timeline-title">
+    <div class="tl-head">
+      <h2 id="timeline-title">Where this reading departs</h2>
+      <p class="tl-hint note">Reference above, this recording below, on one time scale. Select a band to open its finding; click a word to hear it.</p>
+    </div>
+    <div class="tl-stage">
+      <div id="wave-ref" class="wave wave-ref" aria-hidden="true"></div>
+      <div id="tl-host" class="tl-host"></div>
+      <div id="wave" class="wave wave-you"></div>
+    </div>
+    <div id="tl-tip" class="tl-tip" hidden></div>
+    <p id="wave-msg" class="note"></p>
+  </section>
+</section>
 
 <section id="clip-wrap" aria-label="Whole-clip findings and differences" hidden>
   <h2>Whole-clip findings and differences</h2>
@@ -63,8 +110,8 @@
 </section>
 
 <div class="findings">
-  <section id="explain" class="explain" aria-label="Selected finding" aria-live="polite"></section>
-  <aside class="side" aria-label="Findings and reference differences">
+  <section id="explain" class="explain glass" aria-label="Selected finding" aria-live="polite"></section>
+  <aside class="side glass" aria-label="Findings and reference differences">
     <div class="side-head">
       <h2>Flagged regions <span id="flaw-count"></span></h2>
       <button type="button" id="clear-filter" hidden>Show all</button>
@@ -85,7 +132,12 @@
     </details>
   </aside>
   <div class="work">
-    <section class="stage" aria-label="Recording and deviations">
+    <section class="stage glass" aria-label="Dimension charts and transcript">
+      <div class="stage-head">
+        <h2>Dimension by dimension</h2>
+        <button type="button" id="all-dimensions" class="plain" aria-pressed="false" aria-controls="chart">Show all dimensions</button>
+      </div>
+      <p class="note">Pitch, level and the dimensions with a flag or a selected finding. Hover a chart to read the values.</p>
       <div class="legend" aria-label="Chart key">
         <span><i class="sw sw-ref"></i><span id="key-ref">Reference rendition</span></span>
         <span><i class="sw sw-you"></i>This recording</span>
@@ -98,19 +150,9 @@
         <span id="key-group" hidden><i class="sw sw-group"></i>Finding group (shared penalty)</span>
         <span id="key-subword" hidden><i class="sw sw-subword"></i>Sub-word evidence span (hatched)</span>
       </div>
-      <div class="transport">
-        <button type="button" id="play-all" disabled>Play recording</button>
-        <span id="clock" class="clock">Loading audio…</span>
-        <span id="wave-msg" class="note"></span>
-      </div>
-      <div id="wave" class="wave"></div>
-      <div class="dimension-tools">
-        <button type="button" id="all-dimensions" class="plain" aria-pressed="false" aria-controls="chart">Show all dimensions</button>
-        <span class="note">Pitch, level and dimensions with a flag or selected finding.</span>
-      </div>
       <div id="chart-host"><div id="chart"></div><div id="cursor"></div></div>
-      <h2 class="small">Transcript</h2>
-      <p class="note">Click a word to hear it. Underlines mark flagged words, with the same dotted, dashed or solid outline as in the chart.</p>
+      <h2 class="transcript-h">Transcript</h2>
+      <p class="note">Click a word to hear it. Underlines mark flagged words, with the same dotted, dashed or solid outline as in the charts.</p>
       <p id="whole-note" class="note" hidden>This finding concerns the whole passage.</p>
       <p id="transcript" class="transcript"></p>
       <div id="truth-matches" aria-label="Injected edits and matching findings"></div>
@@ -119,48 +161,69 @@
 </div>
 
 <section id="notices-wrap" aria-label="Notes on this analysis">
-  <h2 class="small">Notes on this analysis</h2>
+  <h2>Notes on this analysis</h2>
   <ul id="notices" class="notices"></ul>
 </section>
 
-<details id="stress" hidden>
-  <summary>Stress matrix: how much the output moves when only the recording conditions change</summary>
-  <p id="stress-summary" class="note"></p>
-  <div class="scroll"><table id="stress-table"></table></div>
-</details>
+<div class="more">
+  <details id="evaluation" class="glass" hidden>
+    <summary>How well it works</summary>
+    <div id="evaluation-body"></div>
+  </details>
 
-<details id="upload">
-  <summary>Analyse your own recording</summary>
-  <p id="upload-note" class="note"></p>
-  <p id="upload-lockbox" class="note" hidden></p>
-  <form id="form" novalidate>
-    <fieldset id="fields">
-      <label>Your recording
-        <input type="file" name="audio" id="f-audio" accept="audio/*,.wav,.mp3,.m4a,.ogg,.oga,.webm,.flac" required>
-      </label>
-      <label>Reference
-        <select id="f-baseline" aria-describedby="baseline-note"></select>
-      </label>
-      <p id="baseline-note" class="note wide" aria-live="polite"></p>
-      <label id="own-baseline" hidden>Your reference recording
-        <input type="file" name="baseline_audio" id="f-baseline-audio" accept="audio/*,.wav,.mp3,.m4a,.ogg,.oga,.webm,.flac">
-      </label>
-      <label class="wide">Transcript: the exact words both recordings read
-        <textarea id="f-text" rows="6" maxlength="20000" required></textarea>
-      </label>
-      <label>or load the transcript from a text file
-        <input type="file" id="f-text-file" accept=".txt,text/plain">
-      </label>
-      <p class="note wide">An uploaded recording is compared as a different performance (regime R2). Its analysis states the reference mode (one reading, or the median of five readings of a bundled bank) and reports which dimensions are scored, listed or displayed. Limits: <span id="limits"></span>.</p>
-      <button type="submit" id="submit">Analyse</button>
-    </fieldset>
-  </form>
-  <ol id="stages" class="stages" aria-label="Analysis stages" hidden></ol>
-  <p id="stage-msg" role="status" class="note"></p>
-</details>
+  <details id="stress" class="glass" hidden>
+    <summary>Stress matrix: how much the output moves when only the recording conditions change</summary>
+    <p id="stress-summary" class="note"></p>
+    <div class="scroll"><table id="stress-table"></table></div>
+  </details>
+
+  <details id="upload" class="glass">
+    <summary>Analyse your own recording</summary>
+    <p id="upload-note" class="note"></p>
+    <p id="upload-lockbox" class="note" hidden></p>
+    <form id="form" novalidate>
+      <fieldset id="fields">
+        <label>Your recording
+          <input type="file" name="audio" id="f-audio" accept="audio/*,.wav,.mp3,.m4a,.ogg,.oga,.webm,.flac" required>
+        </label>
+        <label>Reference
+          <select id="f-baseline" aria-describedby="baseline-note"></select>
+        </label>
+        <p id="baseline-note" class="note wide" aria-live="polite"></p>
+        <label id="own-baseline" hidden>Your reference recording
+          <input type="file" name="baseline_audio" id="f-baseline-audio" accept="audio/*,.wav,.mp3,.m4a,.ogg,.oga,.webm,.flac">
+        </label>
+        <label class="wide">Transcript: the exact words both recordings read
+          <textarea id="f-text" rows="6" maxlength="20000" required></textarea>
+        </label>
+        <label>or load the transcript from a text file
+          <input type="file" id="f-text-file" accept=".txt,text/plain">
+        </label>
+        <p class="note wide">An uploaded recording is compared as a different performance (regime R2). Its analysis states the reference mode (one reading, or the median of five readings of a bundled bank) and reports which dimensions are scored, listed or displayed. Limits: <span id="limits"></span>.</p>
+        <button type="submit" id="submit">Analyse</button>
+      </fieldset>
+    </form>
+    <ol id="stages" class="stages" aria-label="Analysis stages" hidden></ol>
+    <p id="stage-msg" role="status" class="note"></p>
+  </details>
+</div>
+</main>
 
 <footer>
-  <p>Deviations are relative to the reference: one rendition, or the word-by-word median of five readings of a bundled bank. Read the analysis notes for timing resolution and scoring limits. The flaws in the examples are controlled acoustic edits, and no human ratings back the scores.</p>
+  <p>Deviations are relative to the reference: one rendition, or the word-by-word median of five readings of a bundled bank. Read the analysis notes for timing resolution and scoring limits. The flaws in the examples are controlled acoustic edits, and no human ratings back the scores. Typefaces: Sora and Atkinson Hyperlegible Next (SIL Open Font License, vendor/fonts).</p>
 </footer>
+
+<div class="player" role="region" aria-label="Player">
+  <div class="player-in">
+    <button type="button" id="play-all" class="play-btn" disabled>Play recording</button>
+    <div class="ab-toggle" role="group" aria-label="Listen to">
+      <button type="button" id="ab-you" class="ab-opt" aria-pressed="true">This recording</button>
+      <button type="button" id="ab-ref" class="ab-opt" aria-pressed="false">Reference</button>
+    </div>
+    <span id="clock" class="clock">Loading audio…</span>
+    <div id="player-progress" class="player-progress" aria-hidden="true"><i></i></div>
+    <p class="player-now"><span class="player-label">Selected</span> <span id="player-finding">-</span></p>
+  </div>
+</div>
 </body>
 </html>

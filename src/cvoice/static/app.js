@@ -13,6 +13,24 @@ const GROUP_PAD_PX = 4;                  // px between a group outline and its m
 const LABEL_PAD_PX = 3, LABEL_CHAR_PX = 7;   // a wash number's padding and its width per character at 11 px
 const LABEL_GAP_PX = 4, LABEL_SHIFT_PX = 6;  // px between two wash numbers; px a number may move right past a wash narrower than that
 const POLL_MS = 500;
+const BOTH_GAP_MS = 350;                 // ms of silence between the two spans of "Play both"
+const TL_GUTTER_PX = 118;                // px; the timeline's track labels on a wide screen
+const TL_NARROW_PX = 620;                // px; below this width the track labels sit above and below the tracks
+const TL_TRACK_PX = 28, TL_LINK_PX = 66, TL_LABEL_PX = 20;   // px; word track, ribbon zone between the tracks, label row
+const TL_MIN_SPAN_PX = 4;                // px; a shorter span (a pause point) is widened to stay visible and clickable
+const TL_MARK_H = 18, TL_MARK_GAP = 3;   // px; height of a band number and the gap kept between two numbers
+const TL_WORD_FONT = 11;                 // px; must equal .tl-word text in style.css
+const SVG_NS = "http://www.w3.org/2000/svg";
+const RING_C = 2 * Math.PI * 52;         // circumference of the score ring (r 52 in index.html)
+const COUNT_MS = 1000;                   // ms of the score count-up on the first load
+const INTRO_MS = 1400;                   // ms after which the draw-in animation class is removed
+const SIGNATURE = ["#7c5cff", "#e04ac6", "#ffb547"];   // must equal #g-signature in index.html
+// Simple line icons per dimension key, as SVG path data on a 20 x 20 grid.
+const DIM_ICON = {
+  D1: "M4 16 L10 3 L16 16 M7 10 H13", D7: "M4 16 L10 3 L16 16 M7 10 H13", D9: "M4 16 L10 3 L16 16 M7 10 H13",
+  D2: "M6 4 V16 M14 4 V16", D3: "M2 12 C5 4 8 4 10 10 S15 16 18 8", D4: "M10 3 V12 M10 16 V16.5", D8: "M3 14 C7 14 9 6 17 5",
+  D5: "M3 8 H7 L12 4 V16 L7 12 H3 Z M15 7 C17 9 17 11 15 13", D6: "M3 10 H5 M7 5 V15 M10 7 V13 M13 3 V17 M16 8 V12",
+};
 const SEVERITY_STYLES = [[1 / 3, "dot", "dotted"], [2 / 3, "dash", "dashed"], [Infinity, "solid", "solid"]];
 
 const LIBS = [  // [is it loaded?, fallback file]; the wavesurfer core must come before its plugins
@@ -95,6 +113,7 @@ const synthetic = (f) => (f.text || "").toLowerCase().includes(SYNTHETIC_TEXT.to
 const scoreText = (v) => v == null ? "n/a" : num(v, 2);
 const multipleText = (v) => v == null ? "-" : `×${num(v, 2)}`;
 const patternText = (p) => PATTERN_TEXT[p] || TYPE_TEXT[p] || p || "No pattern label";
+const groupName = (f) => f.group_pattern ? patternText(f.group_pattern) : "Finding";
 // The pattern has its own chip (patternTags), so the title names the measured departure.
 const findingText = (f) => f.type ? typeText(f) : f.label || f.brief_word || f.dimension;
 const unevenTempo = (f) => f.pattern === "UNEVEN_TEMPO" || f.type === "UNEVEN_TEMPO";
@@ -113,6 +132,24 @@ function el(tag, attrs = {}, ...kids) {
   }
   e.append(...kids.filter((x) => x != null));
   return e;
+}
+
+function svgEl(tag, attrs = {}, ...kids) {
+  const e = document.createElementNS(SVG_NS, tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === "text") e.textContent = v;
+    else if (k.startsWith("on")) e.addEventListener(k.slice(2), v);
+    else e.setAttribute(k, v);
+  }
+  e.append(...kids.filter((x) => x != null));
+  return e;
+}
+
+let measureContext = null;
+function textWidth(text, px) {
+  if (!measureContext) measureContext = document.createElement("canvas").getContext("2d");
+  measureContext.font = `${px}px ${css("--sans")}`;
+  return measureContext.measureText(text).width;
 }
 
 /** Piecewise-linear map xs -> ys (xs non-decreasing); clamps outside the range. */
@@ -142,8 +179,8 @@ function showAlert(msg) {
 
 // ---------------------------------------------------------------------------------------------------- state
 const S = { result: null, sel: null, filter: null, rid: 0, limits: null, ws: null, regions: null, ref: new Audio(),
-  refTimer: null, chart: null, hasLibs: false, selKind: "flaw", allDimensions: false, openId: 0,
-  mediaId: 0, youReady: false, refReady: false, playId: 0, priority: null, pattern: null, evaluation: null };
+  refTimer: null, bothTimer: null, tl: null, chart: null, hasLibs: false, selKind: "flaw", allDimensions: false, openId: 0,
+  mediaId: 0, youReady: false, refReady: false, countId: 0, counted: false, side: "you", wsRef: null, playId: 0, priority: null, pattern: null, evaluation: null };
 
 function differences() { return S.result.regime === "R2" && Array.isArray(S.result.differences) ? S.result.differences : []; }
 function selected() { return (S.selKind === "difference" ? differences() : S.result.flaws)[S.sel]; }
@@ -201,9 +238,36 @@ function dimGroups(r) {
   return groups;
 }
 
+/** The score ring's arc, and on the first load a count-up of the score that ends on the stored value. */
+function showScore(o) {
+  const arc = `${(RING_C * Math.max(0, Math.min(100, o ?? 0)) / 100).toFixed(2)} ${RING_C.toFixed(2)}`;
+  for (const id of ["#ring-value", "#ring-glow"]) $(id).style.strokeDasharray = arc;
+  S.countId += 1;
+  const fig = $("#overall-fig"), run = S.countId;
+  if (S.counted || o == null || matchMedia("(prefers-reduced-motion: reduce)").matches) { S.counted = true; fig.textContent = scoreText(o); return; }
+  S.counted = true;
+  const start = performance.now();
+  const step = (now) => {
+    if (run !== S.countId) return;
+    const k = Math.min(1, (now - start) / COUNT_MS);
+    fig.textContent = k < 1 ? num(o * (1 - (1 - k) ** 3), 2) : scoreText(o);
+    if (k < 1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+
+/** The regime and reference mode as a short badge beside the example name. */
+function regimeBadge(r) {
+  const d = r.detection || {};
+  const mode = d.reference_mode === "consensus5" ? `, median of ${d.reference_count} readings` : d.reference_mode ? ", one reference reading" : "";
+  return `${r.regime} ${r.regime === "R1" ? "same performance" : "different performance"}${mode}`;
+}
+
 function renderLedger(r) {
   const o = r.scores.overall;
-  $("#overall-fig").textContent = scoreText(o);
+  showScore(o);
+  $("#regime-badge").textContent = regimeBadge(r);
+  $("#regime-badge").hidden = false;
   const note = detectionNote(r);
   $("#detection-note p").textContent = note;
   $("#detection-note").hidden = !note;
@@ -227,9 +291,9 @@ function renderLedger(r) {
       el("div", { class: value == null ? "fig unscored" : "fig", text: value == null ? `Not scored (${r.regime})` : num(value, 1) }),
       reason ? el("div", { class: "reason", text: reason[0].toUpperCase() + reason.slice(1) + "." }) : null,
       el("div", { class: "bar" }, el("i", { style: `width:${value == null ? 0 : Math.max(0, Math.min(100, value))}%` })),
-      ...g.dims.map((d) => el("div", { class: "line", title: `${d.note || ""} Coverage: ${num(d.coverage * 100, 0)}%.` },
-        el("span", { text: d.key === "D6" ? "Spectral change" : d.label }), el("span", { text: d.scored ? num(d.score, 1) : "not scored" }))),
-      el("div", { class: "count", text: n ? `${n} flagged ${n === 1 ? "region" : "regions"}` : "No flagged regions" }));
+      el("div", { class: "lines" }, ...g.dims.map((d) => el("div", { class: "line", title: `${d.note || ""} Coverage: ${num(d.coverage * 100, 0)}%.` },
+        el("span", { text: d.key === "D6" ? "Spectral change" : d.label }), el("span", { text: d.scored ? num(d.score, 1) : "not scored" })))),
+      el("div", { class: n ? "count flagged" : "count", text: n ? `${n} flagged ${n === 1 ? "region" : "regions"}` : "No flagged regions" }));
     card.addEventListener("click", () => setFilter(S.filter && S.filter.join() === keys.join() ? null : keys));
     cards.append(card);
   }
@@ -285,14 +349,20 @@ function refreshLists() {
   document.querySelectorAll(".pattern-chip").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.pattern === S.pattern)));
 }
 
+// A finding without a pattern label gets no chip; the pattern filter still offers "No pattern label".
 function patternTags(f) {
-  const p = f.pattern || "unlabelled";
-  const repeats = !!f.pattern && patternText(f.pattern) === findingText(f);   // e.g. uneven word timing: type and pattern share one name
+  const p = f.pattern;
+  const repeats = !!p && patternText(p) === findingText(f);   // e.g. uneven word timing: type and pattern share one name
   return el("div", { class: "finding-tags" },
-    repeats ? null : el("button", { type: "button", class: "pattern-chip", "data-pattern": p, "aria-pressed": String(S.pattern === p),
+    !p || repeats ? null : el("button", { type: "button", class: "pattern-chip", "data-pattern": p, "aria-pressed": String(S.pattern === p),
       "aria-label": `Filter by pattern: ${patternText(f.pattern)}`, onclick: () => setPattern(S.pattern === p ? null : p), text: patternText(f.pattern) }),
     f.candidate ? el("span", { class: "candidate", title: CANDIDATE_TEXT, text: "Candidate" }) : null,
     synthetic(f) ? el("span", { class: "candidate", title: SYNTHETIC_TEXT, text: "Synthetic only" }) : null);
+}
+
+function dimIcon(key) {
+  const d = DIM_ICON[key];
+  return d ? svgEl("svg", { class: "dim-icon", viewBox: "0 0 20 20", "aria-hidden": "true" }, svgEl("path", { d })) : null;
 }
 
 function findingGroups(r) {
@@ -320,7 +390,7 @@ function renderFlawList() {
     return el("li", { class: "finding-item", "data-finding": f.id },
       el("button", { type: "button", class: "finding-select", "aria-pressed": String(S.selKind === "flaw" && S.sel === i), "data-i": i,
         "data-kind": "flaw", onclick: () => select(i) },
-        el("span", { class: "n", text: `#${i + 1}` }), el("span", { class: "t", text: findingText(f) }),
+        el("span", { class: "n", text: `#${i + 1}` }), el("span", { class: "t" }, dimIcon(f.dimension), findingText(f)),
         el("span", { class: "pts", text: f.counted === false ? "shared" : findingPts(f) }),
         el("span", { class: "m" }, el("span", { text: `${f.brief_word}, ${wholePassage(f) ? "whole passage" : span(f.p)}` }),
           el("i", { class: `dash ${st[2]}`, "aria-label": `Severity: ${st[2]}` }))), patternTags(f));
@@ -331,8 +401,8 @@ function renderFlawList() {
     return el("li", { class: "finding-group" },
       el("button", { type: "button", class: "group-select", "data-i": i, "data-kind": "flaw",
         "aria-pressed": String(S.selKind === "flaw" && members.some(([, j]) => S.sel === j)), onclick: () => select(i) },
-        el("span", { class: "t", text: patternText(f.group_pattern) }), el("span", { class: "pts", text: findingPts(f) }),
-        el("span", { class: "m", text: `${members.length} members · one shared penalty` })),
+        el("span", { class: "t", text: `${groupName(f)} group` }), el("span", { class: "pts", text: findingPts(f) }),
+        el("span", { class: "m", text: `${members.length} findings share one penalty` })),
       el("ul", { class: "flaws group-members" }, ...members.map(item)));
   };
   const minor = (members) => !saturated(counted(members)[0]) && (counted(members)[0].points_lost ?? 1) < 0.05;
@@ -375,7 +445,7 @@ function renderClipCards() {
   $("#clip-cards").replaceChildren(...entries.map(([f, i, kind]) => el("div", { class: "clip-card", "data-finding": f.id },
     el("button", { type: "button", "data-i": i, "data-kind": kind, "aria-pressed": String(S.selKind === kind && S.sel === i),
       onclick: () => select(i, { kind }) }, el("b", { text: findingText(f) }),
-      el("span", { class: "note", text: kind === "flaw" ? `Whole clip · ${findingPts(f)}` : f.status === "listed" ? "Listed, not scored · whole clip" : "Difference, not scored · whole clip" }),
+      el("span", { class: "note", text: kind === "flaw" ? `Whole clip, ${findingPts(f)}` : f.status === "listed" ? "Whole clip, listed, not scored" : "Whole clip difference, not scored" }),
       el("span", { text: unevenTempo(f) ? `Typical word-to-word factor: ${spreadFactor(f)}` : diffLine(f) }),
       unevenTempo(f) && f.threshold != null ? el("span", { class: "note", text: `Flag threshold: ${thresholdFactor(f)}` }) : null), patternTags(f))));
 }
@@ -401,7 +471,27 @@ function diffLine(f) {
 }
 
 function fact(dl, term, value) {
-  dl.append(el("dt", { text: term }), el("dd", { text: value }));
+  dl.append(el("div", {}, el("dt", { text: term }), el("dd", { text: value })));
+}
+
+/** How far the measured departure lies past its flag threshold, drawn from the stored multiple of the threshold. */
+function thresholdGauge(f) {
+  const multiple = f.tolerance_multiple;
+  if (multiple == null || !(multiple >= 0)) return null;
+  const end = Math.max(2, Math.ceil(multiple * 1.15 * 2) / 2);   // scale end, in multiples of the threshold
+  const at = (v) => 100 * Math.min(v, end) / end;
+  const pct = (v) => `${at(v).toFixed(2)}%`;
+  const over = multiple >= 1;
+  const valueLabel = at(multiple) < 70 ? `left:calc(${pct(multiple)} + 6px)` : `right:calc(${(100 - at(multiple)).toFixed(2)}% + 0px)`;
+  return el("div", { class: "gauge", "aria-hidden": "true" },
+    el("p", { class: "note", text: "Distance past the flag threshold" }),
+    el("div", { class: "gauge-track" }, el("i", { class: "gauge-tol", style: `width:${pct(1)}` }),
+      over ? el("i", { class: "gauge-over", style: `left:${pct(1)};width:${(at(multiple) - at(1)).toFixed(2)}%` })
+        : el("i", { class: "gauge-under", style: `width:${pct(multiple)}` }),
+      el("i", { class: "gauge-tick", style: `left:${pct(1)}` }), el("i", { class: "gauge-knob", style: `left:${pct(multiple)}` })),
+    el("div", { class: "gauge-labels" },
+      el("span", { style: `right:calc(${(100 - at(1)).toFixed(2)}% + 6px)`, text: "Flag threshold" }),
+      el("span", { class: "gauge-value", style: valueLabel, text: multipleText(multiple) })));
 }
 
 function evidenceValue(e) {
@@ -417,6 +507,7 @@ function evidenceValue(e) {
 function renderExplain() {
   const box = $("#explain"), r = S.result, f = selected(), diff = S.selKind === "difference";
   box.replaceChildren();
+  $("#player-finding").textContent = !f ? "-" : diff ? findingText(f) : `#${S.sel + 1} ${findingText(f)}`;
   box.classList.toggle("neutral", diff);
   if (!f) {
     box.append(el("h3", { text: "Listen and compare" }),
@@ -449,24 +540,32 @@ function renderExplain() {
     fact(dl, "Multiple of the flag threshold", multipleText(f.tolerance_multiple));
     fact(dl, "Flagged beyond", f.threshold == null ? "-" : unevenTempo(f) ? thresholdFactor(f) : `${f.delta < 0 ? "−" : "+"}${num(f.threshold, 2)} ${deltaUnit}`);
   }
+  const pts = diff ? null : f.counted === false ? "shared" : findingPts(f);
+  const listen = (who, key, title, at) => el("button", { type: "button", class: `ab ${who}`, "data-audio": who, "aria-label": `Play ${title.toLowerCase()}, ${at}`,
+    onclick: () => playSpan(who, mediaSpan(f, who)) }, el("span", { class: "ab-key", text: key }), el("span", {}, el("span", { class: "ab-name", text: title }),
+      el("span", { class: "ab-span", text: at })));
   box.append(
-    el("p", { class: "eyebrow", text: diff ? f.status === "listed" ? "Listed, not scored · no point penalty" : "Reference difference · not scored" : "Selected finding · listen, then try the fix" }),
-    el("h3", { text: diff ? findingText(f) : `#${S.sel + 1} ${findingText(f)}` }), patternTags(f),
-    el("p", { class: "spans", text: `Words: ${wholePassage(f) ? words : `‘${words}’`}` }),
-    el("p", { class: "spans", text: `This recording: ${span(f.p)} · Reference: ${span(f.b)}` }),
-    el("div", { class: "ab-row" },
-      el("button", { type: "button", class: "ab", "data-audio": "you", onclick: () => playSpan("you", mediaSpan(f, "you")) }, el("b", { text: "A" }), "This recording"),
-      el("button", { type: "button", class: "ab", "data-audio": "ref", onclick: () => playSpan("ref", mediaSpan(f, "ref")) }, el("b", { text: "B" }), "Reference")),
+    el("div", { class: "ex-head" },
+      el("div", {},
+        el("h3", {}, diff ? null : el("span", { class: "ex-num", text: `#${S.sel + 1}` }), diff ? null : " ", findingText(f)),
+        diff ? el("p", { class: "ex-status", text: f.status === "listed" ? "Listed, not scored: no point penalty" : "Reference difference, not scored" }) : null,
+        patternTags(f)),
+      pts ? el("p", { class: "ex-pts" }, pts, el("small", { text: f.counted === false ? "penalty carried by the group" : "from the delivery score" })) : null),
+    el("p", { class: "ex-words", text: wholePassage(f) ? "Whole passage" : `‘${words}’` }),
+    el("div", { class: "ex-listen" }, listen("you", "A", "This recording", span(f.p)), listen("ref", "B", "Reference", span(f.b)),
+      el("button", { type: "button", class: "ab both", "data-audio": "both", onclick: () => playBoth(f), text: "Play both" })),
+    diff ? null : thresholdGauge(f),
+    dl,
     el("p", { class: "what", text: (f.candidate ? f.text.replace(CANDIDATE_TEXT, "").trim() : f.text) || "" }));
+  if (!diff && f.fix) box.append(el("p", { class: "fix" }, el("b", { text: "How to fix" }), f.fix));
   if (f.candidate) box.append(el("p", { class: "candidate-note", text: CANDIDATE_TEXT }));
   if (f.group) {
     const members = r.flaws.filter((x) => f.group.includes(x.id));
-    box.append(el("p", { class: "group-note", text: `${patternText(f.group_pattern)} group · ${members.length} members · one shared penalty. ${f.counted === false ? "This member adds no points lost; the counted member carries the group's penalty." : "The score with this penalty removed removes the whole group's penalty."}` }),
+    box.append(el("p", { class: "group-note", text: `${groupName(f)} group: ${members.length} findings share one penalty. ${f.counted === false ? "This member adds no points lost; the counted member carries the group's penalty." : "The score with this penalty removed removes the whole group's penalty."}` }),
       el("div", { class: "group-links" }, ...members.map((member) => el("button", { type: "button", class: "plain",
         onclick: () => select(r.flaws.indexOf(member)), text: `#${r.flaws.indexOf(member) + 1} ${findingText(member)}` }))));
   }
-  if (!diff && f.fix) box.append(el("p", { class: "fix" }, el("b", { text: "To fix: " }), f.fix));
-  const detail = el("details", { class: "measure-details" }, el("summary", { text: "Measurements and context" }), dl);
+  const detail = el("details", { class: "measure-details" }, el("summary", { text: "Measurements and context" }));
   if (f.evidence?.length) {
     const evidence = el("dl", { class: "facts evidence" });
     // The finding's own measure shows the Difference row's factor: a second rounding of the stored value can differ by 0.01.
@@ -519,6 +618,7 @@ function select(i, { scroll = false, kind = "flaw", reveal = true } = {}) {
   renderExplain();
   renderFix();
   markWords();
+  markTimeline();
   if (S.chart && before !== rowDefs(S.result).map((d) => d.key).join()) drawChart();
   else highlight();
   updateWaveRegions();
@@ -632,6 +732,133 @@ function markPlaying(tp) {
   if (b && tp >= ws[lo].p[0] && tp <= ws[lo].p[1] + 0.2) b.setAttribute("aria-current", "true");
 }
 
+// ---------------------------------------------------------------------------------------------------- timeline
+/** A finding's span in the reference: its own b span, else its recording span carried through the word map. */
+function referenceSpan(f) {
+  const m = S.result.map;
+  return f.b || [interp(f.p[0], m.p, m.b), interp(f.p[1], m.p, m.b)];
+}
+
+const SEVERITY_DASH = { dot: "1.5 2.5", dash: "5 3", solid: "none" };
+
+/** The washes on both word tracks and the ribbon that joins them, for one local finding or difference. */
+function bandParts(f) {
+  const g = S.tl, widen = (a, b) => b - a >= TL_MIN_SPAN_PX ? [a, b] : [(a + b) / 2 - TL_MIN_SPAN_PX / 2, (a + b) / 2 + TL_MIN_SPAN_PX / 2];
+  const [b0, b1] = widen(...referenceSpan(f).map(g.x)), [p0, p1] = widen(...f.p.map(g.x));
+  const mid = (g.refBot + g.youTop) / 2;
+  const ribbon = `M${b0},${g.refBot} C${b0},${mid} ${p0},${mid} ${p0},${g.youTop} L${p1},${g.youTop} C${p1},${mid} ${b1},${mid} ${b1},${g.refBot} Z`;
+  return { b0, b1, p0, p1, mid, parts: [
+    svgEl("rect", { class: "wash", x: b0, y: g.refTop, width: b1 - b0, height: TL_TRACK_PX }),
+    svgEl("path", { class: "ribbon", d: ribbon, "stroke-dasharray": SEVERITY_DASH[sevStyle(f.severity ?? 0)[1]] }),
+    svgEl("rect", { class: "wash", x: p0, y: g.youTop, width: p1 - p0, height: TL_TRACK_PX })] };
+}
+
+/**
+ * The reference reading above this recording, word by word on one time scale (the longer reading sets the scale), with each
+ * local finding as a numbered band from its reference span to its recording span. The waveform below uses the same scale.
+ */
+function drawTimeline() {
+  const host = $("#tl-host"), r = S.result;
+  S.tl = null;
+  if (!r || !host.clientWidth) return;
+  const width = host.clientWidth, narrow = width < TL_NARROW_PX, gutter = narrow ? 0 : TL_GUTTER_PX;
+  const pxPerS = Math.max(width - gutter - PLOT_R, 1) / Math.max(r.participant.duration, r.baseline.duration);
+  const label = narrow ? TL_LABEL_PX : 0;
+  const refTop = label, refBot = refTop + TL_TRACK_PX, youTop = refBot + TL_LINK_PX, youBot = youTop + TL_TRACK_PX;
+  S.tl = { x: (t) => gutter + t * pxPerS, refTop, refBot, youTop, youBot, width };
+  const g = S.tl;
+  const svg = svgEl("svg", { width, height: youBot + label, viewBox: `0 0 ${width} ${youBot + label}`, role: "group",
+    "aria-label": "Reference and this recording, word by word, with numbered flagged regions" });
+  const trackLabel = (text, who, y) => svgEl("text", { class: `tl-label ${who}`, x: 0, y, "dominant-baseline": "central", text });
+  if (narrow) svg.append(trackLabel("Reference", "ref", label / 2 - 1), trackLabel("This recording", "you", youBot + label / 2 + 1));
+  else svg.append(trackLabel("Reference", "ref", (refTop + refBot) / 2), trackLabel("This recording", "you", (youTop + youBot) / 2));
+  const mid = (s) => (s[0] + s[1]) / 2;
+  // At phone width the word links are closer than 2 px apart and read as one grey block, so only the bands join the tracks.
+  if (!narrow) svg.append(svgEl("g", { "aria-hidden": "true" }, ...r.words.filter((w) => w.b).map((w) =>
+    svgEl("line", { class: "tl-align", x1: g.x(mid(w.b)), y1: refBot, x2: g.x(mid(w.p)), y2: youTop }))));
+  const track = (who, key, top) => svgEl("g", { "aria-hidden": "true" }, ...r.words.filter((w) => w[key]).map((w) => {
+    const x0 = g.x(w[key][0]), wide = Math.max(g.x(w[key][1]) - x0 - 1, 1);
+    return svgEl("g", { class: `tl-word ${who}`, onclick: () => playSpan(who, [w[key][0], w[key][1] + 0.25]),
+      onpointerenter: (e) => showTip(e.currentTarget, `${w.w}  ${span(w[key])}`), onpointerleave: hideTip },
+      svgEl("rect", { x: x0, y: top, width: wide, height: TL_TRACK_PX, rx: 4 }),
+      textWidth(w.w, TL_WORD_FONT) + 6 <= wide ? svgEl("text", { x: x0 + 3, y: top + TL_TRACK_PX / 2, "dominant-baseline": "central", text: w.w }) : null);
+  }));
+  svg.append(track("ref", "b", refTop), track("you", "p", youTop));
+  const bands = svgEl("g", {}), markers = svgEl("g", {}), placed = [];
+  r.flaws.forEach((f, i) => {
+    if (wholePassage(f)) return;   // listed and explained in the whole-clip cards, not painted over both readings
+    const band = bandParts(f), text = `#${i + 1}`, w = textWidth(text, TL_WORD_FONT) + 12;
+    const cx = Math.min(Math.max((band.b0 + band.b1 + band.p0 + band.p1) / 4, gutter + w / 2), width - w / 2);
+    // A number takes the middle row of the ribbon zone, else the row above or below where it does not touch another number.
+    const rows = [band.mid, band.mid - TL_MARK_H - TL_MARK_GAP, band.mid + TL_MARK_H + TL_MARK_GAP];
+    const free = (y) => !placed.some((m) => m.y === y && cx - w / 2 < m.x1 + TL_MARK_GAP && cx + w / 2 > m.x0 - TL_MARK_GAP);
+    const y = rows.find(free) ?? rows[0];
+    placed.push({ y, x0: cx - w / 2, x1: cx + w / 2 });
+    const pick = () => select(i, { scroll: true });
+    bands.append(svgEl("g", { class: "tl-band", "data-i": i, onclick: pick, "aria-hidden": "true" },
+      svgEl("title", { text: `#${i + 1} ${findingText(f)}` }), ...band.parts));
+    markers.append(svgEl("g", { class: "tl-mk", "data-i": i, tabindex: 0, role: "button", "aria-pressed": "false",
+      "aria-label": `#${i + 1} ${findingText(f)}: this recording ${span(f.p)}${f.b ? `, reference ${span(f.b)}` : ""}`,
+      onclick: pick, onkeydown: (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(); } } },
+      svgEl("rect", { x: cx - w / 2, y: y - TL_MARK_H / 2, width: w, height: TL_MARK_H, rx: TL_MARK_H / 2 }),
+      svgEl("text", { x: cx, y, text })));
+  });
+  svg.append(svgEl("g", { id: "tl-diff" }), bands, markers,
+    svgEl("line", { id: "tl-cur-ref", class: "tl-cursor", y1: refTop - 3, y2: refBot + 3, style: "display:none" }),
+    svgEl("line", { id: "tl-cur-you", class: "tl-cursor", y1: youTop - 3, y2: youBot + 3, style: "display:none" }));
+  host.replaceChildren(svg);
+  for (const [id, seconds] of [["#wave", r.participant.duration], ["#wave-ref", r.baseline.duration]]) {
+    $(id).style.marginLeft = `${gutter}px`;
+    $(id).style.width = `${Math.max(seconds * pxPerS, 1)}px`;
+  }
+  if (S.ws) S.ws.setOptions(waveColors());
+  markTimeline();
+}
+
+function markTimeline() {
+  const svg = $("#tl-host svg");
+  if (!svg || !S.tl || !S.result) return;
+  const f = selected(), flaw = S.selKind === "flaw";
+  svg.querySelectorAll(".tl-band[data-i], .tl-mk").forEach((band) => {
+    const i = +band.dataset.i, on = flaw && S.sel === i;
+    band.classList.toggle("sel", on);
+    band.classList.toggle("grp", flaw && !on && !!f?.group?.includes(S.result.flaws[i].id));
+    if (band.classList.contains("tl-mk")) band.setAttribute("aria-pressed", String(on));
+  });
+  const layer = svg.querySelector("#tl-diff");
+  layer.replaceChildren();
+  if (!flaw && f && !wholePassage(f)) layer.append(svgEl("g", { class: "tl-band tl-diff sel", "aria-hidden": "true" }, ...bandParts(f).parts));
+}
+
+/** Playhead on both tracks: tp in this recording, tb in the reference (s). */
+function moveTimelineCursor(tp, tb) {
+  if (!S.tl) return;
+  for (const [id, t] of [["#tl-cur-you", tp], ["#tl-cur-ref", tb]]) {
+    const line = $(id);
+    if (!line) continue;
+    line.setAttribute("x1", S.tl.x(t));
+    line.setAttribute("x2", S.tl.x(t));
+    line.style.display = "";
+  }
+}
+
+function showTip(target, text) {
+  const tip = $("#tl-tip"), box = target.getBoundingClientRect(), host = $("#timeline").getBoundingClientRect();
+  tip.textContent = text;
+  tip.hidden = false;
+  const left = Math.min(Math.max(box.left + box.width / 2 - host.left - tip.offsetWidth / 2, 8), host.width - tip.offsetWidth - 8);
+  tip.style.left = `${left}px`;
+  tip.style.top = `${box.top - host.top - tip.offsetHeight - 6}px`;
+}
+
+function hideTip() {
+  $("#tl-tip").hidden = true;
+}
+
+function hideTimelineCursor() {
+  document.querySelectorAll(".tl-cursor").forEach((line) => { line.style.display = "none"; });
+}
+
 // ---------------------------------------------------------------------------------------------------- chart
 function rowDefs(r) {
   const defs = [], dims = new Set(r.flaws.map((f) => f.dimension));
@@ -685,7 +912,7 @@ function eventBars(words, vals, isGap) {
 
 function chartModel(r) {
   const c = { ink: css("--ink"), ink2: css("--ink2"), muted: css("--muted"), rule: css("--rule"), surface: css("--surface"),
-    ref: css("--ref"), you: css("--you"), flag: css("--flag"), neutral: css("--neutral") };
+    ref: css("--ref"), you: css("--you"), flag: css("--flag"), neutral: css("--neutral"), tol: css("--tol") };
   const width = $("#chart-host").clientWidth, narrow = width < 620;
   const pxPerS = Math.max(width - PLOT_L - PLOT_R, 1) / r.participant.duration;
   const defs = rowDefs(r), n = defs.length;
@@ -702,8 +929,8 @@ function chartModel(r) {
     top += spec.h + ROW_GAP_PX;
     rowAxis[d.key] = ax;
     rowHeight[d.key] = spec.h;
-    const yaxis = { domain: [lo, hi], fixedrange: true, gridcolor: c.rule, linecolor: c.rule, zeroline: false, nticks: 4,
-      tickfont: { color: c.ink2, size: 11 }, automargin: false };
+    const yaxis = { domain: [lo, hi], fixedrange: true, gridcolor: c.rule, showline: false, zeroline: false, nticks: 4,
+      tickfont: { color: c.ink2, size: 10.5 }, automargin: false };
     const unit = UNIT[row.unit] || row.unit;
     let head = narrow ? spec.s : spec.t;
     if (spec.frame) {
@@ -712,7 +939,7 @@ function chartModel(r) {
       const x = times(row.p);
       for (const [name, vals, color] of [["Reference", row.b, c.ref], ["This recording", row.p, c.you]]) {
         traces.push({ type: "scatter", mode: "lines", name: `${name}, ${spec.s.split(" (")[0].toLowerCase()}`, x, y: thin(vals), yaxis: ax, connectgaps: false,
-          line: { color, width: 1.6, dash: name === "Reference" ? "dash" : "solid" }, hovertemplate: `%{y:.1f} ${unit}<extra></extra>` });
+          line: { color, width: 2, dash: name === "Reference" ? "dash" : "solid" }, hovertemplate: `%{y:.1f} ${unit}<extra></extra>` });
       }
     } else if (d.key === "stress") {
       const mid = (i) => (r.words[i].p[0] + r.words[i].p[1]) / 2;
@@ -730,7 +957,7 @@ function chartModel(r) {
       if (spec.markers) {
         const points = eventBars(r.words, vals, false);
         traces.push({ type: "scatter", mode: "markers", name, x: points.x, y: points.y, yaxis: ax, customdata: points.c,
-          marker: { size: 9, color: c.you, line: { width: 1, color: c.ink } },
+          marker: { size: 8, color: c.you, line: { width: 1, color: c.surface } },
           hovertemplate: `%{y:+.2f} ${unit} (%{customdata})<extra></extra>` });
       } else if (spec.bars) {
         const b = eventBars(r.words, vals, d.key === "pauses");
@@ -739,11 +966,11 @@ function chartModel(r) {
       } else {
         const segments = wordSegments(r.words, vals);
         traces.push({ type: "scatter", mode: "lines", name, x: segments.x, y: segments.y, yaxis: ax, customdata: segments.c, connectgaps: false,
-          line: { color: c.you, width: 3 }, hovertemplate: `%{y:+.2f} ${unit} (%{customdata})<extra></extra>` });
+          line: { color: c.you, width: 2 }, hovertemplate: `%{y:+.2f} ${unit} (%{customdata})<extra></extra>` });
       }
       if (below != null || above != null) {
         shapes.push({ type: "rect", xref: "x domain", yref: ax, x0: 0, x1: 1, y0: below != null ? -below : -m, y1: above != null ? above : m,
-          layer: "below", line: { width: 0 }, fillcolor: rgba(c.ink, 0.06) });
+          layer: "below", line: { width: 0 }, fillcolor: rgba(c.tol, 0.14) });
         head += narrow ? ` · flag ${thresholdText(row, true)}` : `. Flagged ${thresholdText(row)}`;
       } else {
         head += row.status === "listed" ? ". Listed, not scored" : row.status === "scored" ? ". Flag threshold unavailable" : ". Shown, not scored";
@@ -752,7 +979,7 @@ function chartModel(r) {
     layout[ax === "y" ? "yaxis" : `yaxis${k + 1}`] = yaxis;
     // The heading starts at the chart's left edge, over the tick labels, to leave the most width on a phone.
     annotations.push({ xref: "paper", yref: "paper", x: -PLOT_L / Math.max(width - PLOT_L - PLOT_R, 1), y: hi, xanchor: "left", yanchor: "bottom", yshift: 3, showarrow: false,
-      text: head, font: { size: 11.5, color: c.ink2 } });
+      text: head, font: { size: 12, color: c.ink2 } });
   });
   const hatch = (key, x0, x1, color, width) => ({ type: "path", xref: "x", yref: `${rowAxis[key]} domain`, layer: "below",
     path: hatchPath(x0, x1, HATCH_STEP_PX / pxPerS, rowHeight[key] / pxPerS), line: { color, width } });
@@ -769,7 +996,7 @@ function chartModel(r) {
     if (left < free(side) || left > Math.max(x1 * pxPerS, start + LABEL_SHIFT_PX)) return null;
     taken[side] = left + width;
     return { xref: "x", yref: `${rowAxis[key]} domain`, x: left / pxPerS, y: side === "top" ? 1 : 0, xanchor: "left",
-      yanchor: side, yshift: side === "top" ? -3 : 1, showarrow: false, text, font: { size: 11, color: c.ink }, bgcolor: rgba(c.surface, 0.85), borderpad: 1 };
+      yanchor: side, yshift: side === "top" ? -3 : 1, showarrow: false, text, font: { size: 11, color: c.flag, weight: 700 }, bgcolor: rgba(c.surface, 0.85), borderpad: 1 };
   };
   r.flaws.forEach((f, i) => {   // flagged regions: a wash in the dimension's row (and the contour row it summarises)
     if (wholePassage(f)) return;   // listed and explained, not painted over the whole chart
@@ -782,7 +1009,7 @@ function chartModel(r) {
       if (!rowAxis[key]) continue;
       flawShapes[i].push(shapes.length);
       const shape = { type: "rect", xref: "x", yref: `${rowAxis[key]} domain`, x0, x1, y0: 0, y1: 1, layer: "below",
-        fillcolor: rgba(c.flag, BAND_ALPHA), line: { color: c.ink2, width: 1, dash: st[1] } };
+        fillcolor: rgba(c.flag, BAND_ALPHA), line: { color: c.flag, width: 1, dash: st[1] } };
       // The flagged value lies on the side of the departure, so the number goes on the other side. An annotation, not a
       // shape label, because the data bars paint over every shape layer that the number could use.
       if (key === ROW_OF_DIM[f.dimension]) {
@@ -838,10 +1065,10 @@ function chartModel(r) {
     shapes.push({ type: "line", xref: "x", yref: `${rowAxis[ROW_OF_DIM[t.dimension]]} domain`, x0: t.p[0], x1: t.p[1], y0: 1, y1: 1,
       line: { color: c.ink, width: 4, dash: t.excluded ? "dot" : "solid" }, layer: "above" });
   }
-  layout.xaxis = { anchor: axisId(n - 1), range: [0, r.participant.duration], gridcolor: c.rule, linecolor: c.rule, zeroline: false,
-    ticks: "outside", tickcolor: c.rule, tickfont: { color: c.ink2, size: 11 }, hoverformat: ".2f",
-    title: { text: "Time in this recording (s)", font: { size: 11.5, color: c.ink2 }, standoff: 6 } };
-  Object.assign(layout, { width, height: plotH + margin.t + margin.b, margin, paper_bgcolor: c.surface, plot_bgcolor: c.surface, showlegend: false,
+  layout.xaxis = { anchor: axisId(n - 1), range: [0, r.participant.duration], gridcolor: c.rule, showline: false, zeroline: false,
+    ticks: "outside", tickcolor: c.rule, tickfont: { color: c.ink2, size: 10.5 }, hoverformat: ".2f",
+    title: { text: "Time in this recording (s)", font: { size: 12, color: c.ink2 }, standoff: 6 } };
+  Object.assign(layout, { width, height: plotH + margin.t + margin.b, margin, paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)", showlegend: false,
     font: { family: css("--sans"), color: c.ink, size: 12 }, hovermode: "x unified", hoversubplots: "axis", clickanywhere: true,
     dragmode: "zoom", uirevision: S.rid, shapes, annotations, bargap: 0,
     hoverlabel: { bgcolor: c.surface, bordercolor: c.rule, font: { color: c.ink, size: 12 } } });
@@ -870,8 +1097,8 @@ function highlight() {
   S.result.flaws.forEach((f, i) => {
     const on = S.selKind === "flaw" && (S.sel === i || selected()?.group?.includes(f.id));
     for (const k of S.chart.flawShapes[i]) {
-      updates[`shapes[${k}].line.width`] = on ? 2.5 : 1;
-      updates[`shapes[${k}].line.color`] = on ? c.ink : c.ink2;
+      updates[`shapes[${k}].line.width`] = on ? 2 : 1;
+      updates[`shapes[${k}].line.color`] = on ? c.ink : c.flag;
       updates[`shapes[${k}].fillcolor`] = rgba(c.flag, on ? BAND_ALPHA_SEL : BAND_ALPHA);
     }
   });
@@ -916,17 +1143,19 @@ function moveCursor(tp) {
 
 // ---------------------------------------------------------------------------------------------------- audio
 function updatePlayback() {
-  $("#play-all").disabled = !S.youReady;
-  document.querySelectorAll("[data-audio]").forEach((b) => { b.disabled = !(b.dataset.audio === "you" ? S.youReady : S.refReady); });
+  $("#play-all").disabled = !(S.side === "you" ? S.youReady : S.refReady);
+  const ready = { you: S.youReady, ref: S.refReady, both: S.youReady && S.refReady };
+  document.querySelectorAll("[data-audio]").forEach((b) => { b.disabled = !ready[b.dataset.audio]; });
 }
 
 function invalidateMedia() {
   stopAll();
   S.mediaId += 1;
   S.youReady = false; S.refReady = false;
-  $("#play-all").textContent = "Play recording";
+  setPlaying(false);
   $("#clock").textContent = "Loading audio…";
   $("#cursor").style.display = "none";
+  hideTimelineCursor();
   updatePlayback();
 }
 
@@ -936,7 +1165,7 @@ function updateWaveRegions() {
   const add = (f, i, kind) => {
     const p = mediaSpan(f, "you"), duration = S.ws.getDuration();
     const reg = S.regions.addRegion({ start: Math.min(p[0], duration), end: Math.min(Math.max(p[1], p[0] + 0.05), duration), drag: false, resize: false,
-      color: rgba(css(kind === "flaw" ? "--flag" : "--neutral"), 0.18), content: kind === "flaw" ? `#${i + 1}` : "Difference" });
+      color: rgba(css(kind === "flaw" ? "--flag" : "--neutral"), 0.26) });   // the timeline bands above carry the numbers
     reg.findingIndex = i; reg.findingKind = kind;
   };
   S.result.flaws.forEach((f, i) => { if (!wholePassage(f)) add(f, i, "flaw"); });   // a whole-passage finding has no region to mark
@@ -950,16 +1179,25 @@ function loadMedia(r, base) {
   const ref = S.ref = new Audio();
   const refCurrent = () => token === S.mediaId && S.ref === ref;
   ref.addEventListener("canplay", () => { if (refCurrent()) { S.refReady = true; updatePlayback(); } });
+  ref.addEventListener("play", () => { if (refCurrent()) setPlaying(true); });
+  ref.addEventListener("pause", () => { if (refCurrent()) setPlaying(false); });
   ref.addEventListener("error", () => { if (refCurrent()) { S.refReady = false; updatePlayback(); $("#wave-msg").textContent = "The reference audio could not be loaded."; } });
   ref.preload = "auto";
   ref.src = base + r.baseline.audio;
   if (!S.hasLibs) { $("#clock").textContent = "Recording playback unavailable"; return; }
   if (S.ws) S.ws.destroy();
-  const ws = S.ws = WaveSurfer.create({ container: "#wave", height: 64, normalize: true, cursorWidth: 2, waveColor: css("--you"),
-    progressColor: css("--ink2"), cursorColor: css("--ink") });
+  if (S.wsRef) S.wsRef.destroy();
+  S.ws = WaveSurfer.create({ container: "#wave", height: 72, normalize: true, cursorWidth: 2, barWidth: 2, barGap: 1, barRadius: 2,
+    ...waveColors() });
+  const ws = S.ws;
+  // The reference waveform is drawn only; the reference audio element plays it, and setTime shows its progress.
+  S.wsRef = WaveSurfer.create({ container: "#wave-ref", height: 44, normalize: true, cursorWidth: 0, barWidth: 2, barGap: 1, barRadius: 2,
+    interact: false, ...refWaveColors() });
+  S.wsRef.on("error", () => {});
+  S.wsRef.load(base + r.baseline.audio).catch(() => {});
   const current = () => token === S.mediaId && S.ws === ws;
   S.regions = ws.registerPlugin(WaveSurfer.Regions.create());
-  ws.registerPlugin(WaveSurfer.Timeline.create({ height: 16 }));
+  ws.registerPlugin(WaveSurfer.Timeline.create({ height: 16, style: { color: css("--ink2"), fontSize: "11px" } }));
   S.regions.on("region-clicked", (region, e) => { if (current()) { e.stopPropagation(); select(region.findingIndex, { scroll: true, kind: region.findingKind }); } });
   ws.on("ready", () => {
     if (!current()) return;
@@ -970,10 +1208,13 @@ function loadMedia(r, base) {
   ws.on("timeupdate", (t) => {
     if (!current() || !S.youReady) return;
     $("#clock").textContent = `${t.toFixed(2)} / ${ws.getDuration().toFixed(2)} s`;
+    showProgress("you", t / ws.getDuration());
     moveCursor(t); markPlaying(t);
+    showReferenceAt(interp(t, S.result.map.p, S.result.map.b));
+    moveTimelineCursor(t, interp(t, S.result.map.p, S.result.map.b));
   });
-  ws.on("play", () => { if (current()) $("#play-all").textContent = "Pause"; });
-  ws.on("pause", () => { if (current()) $("#play-all").textContent = "Play recording"; });
+  ws.on("play", () => { if (current()) setPlaying(true); });
+  ws.on("pause", () => { if (current()) setPlaying(false); });
   const failed = (e) => {
     if (!current() || e?.name === "AbortError") return;
     S.youReady = false; updatePlayback();
@@ -984,9 +1225,66 @@ function loadMedia(r, base) {
   ws.load(base + r.participant.audio).catch(failed);
 }
 
+/** A left-to-right signature gradient across the recording waveform; unplayed bars at reduced opacity. */
+function waveColors() {
+  const width = Math.max($("#wave").clientWidth, 1) * devicePixelRatio, ctx = document.createElement("canvas").getContext("2d");
+  const gradient = (alpha) => {
+    const g = ctx.createLinearGradient(0, 0, width, 0);
+    SIGNATURE.forEach((c, k) => g.addColorStop(k / (SIGNATURE.length - 1), rgba(c, alpha)));
+    return g;
+  };
+  return { waveColor: gradient(0.5), progressColor: gradient(1), cursorColor: "#ffffff" };
+}
+const refWaveColors = () => ({ waveColor: rgba(css("--ref"), 0.6), progressColor: css("--ref-text") });
+
+function showReferenceAt(tb) {
+  if (S.wsRef && S.wsRef.getDuration() > 0) S.wsRef.setTime(Math.min(tb, S.wsRef.getDuration()));
+}
+
+/** The player's progress groove: the share of the playing reading heard so far, in its own colour. */
+function showProgress(who, share) {
+  const bar = $("#player-progress");
+  bar.classList.toggle("ref", who === "ref");
+  bar.firstElementChild.style.width = `${(100 * Math.min(Math.max(share, 0), 1)).toFixed(2)}%`;
+}
+
+function setPlaying(on) {
+  const btn = $("#play-all");
+  btn.classList.toggle("playing", on);
+  btn.textContent = on ? "Pause" : S.side === "you" ? "Play recording" : "Play reference";
+}
+
+/** The main play button plays the chosen reading from its current position, or stops any playback. */
+function togglePlay() {
+  if (S.ws?.isPlaying() || !S.ref.paused) return stopAll();
+  if (S.side === "you") {
+    if (S.youReady) playSpan("you", [S.ws.getCurrentTime(), S.ws.getDuration()]);
+    return;
+  }
+  if (!S.refReady) return;
+  const at = S.ref.currentTime >= S.ref.duration - 0.05 ? 0 : S.ref.currentTime;
+  playSpan("ref", [at, S.ref.duration]);
+}
+
+/** The A/B switch: while playing, the other reading continues from the aligned time. */
+function setSide(side) {
+  if (side === S.side) return;
+  const m = S.result?.map, playingYou = !!S.ws?.isPlaying(), playingRef = !S.ref.paused;
+  const tp = playingYou ? S.ws.getCurrentTime() : null, tb = playingRef ? S.ref.currentTime : null;
+  S.side = side;
+  $("#ab-you").setAttribute("aria-pressed", String(side === "you"));
+  $("#ab-ref").setAttribute("aria-pressed", String(side === "ref"));
+  updatePlayback();
+  setPlaying(playingYou || playingRef);
+  if (!m || !(playingYou || playingRef)) return;
+  if (side === "ref" && playingYou) playSpan("ref", [interp(tp, m.p, m.b), S.ref.duration]);
+  if (side === "you" && playingRef) playSpan("you", [interp(tb, m.b, m.p), S.ws.getDuration()]);
+}
+
 function stopAll() {
   S.playId += 1;
   clearTimeout(S.refTimer);
+  clearTimeout(S.bothTimer);
   S.ref.pause();
   if (S.ws) S.ws.pause();
 }
@@ -1011,13 +1309,23 @@ async function playSpan(who, s) {
     const tick = () => {
       if (current() && !ref.paused) {
         const tp = interp(ref.currentTime, m.b, m.p);
-        moveCursor(tp); markPlaying(tp); requestAnimationFrame(tick);
+        moveCursor(tp); markPlaying(tp); moveTimelineCursor(tp, ref.currentTime); showReferenceAt(ref.currentTime);
+        $("#clock").textContent = `Reference ${ref.currentTime.toFixed(2)} / ${ref.duration.toFixed(2)} s`;
+        showProgress("ref", ref.currentTime / ref.duration);
+        requestAnimationFrame(tick);
       }
     };
     tick();
   } catch (e) {
     if (current()) $("#wave-msg").textContent = "The browser blocked playback: press the button again.";
   }
+}
+
+/** This recording's span, then the reference's span of the same words. */
+async function playBoth(f) {
+  await playSpan("you", mediaSpan(f, "you"));
+  const playId = S.playId, [a, b] = padSpan(mediaSpan(f, "you"));
+  S.bothTimer = setTimeout(() => { if (playId === S.playId) playSpan("ref", mediaSpan(f, "ref")); }, (b - a) * 1000 + BOTH_GAP_MS);
 }
 
 // ---------------------------------------------------------------------------------------------------- render
@@ -1065,6 +1373,7 @@ function render(r, base, focus = null) {
   renderClipCards();
   renderTranscript(r);
   renderNotices(r);
+  drawTimeline();
   loadMedia(r, base);
   const [first, kind, focused] = initialSelection(r, focus);
   // A gallery item opens on the item it shows, so that item must show in the list column; a list heading stays above it.
@@ -1083,6 +1392,24 @@ async function getJSON(url) {
   return res.json();
 }
 
+const ART_PAIRS = [["#7c5cff", "#e04ac6"], ["#e04ac6", "#ffb547"], ["#14a6b8", "#7c5cff"], ["#ff6f91", "#ffb547"], ["#5b8cff", "#14a6b8"], ["#a855f7", "#ff6f91"]];
+
+/** Generated cover art for an example: a gradient tile with a mini waveform, both seeded by the example id. */
+function coverArt(id) {
+  let seed = 0;
+  for (const ch of id) seed = (seed * 31 + ch.charCodeAt(0)) >>> 0;
+  const random = () => { seed = (seed * 1103515245 + 12345) >>> 0; return seed / 2 ** 32; };
+  const [a, b] = ART_PAIRS[seed % ART_PAIRS.length], gid = `art-${id.replace(/[^\w-]/g, "_")}`;
+  const bars = Array.from({ length: 9 }, (_, k) => {
+    const h = 6 + random() * 24;
+    return svgEl("rect", { x: 5 + k * 4, y: 22 - h / 2, width: 2.2, height: h, rx: 1.1, fill: "rgba(255,255,255,0.88)" });
+  });
+  return svgEl("svg", { viewBox: "0 0 44 44" },
+    svgEl("defs", {}, svgEl("linearGradient", { id: gid, x1: 0, y1: 0, x2: 1, y2: 1 },
+      svgEl("stop", { offset: 0, "stop-color": a }), svgEl("stop", { offset: 1, "stop-color": b }))),
+    svgEl("rect", { width: 44, height: 44, fill: `url(#${gid})` }), ...bars);
+}
+
 function buildChips(index) {
   const chips = $("#chips");
   chips.replaceChildren();
@@ -1097,12 +1424,18 @@ function buildChips(index) {
   for (const g of groups) {
     chips.append(el("div", { class: "group" }, el("span", { class: "gname", text: g.name }),
       el("div", { class: "chips" }, ...g.items.map((it) => el("button", { type: "button", class: "chip", "aria-pressed": "false", "data-id": it.id,
-        title: it.title, onclick: () => openExample(it) }, it.label, el("span", { class: "score", text: scoreText(it.overall) }))))));
+        title: it.title, onclick: () => openExample(it) }, el("span", { class: "art", "aria-hidden": "true" }, coverArt(it.id)),
+        el("span", { class: "name", text: it.label }), el("span", { class: "score", text: scoreText(it.overall) }))))));
   }
   const left = index.left_out || [];
   $("#left-out").hidden = !left.length;
   $("#left-out summary").textContent = `${left.length} planned ${left.length === 1 ? "example" : "examples"} left out with this detector`;
   $("#left-out-list").replaceChildren(...left.map((x) => el("li", { text: `${x.label}: ${x.reason}.` })));
+}
+
+/** The hero's title names the open example. */
+function showPicked(name) {
+  $("#picker-current").textContent = name;
 }
 
 async function openExample(it) {
@@ -1112,6 +1445,7 @@ async function openExample(it) {
     const r = await getJSON("gallery/" + it.result);
     if (request !== S.openId) return;
     document.querySelectorAll(".chip").forEach((c) => c.setAttribute("aria-pressed", String(c.dataset.id === it.id)));
+    showPicked(`${it.group}, ${it.label}`);
     $("#picker-note").textContent = `${it.title}. ${it.description}`;
     showAlert("");
     render(r, "gallery/", it.focus);
@@ -1350,6 +1684,7 @@ async function poll(id) {
       const r = await getJSON(job.result);
       S.openId += 1;
       document.querySelectorAll(".chip").forEach((c) => c.setAttribute("aria-pressed", "false"));
+      showPicked("Your analysis");
       const mode = referenceMode(r);
       $("#picker-note").textContent = `Your analysis (regime R2).${mode ? " " + mode.text : ""}`;
       render(r, "");
@@ -1366,11 +1701,13 @@ async function init() {
   $("#clear-filter").addEventListener("click", () => { S.pattern = null; $("#pattern-filter").value = ""; setFilter(null); });
   $("#dimension-filter").addEventListener("change", (e) => setFilter(e.target.value ? e.target.value.split(",") : null));
   $("#pattern-filter").addEventListener("change", (e) => setPattern(e.target.value || null));
-  $("#play-all").addEventListener("click", () => {
-    if (!S.youReady) return;
-    if (S.ws.isPlaying()) stopAll();
-    else playSpan("you", [S.ws.getCurrentTime(), S.ws.getDuration()]);
-  });
+  $("#play-all").addEventListener("click", togglePlay);
+  $("#ab-you").addEventListener("click", () => setSide("you"));
+  $("#ab-ref").addEventListener("click", () => setSide("ref"));
+  setTimeout(() => document.body.classList.remove("intro"), INTRO_MS);
+  // The page keeps room for the fixed player bar, whose height changes when it wraps at phone width.
+  const player = $(".player-in");
+  new ResizeObserver(() => document.documentElement.style.setProperty("--player-h", `${player.offsetHeight}px`)).observe(player);
   $("#all-dimensions").addEventListener("click", () => {
     S.allDimensions = !S.allDimensions;
     $("#all-dimensions").setAttribute("aria-pressed", String(S.allDimensions));
@@ -1382,12 +1719,15 @@ async function init() {
   let resizeTimer = 0;
   addEventListener("resize", () => {
     clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(() => { if (S.chart && $("#chart-host").clientWidth !== S.chart.width) drawChart(); }, 150);
+    resizeTimer = setTimeout(() => {
+      if (S.tl && $("#tl-host").clientWidth !== S.tl.width) drawTimeline();
+      if (S.chart && $("#chart-host").clientWidth !== S.chart.width) drawChart();
+    }, 150);
   });
+  document.fonts?.ready.then(() => { if (S.result) drawTimeline(); });
   await ensureLibs();
   S.hasLibs = typeof Plotly !== "undefined" && typeof WaveSurfer === "function" && !!WaveSurfer.Regions && !!WaveSurfer.Timeline;
   if (!S.hasLibs) showAlert("The chart and audio libraries could not be loaded, so the chart and the waveform are unavailable. Scores, flagged regions and the transcript still work.");
-  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { if (S.ws) S.ws.setOptions({ waveColor: css("--you"), progressColor: css("--ink2"), cursorColor: css("--ink") }); drawChart(); });
   let index;
   try {
     index = await getJSON("gallery/index.json");
