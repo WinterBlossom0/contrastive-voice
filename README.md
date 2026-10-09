@@ -203,7 +203,6 @@ The second command runs 564 tests (all pass, about 85 s on a laptop CPU); two sl
 | `models/final_evaluations.json` | Record of test-split evaluations (configurations `32cdd86f…` and `782d7df7…`) |
 | `gallery/` | 17 precomputed examples (audio and result JSON), the evaluation panel and the stress matrix shown on the page; rebuilt on CPU after the final evaluation with the frozen detector (`gallery/index.json` `provenance`) |
 | `data/sources_manifest.json`, `data/transcripts/` | The 19 source recordings (URL, SHA-256, licence basis, split) and the transcript snapshots with their hashes |
-| `data/dataset/` | An earlier public-domain-only dataset build (manifest `8db28b8b…`, 9 baselines, 10 readers, 110 edited clips). It is not the final-run dataset (manifest `d67c9cd9…`, 2410 files, 1109.2 minutes), which includes non-commercial reader corpora and is rebuilt on Kaggle |
 | `docs/technical.md`, `docs/technical.pdf` | Technical report |
 | `docs/PAPERS.md` | Papers used, what was taken from each, and the chain from each flaw to its method and module |
 | `docs/evidence_final_782d7df7/`, `docs/evidence_final_32cdd86f3d6e/` | Evidence of the final evaluation and of the earlier look at the test split |

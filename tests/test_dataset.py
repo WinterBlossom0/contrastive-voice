@@ -77,20 +77,34 @@ def test_extra_composition_has_stable_disjoint_ids_and_required_trials():
     assert all(2 <= len(ts) <= 3 for _, _, ts in cross)
 
 
+def label_differences(got, want, path=""):
+    """Paths where two label trees differ; floats may differ in the last bits with the CPU and the BLAS threads."""
+    if isinstance(want, dict) and isinstance(got, dict) and set(got) == set(want):
+        return [d for key in want for d in label_differences(got[key], want[key], f"{path}.{key}")]
+    if isinstance(want, list) and isinstance(got, list) and len(got) == len(want):
+        return [d for i, (g, w) in enumerate(zip(got, want)) for d in label_differences(g, w, f"{path}[{i}]")]
+    if isinstance(want, float) and isinstance(got, float):
+        return [] if got == pytest.approx(want, rel=1e-9, abs=1e-12) else [f"{path}: {got} != {want}"]
+    return [] if got == want else [f"{path}: {got!r} != {want!r}"]
+
+
 def test_old_clip_labels_and_pcm_hashes_are_unchanged(tmp_path):
-    import hashlib
     import json
+    from pathlib import Path
     rec = recording(64, text=". ".join(["we hold these truths to be self evident"] * 8) + ".",
                     pauses={7: .7, 19: .8, 30: .6, 45: .7})
     rows = dataset.build_baseline_clips(rec, {"id": "s", "split": "train"}, tmp_path)
     rows += dataset.build_cross_clips(rec, rec, {"id": "r", "split": "check"}, "B", tmp_path)
-    expected = GOLDEN_LABELS
+    # pre-extension synthetic build
+    expected = json.loads((Path(__file__).parent / "fixtures" / "golden_labels.json").read_text())
     old = [r for r in rows if r.get("spectrum") != "extra"]
     assert {r["id"] for r in old} == set(expected)
+    differences = []
     for r in old:
-        labels = (tmp_path / r["labels"]).read_bytes()
-        assert hashlib.sha256(labels).hexdigest() == expected[r["id"]]
-        assert audio.sha256_pcm(audio.read_wav(tmp_path / r["audio"])) == json.loads(labels)["sha256"]
+        labels = json.loads((tmp_path / r["labels"]).read_text())
+        differences += [f"{r['id']}{d}" for d in label_differences(labels, expected[r["id"]])]
+        assert audio.sha256_pcm(audio.read_wav(tmp_path / r["audio"])) == labels["sha256"]
+    assert not differences, differences
     assert len({r["id"] for r in rows}) == len(rows)
 
 
@@ -161,24 +175,6 @@ def test_extra_build_labels_copies_qa_duration_and_card(tmp_path):
     assert [(r["id"], r["sha256"], r["skipped"]) for r in rows] == [(r["id"], r["sha256"], r["skipped"]) for r in again]
 
 
-# Pre-extension synthetic build, including label bytes and their PCM hashes.
-GOLDEN_LABELS = {
-    "s__single_L1A": "e20202e627d6a652045bf8a1be0343842b4de878c16e26b2b5dbf1913bb2f73a",
-    "s__single_L1B": "7ba1920edf143103d8a02b942302581759f5d3b9481dbbb2a352bd17064b87d1",
-    "s__single_L2A": "3ebe28c7386c919106a5c066424b7937a49da9a9557a21b20c2533dc217253e7",
-    "s__single_L2B": "857744de692346a3af4ca2785eaeeb844cda48c473c3eedbbf571285bc77f35c",
-    "s__single_L3A": "ea266fef77355f6a9a8537a7bf3081e7e0f99bff27a2d40012f9e1f09822bd89",
-    "s__single_L3B": "c2787d8c2ef8f4a55190d6a4342b7dfca24796095bff715060ca243d7160fe1c",
-    "s__identity": "51bbfbe848f499426d5cec2628df0372deb7a6ad69ff8bc11d469febfda666d3",
-    "s__G1": "82b7589bb0c0f9e04d390fe9f171e15511ab2d7909890f62b08036552ec7bd0e",
-    "s__G3": "f5a8b319e34dcb880e0de42fe17e1fe2ff356797a764a5611cc0a5968f38627f",
-    "s__G5": "c908f0423d97190f9ce9dec97dcbe63458fc1ff2fefd21c5697f55dd322d858d",
-    "r__x1_L2": "3a5805b670c43781224fa705ef098a4c5662af126d0da3ff0f88de868f317e2b",
-    "r__x2_L3": "6015a4b43790d818d491c7c73f9007a4bc86c003200bd6f3b3bd229835a73375",
-    "r__x3_L3": "a4b45471853e13729f0b46236f3cd764e6f51ccd95b434db266c760d182cf940",
-    "r__x4_L3": "b5585ebe031c262183f48b3094952554a33b12e8f89b05a39ac7991c3c4bd56e",
-    "r__G5": "1855561914a18c9cf90c02b76a17f6aff57a357618edc7dd59580115b3555d67"
-}
 
 
 

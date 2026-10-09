@@ -8,8 +8,8 @@ DOCUMENTS = ["README.md", "docs/technical.md", "docs/PAPERS.md"]
 MARKDOWN_LINK = re.compile(r"\]\(([^)\s]+)\)")
 # Code spans that name a repository path; other code spans are commands or identifiers.
 PATH_SPAN = re.compile(r"`((?:docs|gallery|models|scripts|src|data|kaggle|tests)/[^`\s]*)`")
-# scripts/import_run.sh creates this folder; the README names it as an output, not as a file in the repository.
-CREATED_BY_IMPORT = {"docs/evidence/"}
+# scripts/import_run.sh creates these folders; the README names them as outputs, not as files in the repository.
+CREATED_BY_IMPORT = {"docs/evidence/", "data/dataset/"}
 
 
 def local_targets(document: Path) -> list[Path]:
