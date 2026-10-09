@@ -1,0 +1,32 @@
+# Fly.io: `fly launch --copy-config --no-deploy`, `fly deploy`, then `fly scale count 1` (the job table is in memory).
+app = "contrastive-voice"
+primary_region = "bom"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  PORT = "7860"
+
+[http_service]
+  internal_port = 7860
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+  [http_service.concurrency]
+    type = "requests"
+    soft_limit = 20
+    hard_limit = 40
+
+  [[http_service.checks]]
+    method = "GET"
+    path = "/api/health"
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "60s"
+
+# CPU torch with the 378 MB aligner in memory needs about 2 GB
+[[vm]]
+  size = "shared-cpu-2x"
+  memory = "2gb"

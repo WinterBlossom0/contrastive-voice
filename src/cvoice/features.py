@@ -331,7 +331,7 @@ def speech_time(x) -> float:
 
 
 def speech_time_ratio(x, b=None):
-    """docs/research/chain/pace_pauses/REPORT.md §4 #2: ln participant/reference speech time. Without b, the speech time
+    """ln participant/reference speech time, pauses removed (de Jong & Wempe 2009). Without b, the speech time
     of x in s."""
     v = speech_time(x)
     return v if b is None else np.log(v / speech_time(b))
@@ -361,7 +361,7 @@ def slope(t, v):
 
 
 def decode_edits(prompt, decoded):
-    """docs/research/chain/disfluency/REPORT.md §2.6 M2: minimum word edit alignment; choose match/substitution before deletion/insertion ties."""
+    """Minimum word edit alignment; choose match/substitution before deletion/insertion ties."""
     a, z = list(prompt), [w['norm'] for w in decoded]
     d = np.zeros((len(a) + 1, len(z) + 1), np.int32)
     d[:, 0], d[0, :] = np.arange(len(a) + 1), np.arange(len(z) + 1)
@@ -393,7 +393,7 @@ def recording_arrays(r):
 
 
 def spectral_arrays(rec):
-    """docs/research/chain/volume_clarity/REPORT.md §§2.1/2.4: batched spectra; F0-driven Butterworth power response implements the stated filter."""
+    """Batched spectra; an F0-driven Butterworth power response gives the L-L0 filter of every frame at once."""
     fr = frames(rec.wav)
     freq = np.fft.rfftfreq(C.NFFT, 1 / C.SR)
     alpha, emph, share = (np.full(len(fr), np.nan) for _ in range(3))

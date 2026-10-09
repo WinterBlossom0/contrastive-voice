@@ -1,0 +1,344 @@
+{
+  "voice": "af_heart",
+  "scenes": [
+    {
+      "id": "s1_hook",
+      "lines": [
+        {
+          "text": "You practise a speech and record it.",
+          "file": "narration/s1_hook_01.wav",
+          "durationSec": 2.122
+        },
+        {
+          "text": "It sounds a little off, but you cannot say where.",
+          "file": "narration/s1_hook_02.wav",
+          "durationSec": 2.626
+        },
+        {
+          "text": "Too fast? A pause in the wrong place? Too quiet at the end?",
+          "file": "narration/s1_hook_03.wav",
+          "durationSec": 3.585
+        },
+        {
+          "text": "Contrastive Voice shows you which words to fix, and how.",
+          "file": "narration/s1_hook_04.wav",
+          "durationSec": 3.361
+        }
+      ],
+      "clip": null,
+      "gapAfterSec": 1.2
+    },
+    {
+      "id": "s2_what",
+      "lines": [
+        {
+          "text": "Give it two readings of the same text: yours, and a reference you want to sound like.",
+          "file": "narration/s2_what_01.wav",
+          "durationSec": 4.904
+        },
+        {
+          "text": "It lines them up word by word.",
+          "file": "narration/s2_what_02.wav",
+          "durationSec": 1.958
+        },
+        {
+          "text": "Then it marks each place where your delivery departs from the reference.",
+          "file": "narration/s2_what_03.wav",
+          "durationSec": 3.917
+        },
+        {
+          "text": "Pace, pauses, pitch, emphasis, volume and clarity, pinned to the exact words and times.",
+          "file": "narration/s2_what_04.wav",
+          "durationSec": 5.758
+        },
+        {
+          "text": "Every finding comes with a concrete fix.",
+          "file": "narration/s2_what_05.wav",
+          "durationSec": 2.541
+        }
+      ],
+      "clip": null,
+      "gapAfterSec": 0.8
+    },
+    {
+      "id": "s3_demo_summary",
+      "lines": [
+        {
+          "text": "Here is an example from the gallery.",
+          "file": "narration/s3_demo_summary_01.wav",
+          "durationSec": 2.217
+        },
+        {
+          "text": "The reference is Ronald Reagan's farewell address from 1989.",
+          "file": "narration/s3_demo_summary_02.wav",
+          "durationSec": 4.52,
+          "spoken": "The reference is Ronald Reagan's farewell address, from nineteen eighty-nine."
+        },
+        {
+          "text": "The other reading is a copy of that recording with four delivery edits added.",
+          "file": "narration/s3_demo_summary_03.wav",
+          "durationSec": 4.492
+        },
+        {
+          "text": "The page opens on the top three fixes, ranked by the points each one costs.",
+          "file": "narration/s3_demo_summary_04.wav",
+          "durationSec": 4.647
+        },
+        {
+          "text": "Rushed words at 'the Washington Monument'. A fade at 'you can see past the'. A dropped pause after 'morning'.",
+          "file": "narration/s3_demo_summary_05.wav",
+          "durationSec": 6.787,
+          "spoken": "Rushed words at, the Washington Monument. A fade at, you can see past the. And a dropped pause after, morning."
+        },
+        {
+          "text": "The score is 86 out of 100, measured against the reference.",
+          "file": "narration/s3_demo_summary_06.wav",
+          "durationSec": 4.122,
+          "spoken": "The score is eighty-six out of a hundred, measured against the reference."
+        }
+      ],
+      "clip": null,
+      "gapAfterSec": 0.8
+    },
+    {
+      "id": "s4_demo_listen",
+      "lines": [
+        {
+          "text": "Now listen to the edited reading while the transcript follows along.",
+          "file": "narration/s4_demo_listen_01.wav",
+          "durationSec": 3.84
+        },
+        {
+          "text": "Listen for the three flagged spots.",
+          "file": "narration/s4_demo_listen_02.wav",
+          "durationSec": 2.064
+        },
+        {
+          "text": "The pause after 'morning' is gone, the monument phrase is rushed, and the last words fade.",
+          "file": "narration/s4_demo_listen_03.wav",
+          "durationSec": 5.375,
+          "spoken": "The pause after morning is gone, the monument phrase is rushed, and the last words fade."
+        },
+        {
+          "text": "Each highlight sits on the words where you heard the problem.",
+          "file": "narration/s4_demo_listen_04.wav",
+          "durationSec": 3.143
+        }
+      ],
+      "clip": {
+        "file": "clips/L3A_listen.wav",
+        "durationSec": 12.18,
+        "caption": "Edited reading, 12.0 to 24.2 s",
+        "sourceStartSec": 12.02,
+        "sourceEndSec": 24.2
+      },
+      "gapAfterSec": 0.8,
+      "clipAfterLine": 2
+    },
+    {
+      "id": "s5_demo_finding",
+      "lines": [
+        {
+          "text": "Click a flag to open its finding.",
+          "file": "narration/s5_demo_finding_01.wav",
+          "durationSec": 2.077
+        },
+        {
+          "text": "It shows both measured values and the threshold.",
+          "file": "narration/s5_demo_finding_02.wav",
+          "durationSec": 3.113
+        },
+        {
+          "text": "Here, five words took 0.87 s. In the reference they take 1.62 s.",
+          "file": "narration/s5_demo_finding_03.wav",
+          "durationSec": 6.407,
+          "spoken": "Here, five words took point eight seven seconds. In the reference, they take one point six two seconds."
+        },
+        {
+          "text": "Play both and hear the difference.",
+          "file": "narration/s5_demo_finding_04.wav",
+          "durationSec": 1.891
+        },
+        {
+          "text": "The fix: give these words about 1.6 s, and lengthen the stressed words rather than adding gaps.",
+          "file": "narration/s5_demo_finding_05.wav",
+          "durationSec": 6.75,
+          "spoken": "The fix: give these words about one point six seconds, and lengthen the stressed words, rather than adding gaps."
+        }
+      ],
+      "clip": {
+        "file": "clips/L3A_rush_ab.wav",
+        "durationSec": 7.67,
+        "caption": "Your reading, then the reference: 'the grounds here to the Washington Monument, and then the Mall'",
+        "segments": [
+          {
+            "label": "Your reading",
+            "startSec": 0.0,
+            "endSec": 3.01,
+            "sourceStartSec": 14.88,
+            "sourceEndSec": 17.89,
+            "file": "clips/L3A_rush_yours.wav"
+          },
+          {
+            "label": "Reference",
+            "startSec": 3.81,
+            "endSec": 7.67,
+            "sourceStartSec": 15.59,
+            "sourceEndSec": 19.45,
+            "file": "clips/reagan_rush_reference.wav"
+          }
+        ]
+      },
+      "gapAfterSec": 0.8,
+      "clipAfterLine": 4
+    },
+    {
+      "id": "s6_demo_clean_and_upload",
+      "lines": [
+        {
+          "text": "A clean reading should get no flags.",
+          "file": "narration/s6_demo_clean_and_upload_01.wav",
+          "durationSec": 2.171
+        },
+        {
+          "text": "The identity example runs every edit with zero strength. It scores 100, with nothing flagged.",
+          "file": "narration/s6_demo_clean_and_upload_02.wav",
+          "durationSec": 6.35,
+          "spoken": "The identity example runs every edit with zero strength. It scores a hundred, with nothing flagged."
+        },
+        {
+          "text": "To check your own speech, upload your reading and a reference reading of the same text.",
+          "file": "narration/s6_demo_clean_and_upload_03.wav",
+          "durationSec": 4.887
+        }
+      ],
+      "clip": null,
+      "gapAfterSec": 1.0
+    },
+    {
+      "id": "s7_how",
+      "lines": [
+        {
+          "text": "How does it work?",
+          "file": "narration/s7_how_01.wav",
+          "durationSec": 1.234
+        },
+        {
+          "text": "Both recordings are force-aligned to the transcript with a wav2vec2 CTC model.",
+          "file": "narration/s7_how_02.wav",
+          "durationSec": 5.743,
+          "spoken": "Both recordings are force-aligned to the transcript, with a wave-to-vec two, C T C model."
+        },
+        {
+          "text": "That gives every word a start and end time, at 20 ms resolution.",
+          "file": "narration/s7_how_03.wav",
+          "durationSec": 4.828,
+          "spoken": "That gives every word a start and end time, at twenty millisecond resolution."
+        },
+        {
+          "text": "Nine delivery measures are then taken on the same words in both readings, over five-word windows.",
+          "file": "narration/s7_how_04.wav",
+          "durationSec": 5.966
+        },
+        {
+          "text": "Volume is relative to your own median level, and pitch to your own median pitch.",
+          "file": "narration/s7_how_05.wav",
+          "durationSec": 4.795
+        },
+        {
+          "text": "So a quiet microphone or a deep voice is not a flaw. Only a change from the reference is.",
+          "file": "narration/s7_how_06.wav",
+          "durationSec": 5.688
+        },
+        {
+          "text": "A difference is flagged only when it passes a threshold fitted on comparisons with no flaws.",
+          "file": "narration/s7_how_07.wav",
+          "durationSec": 5.952
+        }
+      ],
+      "clip": null,
+      "gapAfterSec": 1.0
+    },
+    {
+      "id": "s8_evidence",
+      "lines": [
+        {
+          "text": "The dataset holds 2,410 audio files, rebuilt from public origins.",
+          "file": "narration/s8_evidence_01.wav",
+          "durationSec": 6.182,
+          "spoken": "The dataset holds two thousand, four hundred and ten audio files, rebuilt from public origins."
+        },
+        {
+          "text": "Edits of known type, place and size are added to nine public-domain speeches.",
+          "file": "narration/s8_evidence_02.wav",
+          "durationSec": 4.914
+        },
+        {
+          "text": "On the held-out test speakers, F1 is 0.812 with every prediction counted, as pre-registered.",
+          "file": "narration/s8_evidence_03.wav",
+          "durationSec": 6.483,
+          "spoken": "On the held-out test speakers, F one is point eight one two, with every prediction counted, as pre-registered."
+        },
+        {
+          "text": "Counting duplicate detections of one change once, it is 0.879.",
+          "file": "narration/s8_evidence_04.wav",
+          "durationSec": 4.667,
+          "spoken": "Counting duplicate detections of one change once, it is point eight seven nine."
+        },
+        {
+          "text": "On unedited and placebo copies of the test recordings: zero false flags in 5.89 minutes of comparison.",
+          "file": "narration/s8_evidence_05.wav",
+          "durationSec": 7.681,
+          "spoken": "On unedited and placebo copies of the test recordings, zero false flags, in five point eight nine minutes of comparison."
+        },
+        {
+          "text": "Under eleven channel conditions, gain and MP3 keep every test detection; 10 dB babble keeps 60 %.",
+          "file": "narration/s8_evidence_06.wav",
+          "durationSec": 8.273,
+          "spoken": "Under eleven channel conditions, gain and M P three keep every test detection. Ten decibel babble keeps sixty percent."
+        }
+      ],
+      "clip": null,
+      "gapAfterSec": 1.0
+    },
+    {
+      "id": "s9_open",
+      "lines": [
+        {
+          "text": "Run it yourself with one Docker command.",
+          "file": "narration/s9_open_01.wav",
+          "durationSec": 2.409
+        },
+        {
+          "text": "Open the page in your browser, then try the examples or your own reading.",
+          "file": "narration/s9_open_02.wav",
+          "durationSec": 4.328
+        },
+        {
+          "text": "The detector is on Hugging Face, and the code is on GitHub.",
+          "file": "narration/s9_open_03.wav",
+          "durationSec": 3.631
+        }
+      ],
+      "clip": null,
+      "gapAfterSec": 1.5
+    },
+    {
+      "id": "s10_close",
+      "lines": [
+        {
+          "text": "Record. Compare. Fix the exact words.",
+          "file": "narration/s10_close_01.wav",
+          "durationSec": 2.762
+        },
+        {
+          "text": "Contrastive Voice.",
+          "file": "narration/s10_close_02.wav",
+          "durationSec": 1.427
+        }
+      ],
+      "clip": null,
+      "gapAfterSec": 2.0
+    }
+  ]
+}

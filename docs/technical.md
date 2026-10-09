@@ -26,7 +26,7 @@ header-includes:
   - \usepackage{multicol}
 ---
 
-**Summary.** Contrastive Voice aligns a reading with a reference reading of the same words, measures nine delivery quantities (D1 to D9) at the same words in both, and returns time-stamped flagged regions with a measured explanation, a cause label and a cost in points. In regime R1 (an edited copy of the reference recording), core-8 test event F1 at levels 2–3 is **0.812** under the pre-registered accounting (all predictions counted; TP 28, FP 9, FN 4; per speaker 0.800 and 0.824) and 0.879 when duplicate detections of one change count once (an accounting introduced after the plan). The test split was scored once before, on 2026-10-02 under an earlier configuration (`32cdd86f…`, all predictions counted: 0.879). In regime R2 (a different reader, the regime of every upload), held-out readers give 0.46 false regions per comparison-minute (upper 95 % bound 0.54) with one reference; level-3 rush and dropped-pause edits are mostly missed (1 of 18, 4 of 17). Every flaw is a synthetic signal edit; no listener has rated the clips. Sources of numbers: `docs/NUMBERS.md`; citation chains: `docs/GROUNDING.md` (same reference numbers).
+**Summary.** Contrastive Voice aligns a reading with a reference reading of the same words, measures nine delivery quantities (D1 to D9) at the same words in both, and returns time-stamped flagged regions with a measured explanation, a cause label and a cost in points. In regime R1 (an edited copy of the reference recording), core-8 test event F1 at levels 2–3 is **0.812** under the pre-registered accounting (all predictions counted; TP 28, FP 9, FN 4; per speaker 0.800 and 0.824) and 0.879 when duplicate detections of one change count once (an accounting introduced after the plan). The test split was scored once before, on 2026-10-02 under an earlier configuration (`32cdd86f…`, all predictions counted: 0.879). In regime R2 (a different reader, the regime of every upload), held-out readers give 0.46 false regions per comparison-minute (upper 95 % bound 0.54) with one reference; level-3 rush and dropped-pause edits are mostly missed (1 of 18, 4 of 17). Every flaw is a synthetic signal edit; no listener has rated the clips. Sources of numbers: `docs/evidence_final_782d7df7/`; papers and citation chains: `docs/PAPERS.md` (same reference numbers).
 
 *Judging criteria:* data engineering and stress testing, sections 2 and 6.4; causal explainability and temporal grounding, 5; feature extraction, 3 and 4; dashboard, 7; reproducibility and code quality, 8.
 
@@ -58,7 +58,7 @@ Non-commercial audio is used under its licence terms for calibration and evaluat
 
 **Rebuild from public origins.** `data/sources_manifest.json` lists the 19 source recordings with URL, SHA-256 and licence basis; the build stops on a hash mismatch. `kaggle/data/fetch.py` downloads the reader corpora from their origins, checks each member's size and CRC, and writes `LICENSES.md`. `kaggle/run.py` then builds the dataset, calibrates, evaluates and builds the gallery. Two independent Kaggle builds (development run v13 on 2026-10-06 and the final run on 2026-10-07) produced byte-identical dataset manifests (sha256 `d67c9cd9…`).
 
-**Flaw synthesis.** A flaw is a controlled edit of a clean recording at one of three levels, spliced back with exact word, sample and time labels. Stored clips use waveform-similarity overlap-add for duration and Praat PSOLA for pitch; a second generator used only in evaluation (chain B) uses Praat duration and WORLD-vocoder pitch. Identity and placebo clips pass the same processing. The tools are named without citation because their papers are not recorded as read (GROUNDING §11). Synthetic errors helped learned detectors of real errors [105], but a learned detector can also key on synthesis artefacts [106]; this detector learns nothing from the edits except its thresholds.
+**Flaw synthesis.** A flaw is a controlled edit of a clean recording at one of three levels, spliced back with exact word, sample and time labels. Stored clips use waveform-similarity overlap-add for duration and Praat PSOLA for pitch; a second generator used only in evaluation (chain B) uses Praat duration and WORLD-vocoder pitch. Identity and placebo clips pass the same processing. The tools are named without citation because their papers are not recorded as read (`docs/PAPERS.md`). Synthetic errors helped learned detectors of real errors [105], but a learned detector can also key on synthesis artefacts [106]; this detector learns nothing from the edits except its thresholds.
 
 | Core type (dimension) | Edit | L1 | L2 | L3 |
 |:---------------------|:---------------------------------------------|:---------|:---------|:-----------|
@@ -94,7 +94,7 @@ Fifteen further types from the research reports cover natural rushing (words ×1
 | D8 ending | final 0.20 s minus earlier part of a sentence-final word | st | listed | listed | final pitch change [95] |
 | D9 speech tempo | ln ratio of summed word durations in the window (not centred) | ln | scored | listed | tempo decomposition [19, 20] |
 
-"Listed" means shown on the page and never scored. D7 stays listed because its lab gate failed on LibriStutter (word-duration ratio 0.39 found at 0.10 false) and no synthetic disfluency edit was recovered. D8 is listed by owner decision: the RISING_ENDING recipe mostly does not realise and val has 2 eligible ending events. D9 is listed in R2 by owner decision after 0 of 68 R2 rush positives in development run v13. D4 and D6 are shown and not scored in R2 by design (`docs/DESIGN.md` §5.3). A pattern label is on only if it passed a real-data lab gate fixed before the results (12,868 recordings, 48 tests): natural rushing and the filled-pause candidate (PodcastFillers precision 0.54, recall 0.15) passed; six other labels failed and are off (`docs/research/design/LAB_DECISIONS.md`).
+"Listed" means shown on the page and never scored. D7 stays listed because its lab gate failed on LibriStutter (word-duration ratio 0.39 found at 0.10 false) and no synthetic disfluency edit was recovered. D8 is listed by owner decision: the RISING_ENDING recipe mostly does not realise and val has 2 eligible ending events. D9 is listed in R2 by owner decision after 0 of 68 R2 rush positives in development run v13. D4 and D6 are shown and not scored in R2 by design (`config.REGIME_DIMS`). A pattern label is on only if it passed a real-data lab gate fixed before the results (12,868 recordings, 48 tests): natural rushing and the filled-pause candidate (PodcastFillers precision 0.54, recall 0.15) passed; six other labels failed and are off.
 
 # 4. Detection and calibration
 
@@ -134,7 +134,7 @@ The R2 thresholds are set by how much two competent readers differ; they lie far
 
 ## 6.1 Plan and accountings
 
-The plan (`docs/FINAL_EVALUATION_PLAN.md`, written on 2026-10-02 before this evaluation) fixes the headline: R1, test split, levels 2–3, strict one-to-one event F1 with all predictions counted. Windows match at IoU ≥ 0.5; pause and emphasis events match by the labelled boundary or word; D7 and D8 need both edges within 0.20 s [107, 108]. The test split and the R2 lockbox are evaluated only by `evaluate --final`, once per configuration hash, recorded in `models/final_evaluations.json` [110]. The *one-detection-per-change* accounting, introduced after the plan, counts a same-change D9 region on a rush edit as its detection or as a duplicate, not as a false region. The test split was evaluated once before (2026-10-02, configuration `32cdd86f…`, no D9 key); that result was seen before the redesign (`docs/evidence_final_32cdd86f3d6e/`).
+A plan written on 2026-10-02, before any test number of this configuration existed, fixed the headline: R1, test split, levels 2–3, strict one-to-one event F1 with all predictions counted. Windows match at IoU ≥ 0.5; pause and emphasis events match by the labelled boundary or word; D7 and D8 need both edges within 0.20 s [107, 108]. The test split and the R2 lockbox are evaluated only by `evaluate --final`, once per configuration hash, recorded in `models/final_evaluations.json` [110]. The *one-detection-per-change* accounting, introduced after the plan, counts a same-change D9 region on a rush edit as its detection or as a duplicate, not as a false region. The test split was evaluated once before (2026-10-02, configuration `32cdd86f…`, no D9 key); that result was seen before the redesign (`docs/evidence_final_32cdd86f3d6e/`). The plan also fixed that both final results are reported side by side, that there is no third test run, and that validation speakers and the three check readers, inspected during the rework, count as development evidence; no design choice of the rework used a test result.
 
 ## 6.2 R1 results (same recording, synthetic edits)
 
@@ -161,7 +161,7 @@ Rates weight sources equally; the budget is 0.5/min and 0.05 per clip. The lockb
 
 ## 6.4 Stress matrix: measured degradation
 
-Eleven channel conditions are applied to the participant only; each row reports false regions added per minute and the share of original detections kept (pass rule removed). Val and test have 2 speakers each; per-speaker values and per-key rates are in section 5 of the addendum (`docs/evidence_final_782d7df7/addendum.md`).
+Eleven channel conditions are applied to the participant only; each row reports false regions added per minute and the share of original detections kept (pass rule removed). Val and test have 2 speakers each; per-speaker values and per-key rates are in `stress_by_speaker` of the addendum (`docs/evidence_final_782d7df7/addendum.json`).
 
 | Condition | R1 val: added/min, kept | R1 test: added/min, kept | R2 check readers, one reference: added/min |
 |:---------------------------|:-----------------------|:-----------------------|:-----------------------|
@@ -270,7 +270,7 @@ The AI tool used is Claude Code. The research reports, the source code and tests
 
 # References
 
-Numbers and full entries: `docs/GROUNDING.md`; use of each paper: `docs/PAPERS.md`.
+Full entries and the use of each paper: `docs/PAPERS.md`.
 [1] Schreiber, Paul & Shibley (2012), The development and test of the Public Speaking Competence Rubric, *Communication Education* 61(3) (read in [2]).
 [2] Joe, Kitchen, Chen & Feng (2015), A prototype public speaking skills assessment, *ETS Research Report* RR-15-36.
 [3] Morreale et al. (eds.) (2007), *The Competent Speaker Speech Evaluation Form*, 2nd ed., NCA.

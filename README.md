@@ -14,7 +14,7 @@ Contrastive Voice compares a spoken reading with a reference reading of the same
 
 The screenshot shows the local app on the gallery example **Level 3, Set A**: the Reagan passage with four injected level-3 edits, compared with the unedited recording (regime R1). The score is 86.11. Six flagged regions are listed on the right; the selected finding **#3 Rushed** gives the words, both time spans, the measurement (0.87 s against 1.62 s), the 4.89 points it costs and a fix. Below are the waveform, the pitch and level contours, and one row per dimension with its tolerance band.
 
-**Documents:** [technical report](docs/technical.md) ([PDF](docs/technical.pdf)) · [source of every number](docs/NUMBERS.md) · [grounding in prior work](docs/GROUNDING.md) · [papers used](docs/PAPERS.md) · [pre-registered evaluation plan](docs/FINAL_EVALUATION_PLAN.md) · [research reports](docs/research/)
+**Documents:** [technical report](docs/technical.md) ([PDF](docs/technical.pdf)) · [papers used and the chain from each flaw to its method](docs/PAPERS.md) · [evidence of the final evaluation](docs/evidence_final_782d7df7/)
 
 ## Where each judging criterion is covered
 
@@ -22,9 +22,9 @@ The screenshot shows the local app on the gallery example **Level 3, Set A**: th
 |---|---|---|
 | Data engineering and stress testing (30 %) | §2 Data engineering, §6.4 Stress matrix | `kaggle/data/fetch.py`, `src/cvoice/dataset.py`, `flaws.py`, `edits_extra.py`, `r2pool.py`, `stress.py`; [dataset card](docs/evidence_final_782d7df7/dataset_card.md); **Stress matrix** panel in the app |
 | Causal explainability and temporal grounding (25 %) | §5 Causal explainability and temporal grounding | `src/cvoice/patterns.py`, `explain.py`, `score.py`; every finding in the app (words, time spans, measured values, threshold, points, fix, A/B playback) |
-| Feature extraction (20 %) | §3 Feature extraction, §4 Detection and calibration | `src/cvoice/align.py`, `features.py`, `compare.py`, `detect.py`, `calibrate.py`; [grounding in prior work](docs/GROUNDING.md) |
+| Feature extraction (20 %) | §3 Feature extraction, §4 Detection and calibration | `src/cvoice/align.py`, `features.py`, `compare.py`, `detect.py`, `calibrate.py`; [papers and citation chains](docs/PAPERS.md) |
 | Dashboard (15 %) | §7 Dashboard | [Quick start](#quick-start) below; `src/cvoice/app.py`, `src/cvoice/static/` |
-| Reproducibility and code quality (10 %) | §8 Reproducibility and code quality | [Reproduce from public origins](#reproduce-from-public-origins), [Tests](#tests); [source of every number](docs/NUMBERS.md); `uv.lock`, `Dockerfile`, `.github/workflows/ci.yml` |
+| Reproducibility and code quality (10 %) | §8 Reproducibility and code quality | [Reproduce from public origins](#reproduce-from-public-origins), [Tests](#tests); [evidence files with checksums](docs/evidence_final_782d7df7/); `uv.lock`, `Dockerfile`, `.github/workflows/ci.yml` |
 
 ## Three regimes
 
@@ -40,7 +40,7 @@ The R1 F1 measures how well the tool finds edits inside one recording. It does n
 
 ## Headline results
 
-Final evaluation, detector configuration `782d7df7…` (`models/detector.json`, sha256 `d5935d3f…`), run on Kaggle (2 × T4) on 2026-10-07 IST; the test split was evaluated once with this configuration. Evidence: [`docs/evidence_final_782d7df7/`](docs/evidence_final_782d7df7/); source of each number: [`docs/NUMBERS.md`](docs/NUMBERS.md).
+Final evaluation, detector configuration `782d7df7…` (`models/detector.json`, sha256 `d5935d3f…`), run on Kaggle (2 × T4) on 2026-10-07 IST; the test split was evaluated once with this configuration. Evidence: [`docs/evidence_final_782d7df7/`](docs/evidence_final_782d7df7/) (`results.json`, `addendum.json`, checksums in `SHA256SUMS`).
 
 **R1, same recording.** Strict event F1 for the 8 core edit types at levels 2 and 3 (one-to-one matching; windowed regions need IoU ≥ 0.5). Validation and test have 2 speakers each, so per-speaker values are given, not confidence intervals.
 
@@ -113,7 +113,16 @@ docker build -t cvoice .
 docker run --rm -p 7860:7860 cvoice
 ```
 
-Open `http://localhost:7860`. The image uses Python 3.12, ffmpeg and the locked CPU environment, runs as a non-root user and bakes in the verified alignment checkpoint, so the container needs no network at run time. The image was not built during the final checks of this repository.
+Open `http://localhost:7860`. The image uses Python 3.12, ffmpeg and the locked CPU environment, runs as a non-root user and bakes in the verified alignment checkpoint, so the container needs no network at run time. The server listens on `$PORT` when it is set, otherwise on 7860.
+
+### Deploy
+
+The image needs about 2 GB of RAM (CPU PyTorch and the 378 MB alignment checkpoint). Run exactly one instance: the analysis queue is held in memory. The health check is `GET /api/health`. No secrets or environment variables are needed.
+
+- **Fly.io** (`fly.toml`): `fly launch --copy-config --no-deploy`, change `app` to a unique name, then `fly deploy` and `fly scale count 1`.
+- **Render** (`render.yaml`): New > Blueprint, then select the repository. It uses the Docker runtime on the `standard` plan (2 GB).
+- **Hugging Face Docker Spaces**: create a Docker Space, push the repository and add `sdk: docker` and `app_port: 7860` to the Space README front matter.
+- **Google Cloud Run**: `gcloud run deploy cvoice --source . --memory 2Gi --cpu 2 --max-instances 1` (Cloud Run sets `PORT=8080`).
 
 ### Static gallery (no server)
 
@@ -183,7 +192,7 @@ uv run --extra cpu pytest -q -m slow tests/test_smoke.py
 uv run --extra cpu ruff check --select F,E9 src kaggle tests
 ```
 
-The second command runs 561 tests (all pass, about 85 s on a laptop CPU); two slow tests are deselected by default. The third runs the one-clip smoke test (it needs the alignment checkpoint; about 6 s once the checkpoint is cached). The other slow test (`tests/test_integration.py`, a mini dataset build through the gallery) did not finish on the laptop and was not run for the final checks. A few tests read the final-run outputs under `build/`, which is not part of the repository; in a fresh clone they are skipped. `.github/workflows/ci.yml` runs the first three commands.
+The second command runs 564 tests (all pass, about 85 s on a laptop CPU); two slow tests are deselected by default. The third runs the one-clip smoke test (it needs the alignment checkpoint; about 6 s once the checkpoint is cached). The other slow test (`tests/test_integration.py`, a mini dataset build through the gallery) did not finish on the laptop and was not run for the final checks. A few tests read the final-run outputs under `build/`, which is not part of the repository; in a fresh clone they are skipped. `.github/workflows/ci.yml` runs the first three commands.
 
 ## Repository layout
 
@@ -196,15 +205,14 @@ The second command runs 561 tests (all pass, about 85 s on a laptop CPU); two sl
 | `data/sources_manifest.json`, `data/transcripts/` | The 19 source recordings (URL, SHA-256, licence basis, split) and the transcript snapshots with their hashes |
 | `data/dataset/` | An earlier public-domain-only dataset build (manifest `8db28b8b…`, 9 baselines, 10 readers, 110 edited clips). It is not the final-run dataset (manifest `d67c9cd9…`, 2410 files, 1109.2 minutes), which includes non-commercial reader corpora and is rebuilt on Kaggle |
 | `docs/technical.md`, `docs/technical.pdf` | Technical report |
-| `docs/NUMBERS.md`, `docs/GROUNDING.md`, `docs/PAPERS.md` | Source of every number; chain from the literature to each measure; papers used |
-| `docs/research/` | The research reports that record each cited paper as read, and the lab decisions |
-| `docs/FINAL_EVALUATION_PLAN.md` | Plan for the final evaluation, written before it ran |
+| `docs/PAPERS.md` | Papers used, what was taken from each, and the chain from each flaw to its method and module |
 | `docs/evidence_final_782d7df7/`, `docs/evidence_final_32cdd86f3d6e/` | Evidence of the final evaluation and of the earlier look at the test split |
-| `docs/DESIGN.md` | The original build contract, written for the 2026-10-02 detector; not the final numbers |
 | `kaggle/run.py`, `kaggle/data/fetch.py`, `kaggle/lab/` | Build kernel, corpus fetch kernel, measurement lab kernel |
 | `scripts/` | `stage_project.sh`, `import_run.sh`, `rebuild_after_final.sh`, `build_pdf.sh`, `make_pipeline_figure.py` |
 | `tests/` | Unit and regression tests |
-| `pyproject.toml`, `uv.lock`, `Dockerfile` | Locked environment and container |
+| `pyproject.toml`, `uv.lock`, `Dockerfile`, `.dockerignore` | Locked environment and container |
+| `fly.toml`, `render.yaml` | Deploy configurations for Fly.io and Render |
+| `video/` | Source of the launch video (Remotion); `npm install && npm run render` |
 
 ## Data and licences
 
@@ -216,7 +224,7 @@ The second command runs 561 tests (all pass, about 85 s on a laptop CPU); two sl
 
 ## AI assistance
 
-The AI tool used is Claude Code. The research (literature and data-source reports), the source code and tests, the data pipeline and Kaggle kernels, the calibration and evaluation, the dashboard, and the documents (this README, the technical report, the grounding and number-source files) were produced with Claude Code under the owner's direction. The owner made the design decisions: scope and flaw types, the data sources and their use, the threshold-only detector, the speaker splits, the evaluation rules and the decision to run the final evaluation once.
+The AI tool used is Claude Code. The research (literature and data-source reports), the source code and tests, the data pipeline and Kaggle kernels, the calibration and evaluation, the dashboard, and the documents (this README, the technical report, the papers file) were produced with Claude Code under the owner's direction. The owner made the design decisions: scope and flaw types, the data sources and their use, the threshold-only detector, the speaker splits, the evaluation rules and the decision to run the final evaluation once.
 
 ## Limits
 

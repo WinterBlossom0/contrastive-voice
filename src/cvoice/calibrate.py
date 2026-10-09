@@ -727,7 +727,7 @@ def g5_gate_fails(overall_score: float) -> bool:
 
 
 def gate_violations(rows: list[dict], pmax: dict[str, float]) -> list[str]:
-    """Gates of DESIGN 6: identity = 100; every L1-only clip >= 90; G5 <= 50; each speech's ladder non-increasing."""
+    """Calibration gates: identity = 100; every L1-only clip >= 90; G5 <= 50; each speech's ladder non-increasing."""
     bad = []
     by = {}
     for r in rows:

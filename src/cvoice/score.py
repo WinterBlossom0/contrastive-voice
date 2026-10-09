@@ -1,4 +1,4 @@
-"""Scores of DESIGN 6: severity in physical units, region mass, S_k = 100 max(0, 1 - P_k / Pmax_k), overall = mean of the
+"""Scores: severity in physical units, region mass, S_k = 100 max(0, 1 - P_k / Pmax_k), overall = mean of the
 scored dimensions, and the closed-form "points lost" / "score with this penalty removed" (arithmetic on the current result)."""
 from __future__ import annotations
 

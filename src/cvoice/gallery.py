@@ -1,4 +1,4 @@
-"""Static gallery (Kaggle): result JSON + audio for the bundled examples of DESIGN 7, plus gallery/index.json.
+"""Static gallery (Kaggle): result JSON + audio for the bundled examples of the dashboard, plus gallery/index.json.
 
     python -m cvoice.gallery --dataset /kaggle/working/data --models /kaggle/working/out/models/detector.json \
         --cache /kaggle/working/cache --eval /kaggle/working/out/eval --out /kaggle/working/out
@@ -29,7 +29,7 @@ from . import audio, patterns, stress
 from . import config as C
 from .dataset import GETTYSBURG_REFERENCE, load_dataset, sha256_file
 from .detect import key, load_detector
-from .evaluate import cross_matches, languages_above_budget, listed_rank, pre_registered, speaker_stress_rows, stress_tables
+from .evaluate import cross_matches, languages_above_budget, listed_rank, pre_registered, speaker_stress_rows
 from .events import Run, f1, match, on_shortfall, run_pair, truth_changes, truths, whole_passage
 from .pipeline import ROOT, analyze, detector_status, device_class, dumps
 from .pool import PreparePool
@@ -506,7 +506,6 @@ def build(dataset: Path, models: Path, cache: Path | None, eval_dir: Path, out: 
         if matrix:
             rows = dashboard_stress(matrix)
             (gallery_dir / "stress_matrix.json").write_text(json.dumps(rows, indent=1, sort_keys=True) + "\n")
-            (gallery_dir / "stress_matrix.md").write_text(stress_tables(rows, matrix["babble_sources"], matrix["reference"]) + "\n")
             index["stress_matrix"] = "stress_matrix.json"
     (gallery_dir / "index.json").write_text(json.dumps(index, indent=1, sort_keys=True) + "\n")
     record = models.parent / "final_evaluations.json"
@@ -514,9 +513,6 @@ def build(dataset: Path, models: Path, cache: Path | None, eval_dir: Path, out: 
         addendum = eval_dir / ADDENDUM
         write_evaluation(gallery_dir, results_path, record, first_final, addendum if addendum.exists() else None)
         index["evaluation"] = EVALUATION
-    card = ds.root / "dataset_card.md"
-    if card.exists():
-        shutil.copy(card, gallery_dir / "dataset_card.md")
     log(f"wrote {len(index['items'])} examples to {gallery_dir}")
     return index
 

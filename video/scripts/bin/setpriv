@@ -1,0 +1,10 @@
+#!/bin/bash
+# Loopback connections to ephemeral ports are refused on this WSL host, so the DevTools port moves to a fixed low range.
+shift 2
+port=$((9400 + RANDOM % 500))
+args=()
+for arg in "$@"; do
+  if [ "$arg" = "--remote-debugging-port=0" ]; then arg="--remote-debugging-port=$port"; fi
+  args+=("$arg")
+done
+exec /usr/bin/setpriv --pdeathsig SIGKILL "${args[@]}"

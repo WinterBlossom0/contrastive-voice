@@ -1,4 +1,4 @@
-"""analyze(): participant audio + transcript + baseline rendition -> result JSON of DESIGN 9 (schema 2).
+"""analyze(): participant audio + transcript + baseline rendition -> result JSON (schema 2).
 
     python -m cvoice.pipeline --participant p.wav --baseline b.wav --transcript t.txt --regime R1 --out result.json
 

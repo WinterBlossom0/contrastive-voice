@@ -33,7 +33,7 @@ from .protocol import STRICT_ACCOUNTING, tiers
 from .uncertainty import MIN_BOOTSTRAP_CLUSTERS, cluster_summary, wilson
 
 COUNT_ONCE = 'introduced after the plan: ' + STRICT_ACCOUNTING
-PLAN = 'docs/FINAL_EVALUATION_PLAN.md item 4'
+PLAN = 'docs/technical.md section 6.1'
 PROVENANCE = ('Computed after the final evaluation by `python -m cvoice.addendum` (src/cvoice/addendum.py) from the saved '
               'outputs of the final run; no number below was measured on Kaggle again.')
 EXPECTATION_DIMS = ('D1', 'D2', 'D3', 'D5')  # the dimensions the pre-registered R2 level-3 expectation names (pace, pauses, pitch, volume)

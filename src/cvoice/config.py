@@ -1,6 +1,6 @@
-"""Every numeric constant of the build contract (docs/DESIGN.md), in one place.
+"""Every numeric constant of the detector, the dataset recipes and the evaluation, in one place.
 
-Evidence tags in the trailing comments follow DESIGN.md: (K) measured on a Kaggle CPU kernel during research,
+Evidence tags in the trailing comments: (K) measured on a Kaggle CPU kernel during research,
 (S) from a fetched source, (D) design value fixed before any evaluation run. Units are stated per constant.
 Each constant is defined once. `as_dict()` feeds the released detector hash (schema 4; `as_dict(3)` gives the schema-3
 subset of the eight core types). Dataset recipe metadata is versioned separately (REGISTRY_VERSION).
@@ -23,7 +23,7 @@ REGIME_DIMS = {"R1": ("D1", "D2", "D3", "D4", "D5", "D6", "D7", "D9"), "R2": ("D
 # Dimensions shown with their measures but never flagged or scored, whatever the validation gates give.
 LISTED_DIMS = {"R1": ("D7", "D8"), "R2": ("D7", "D8", "D9")}
 FLAG_SIGNS = {"D1": (-1, 1), "D2": (-1, 1), "D3": (-1,), "D4": (-1,), "D5": (-1,), "D6": (-1,),
-              "D7": (1,), "D8": (1,), "D9": (-1,)}  # (D) see DESIGN 5.1
+              "D7": (1,), "D8": (1,), "D9": (-1,)}  # (D)
 CLIP_DIMS = ("D1", "D3", "D7")  # dimensions with a whole-clip measure next to the local one: overall tempo, overall pitch range, uneven tempo
 UNIT_KIND = {dim: "boundary" if dim == "D2" else "word" if dim in ("D4", "D7", "D8") else "window" for dim in DIMS}
 
@@ -83,7 +83,7 @@ CHECKPOINT_NAME = "wav2vec2_fairseq_base_ls960_asr_ls960.pth"
 CHECKPOINT_SHA256 = "488fd4f16de84438ffc945334278c1b9fb9b7159a806c1080b16111a958c945d"
 CHECKPOINT_BYTES = 377_664_473
 # No word-level gate: rushed speech drives word compatibility to ~0 while word times stay accurate (K, stretch probe:
-# 6-18 ms boundary error); per-word compatibility is reported, never used to exclude a word (DESIGN 3).
+# 6-18 ms boundary error); per-word compatibility is reported, never used to exclude a word.
 LOW_COMPAT_NOTICE = 0.10  # (D) words below this are counted in a low-confidence notice, still scored
 MEAN_COMPAT_MIN = 0.10  # (D) refusal "transcript does not match the audio", enforced only at trust boundaries (uploads, passage selection)
 PAUSE_MIN_S = 0.20  # s, acoustic pause
@@ -107,7 +107,7 @@ FLOORS = {"D1": math.log(1.10), "D2": 0.15, "D3": math.log(1.4), "D4": 0.5, "D5"
 Q68 = 0.682689492  # quantile of |x| used as a scale
 HYSTERESIS_LOW = 0.5  # regions extend over |z| >= h * this ...
 REGION_PEAK_FRACTION = {"D1": 0.5, "D3": 0.0, "D5": 0.5, "D6": 0.5, "D9": 0.5}  # (D) ... and over |z| >= this * the run's peak |z| (half-maximum
-#   rule, DESIGN 5.2); the larger bound applies. A window mean (D1, D5, D6) responds in proportion to how much of the window an edit
+#   rule); the larger bound applies. A window mean (D1, D5, D6) responds in proportion to how much of the window an edit
 #   covers, so half the peak marks the edit's edge (also D9). The pitch range (D3) collapses only once the window lies inside a flat stretch:
 #   its response is already narrower than the stretch and is not trimmed.
 MIN_REGION_WORDS = {"D1": 2, "D2": 1, "D3": 2, "D4": 1, "D5": 1, "D6": 1, "D7": 1, "D8": 1, "D9": 2}
@@ -183,32 +183,32 @@ RANDOM_SEEDS = 20  # trivial random-span baseline repetitions (D)
 DEVICE_AGREEMENT_CLIPS = 6  # (D) held-out clips aligned on GPU and on CPU for the device-agreement section
 
 # --------------------------------------------------------------------------------------------- recipes of the extra flaw types
-# "<topic> REPORT §n" cites docs/research/chain/<topic>/REPORT.md; "SYNTHESIS §n" cites docs/research/chain/SYNTHESIS.md.
-# pace_pauses REPORT §1/§4: articulation-rate rise 13–18%; 13/15/18% chosen within that range.
+# Each range below is the published range of the recipe; "chosen" marks a design value inside or beyond it (docs/PAPERS.md).
+# Trouvain & Grice 1999: articulation-rate rise 13–18%; 13/15/18% chosen within that range.
 RUSH_RATE = (1.13, 1.15, 1.18)
-# pace_pauses REPORT §4: shorten/delete pauses, no numeric fraction; chosen fractions ending in deletion.
+# Trouvain & Grice 1999: shorten/delete pauses, no numeric fraction; chosen fractions ending in deletion.
 RUSH_PAUSE_KEEP = (0.6, 0.3, 0.0)
-# pace_pauses REPORT §4: stretch a content word, no factor; chosen duration factors.
+# Moers, Meyer & Janse 2017: stretch a content word, no factor; chosen duration factors.
 HESITATION_STRETCH = (1.2, 1.5, 1.8)
-# pace_pauses REPORT §4: within-phrase insertion 0.2–1.0 s; chosen lower/middle/upper anchors.
+# Within-phrase insertion 0.2–1.0 s; chosen lower/middle/upper anchors.
 HESITATION_PAUSE_S = (0.2, 0.5, 1.0)
-# pace_pauses REPORT §4: word-by-word silences 0.15–0.3 s (midpoint chosen).
+# Word-by-word silences 0.15–0.3 s (midpoint chosen).
 READING_PAUSE_S = (0.15, 0.225, 0.3)
-# pace_pauses REPORT §4: mean-one random factors, no dispersion; chosen maximum deviations.
+# Mean-one random factors, no dispersion; chosen maximum deviations.
 TEMPO_DEVIATION = (0.15, 0.3, 0.45)
-# disfluency REPORT §4: first typical token lengthened, no factor; chosen substantial stretches.
+# First typical token lengthened, no factor; chosen substantial stretches.
 WORD_REPEAT_STRETCH = (1.3, 1.6, 1.9)
-# disfluency REPORT §4: 100–350 ms between copies; chosen anchors (one copy at every level).
+# 100–350 ms between copies; chosen anchors (one copy at every level).
 WORD_REPEAT_PAUSE_S = (0.1, 0.225, 0.35)
-# disfluency REPORT §4: 2–5 phone copies; choose 2/3/4 rapid inserted copies.
+# 2–5 phone copies; choose 2/3/4 rapid inserted copies.
 SOUND_REPEAT_COPIES = (2, 3, 4)
-# disfluency REPORT §4: 100–350 ms pauses; rapid form uses the published lower anchor at all levels.
+# 100–350 ms pauses; rapid form uses the published lower anchor at all levels.
 SOUND_REPEAT_PAUSE_S = (0.1, 0.1, 0.1)
-# disfluency REPORT §4/§2.1: onset continuant can exceed 1 s; chosen targets capped at 1 s.
+# Lickley 2017: onset continuant can exceed 1 s; chosen targets capped at 1 s.
 ONSET_TARGET_S = (0.35, 0.65, 1.0)
-# disfluency REPORT §4: "first fraction" unspecified; 20% onset proxy chosen, not a phone boundary.
+# "First fraction" unspecified; 20% onset proxy chosen, not a phone boundary.
 ONSET_FRACTION = 0.2
-# disfluency REPORT §4: inserted block gap 0.5–2.0 s; midpoint chosen, location moved inside word.
+# Inserted block gap 0.5–2.0 s; midpoint chosen, location moved inside word.
 BLOCK_PAUSE_S = (0.5, 1.25, 2.0)
 # Signal eligibility choices: 90 ms stable voiced material and onset search within 80 ms.
 CONTINUANT_MIN_S, CONTINUANT_ONSET_S, BURST_WINDOW_S = 0.09, 0.10, 0.08
@@ -218,26 +218,26 @@ BURST_FLUX_RATIO, BURST_HIGH_SHARE, BURST_HIGH_HZ, BURST_MIN_RMS = 4.0, 0.15, 15
 REPEAT_DURATION_JITTER, REPEAT_GAIN_JITTER_DB = 0.08, 1.0
 ALPHA_SPEECH_MARGIN_DB, EFFORT_ROOM_FILL = 15.0, 0.1
 CONTINUANT_CHANGE, BURST_RISE_DB = 0.20, 6.0
-# disfluency REPORT §4: WSOLA 5–10x, phones 2–4x; chosen added durations exceed alignment error.
+# WSOLA 5–10x, phones 2–4x; chosen added durations exceed alignment error.
 RHYME_ADDED_S, PROLONG_MAX_FACTOR = (0.18, 0.36, 0.54), 10.0
-# volume_clarity REPORT §2.1: alpha drop 0.4–0.7 dB per dB of attenuation; midpoint chosen.
+# Sundberg & Nordenberg 2006: alpha drop 0.4–0.7 dB per dB of attenuation; midpoint chosen.
 EFFORT_ALPHA_PER_DB = 0.55
 TRAIL_WORDS = 3
 EXTRA_SENTENCE_MIN_S = 0.5  # chosen minimum for a contour template/target; not a published norm
-# volume_clarity REPORT §2.1/§4: attenuation and small F0 shift chosen; tilt fitted to alpha coupling.
+# Attenuation and small F0 shift chosen; tilt fitted to alpha coupling.
 EFFORT_GAIN_DB, EFFORT_PITCH_ST = (3.0, 6.0, 9.0), (0.5, 1.0, 1.5)
-# volume_clarity REPORT §4: sentence-end gain/tilt ramp, no magnitudes; chosen engineering levels.
+# Sentence-end gain/tilt ramp, no magnitudes; chosen engineering levels.
 TRAIL_GAIN_DB = (4.0, 8.0, 12.0)
-# volume_clarity REPORT §4: tilt filter, no shelf knee; chosen knee in Hz, not a published cutoff.
+# Tilt filter, no shelf knee; chosen knee in Hz, not a published cutoff.
 TILT_KNEE_HZ = 250.0
-# pitch_emphasis REPORT §4: duration/pitch/level boost + de-emphasis, no magnitudes; chosen levels.
+# Duration/pitch/level boost + de-emphasis, no magnitudes; chosen levels.
 EMPH_DURATION, EMPH_PITCH_ST, EMPH_GAIN_DB = (1.1, 1.2, 1.3), (2.0, 4.0, 6.0), (2.0, 4.0, 6.0)
-EMPH_REMOVE = (0.3, 0.6, 0.9)  # pitch_emphasis REPORT §4: de-emphasis proposal, strengths chosen.
-# pitch_emphasis REPORT §4: last 200–300 ms; midpoint chosen; rise size not published, chosen in st.
+EMPH_REMOVE = (0.3, 0.6, 0.9)  # de-emphasis strengths chosen; no published magnitudes
+# Last 200–300 ms; midpoint chosen; rise size not published, chosen in st.
 ENDING_WINDOW_S, ENDING_RISE_ST = 0.25, (2.0, 4.0, 6.0)
-# pitch_emphasis REPORT §4: flatten fall / copy contour, no levels; chosen interpolation strengths.
+# Flatten fall / copy contour, no levels; chosen interpolation strengths.
 CONTOUR_STRENGTH = (1 / 3, 2 / 3, 1.0)
-# SYNTHESIS §2: word-boundary error 48–89 ms is empirical, NOT a guaranteed upper bound.
+# Huang et al. 2024: word-boundary error 48–89 ms is empirical, NOT a guaranteed upper bound.
 ALIGNMENT_ERROR_S = (0.048, 0.089)
 
 
@@ -253,8 +253,7 @@ def _extra(primary, event, sign, secondary, family=None, **params):
 
 # Per type: primary dimension (the flag key that detects it, with sign; sign 0 = either direction), family (the group it
 # is reported under), event kind, expected secondary dimensions (D: a firing there is not counted as a false region) and
-# the physical magnitude per level (D). Extra types: docs/research/recipes_report.md, primary families, secondary effects
-# and named recipe units.
+# the physical magnitude per level (D).
 FLAW_REGISTRY = {
     "RUSH": _core("D1", "span", -1, ("D4",), (1.20, 1.45, 1.90)),  # speech duration x 1/r
     "DRAG": _core("D1", "span", 1, ("D2", "D4", "D6", "D7"), (1.20, 1.45, 1.90)),  # speech duration x r
@@ -313,7 +312,7 @@ EXTRA_CROSS_CLIPS = tuple((lv, ts) for lv in (2, 3) for ts in EXTRA_CROSS_SETS i
 REGISTRY_VERSION = 3
 
 # --------------------------------------------------------------------------------------------- measures of D7-D9 and the extra types
-BLOCK_S, STABLE_S = 0.25, 0.20  # s, duration floors of docs/research/chain/disfluency/REPORT.md
+BLOCK_S, STABLE_S = 0.25, 0.20  # s, minimum durations of a block and of a stable run
 STABLE_PITCH_ST, STABLE_SPECTRUM = 0.50, 0.08  # lab stability limits; low F0 is below the voiced median
 ORPHAN_MIN_S = 0.20  # s, lab voiced-gap floor
 FINAL_WINDOW_S, MIN_FINAL_VOICED = 0.20, 5  # s and frames, sentence-ending comparison stretches
@@ -337,8 +336,8 @@ D7_IDENTITY_TOL_LN = 0.05
 WORD_BY_WORD_MIN_EVENTS = 3  # Design: isolated pauses do not establish word-by-word reading.
 HESITATION_STRETCH_MIN = math.log(1.25)  # Lab timing floor; independent of recipe levels.
 ALPHA_DROP_DB = 1.0  # Lab alpha-ratio resolution for supporting effort evidence, dB.
-STUTTER_BASE_RATE = 0.0021  # disfluency REPORT §3: 0.21% stuttered syllables in fluent readers.
-# (D) natural-rushing rule (pace_pauses REPORT §1/§4; recipe edits_extra.natural_rushing): faster words and shorter pauses.
+STUTTER_BASE_RATE = 0.0021  # Ritto et al. 2016: 0.21% stuttered syllables in fluent readers.
+# (D) natural-rushing rule (Trouvain & Grice 1999; recipe edits_extra.natural_rushing): faster words and shorter pauses.
 # A D9- region is natural rushing only when the paired pause time in its windows' words is below both the word-time ratio
 # and this kept fraction, the ln midpoint between pauses kept (1.0) and the mildest recipe fraction (0.6).
 NATURAL_RUSH_PAUSE_KEPT_MAX = math.sqrt(RUSH_PAUSE_KEEP[0])
@@ -360,7 +359,7 @@ R2_PREPARE_BATCH = 64  # bound temporary WAV/job copies while using every pool w
 
 # --------------------------------------------------------------------------------------------- validation gates of the pattern labels
 PROMOTION_RECALL_MIN, PROMOTION_AUC_MIN = 0.5, 0.70  # select-set recall and AUC that a label needs for the product
-LABEL_PRECISION_MIN, PROMOTION_AUC_LOWER_MIN = 0.5, 0.5  # Real precision and chance-AUC gates of docs/DESIGN.md section 8
+LABEL_PRECISION_MIN, PROMOTION_AUC_LOWER_MIN = 0.5, 0.5  # Real precision and chance-AUC gates, fixed before the lab results
 PROMOTION_MAX_EXISTING_LOSS = 1
 # Real validation is supplied in the calibration report; unvalidated labels retain the fallback.
 PATTERN_GATES = {'BLOCK': 'block', 'WORD_REPETITION': 'repetition', 'SOUND_REPETITION': 'repetition',

@@ -19,6 +19,9 @@ dependencies = [
     "python-multipart",
 ]
 
+[project.scripts]
+cvoice = "cvoice.app:main"
+
 [project.optional-dependencies]
 # exactly one of these two is installed: `uv sync --locked --extra cpu` (laptop, Docker, CPU kernels) or `--extra gpu` (Kaggle T4 x2)
 cpu = ["torch==2.10.0", "torchaudio==2.10.0"]

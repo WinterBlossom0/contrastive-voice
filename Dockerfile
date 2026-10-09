@@ -1,5 +1,5 @@
-# Contrastive Voice dashboard (DESIGN 10): slim image, ffmpeg, the locked environment (CPU torch: --extra cpu), the aligner checkpoint baked in and
-# verified by SHA-256, port 7860, non-root. Build and run:
+# Contrastive Voice dashboard: slim image, ffmpeg, the locked environment (CPU torch: --extra cpu), the aligner checkpoint baked in and
+# verified by SHA-256, port 7860 (or $PORT), non-root. Build and run:
 #   docker build -t cvoice . && docker run --rm -p 7860:7860 cvoice
 FROM python:3.12-slim-trixie
 
@@ -25,4 +25,5 @@ RUN uv sync --locked --no-dev --extra cpu
 RUN python -c "from cvoice.align import load_aligner; load_aligner()"
 
 EXPOSE 7860
-CMD ["python", "-m", "cvoice.app", "--host", "0.0.0.0", "--port", "7860"]
+# no --port flag: the app reads $PORT, which hosting platforms set, and falls back to 7860
+CMD ["python", "-m", "cvoice.app", "--host", "0.0.0.0"]

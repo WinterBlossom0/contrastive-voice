@@ -1,4 +1,4 @@
-"""Automatic passage selection (DESIGN 2.2): chunked wav2vec2 emissions -> greedy CTC words with frame times ->
+"""Automatic passage selection: chunked wav2vec2 emissions -> greedy CTC words with frame times ->
 difflib anchors against the official transcript text -> sentence anchors -> windows of consecutive sentences of
 20-40 s (each sentence >= 80 % anchored) -> forced alignment of the window with 0.5 s context -> clip.
 """

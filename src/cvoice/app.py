@@ -1,15 +1,17 @@
-"""Dashboard server (DESIGN 7): the static page, the gallery files, and upload analysis jobs.
+"""Dashboard server: the static page, the gallery files, and upload analysis jobs.
 
     python -m cvoice.app [--host 127.0.0.1] [--port 7860] [--gallery DIR]
+
+The port defaults to the PORT environment variable when it is set (hosting platforms set it), else 7860.
 
     GET  /api/health                       uploads possible? limits
     POST /api/analyze                      multipart: audio, transcript (text) or transcript_file, baseline_id or baseline_audio
     GET  /api/jobs/{id}                    {state, stage, stages, error?, result?, reference?}
-    GET  /api/jobs/{id}/result.json        the result JSON of DESIGN 9
+    GET  /api/jobs/{id}/result.json        the analysis result JSON
     GET  /api/jobs/{id}/{participant|baseline}.wav   the decoded audio the analysis used (Range-capable)
     /gallery/...  /                        static files (gallery data, then the page)
 
-Regime rule (DESIGN 5.3): a bundled dataset clip against its own baseline is R1; anything else is R2. An upload is never a
+Regime rule: a bundled dataset clip against its own baseline is R1; anything else is R2. An upload is never a
 bundled clip, so every upload is analysed as R2. A bundled baseline with `references` (a reference bank) is passed to the
 pipeline as its bank, and the pipeline selects the reference mode; a finished job states the mode it used (`reference`).
 """
@@ -17,6 +19,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import shutil
 import tempfile
 import threading
@@ -269,7 +272,7 @@ def create_app(gallery: Path = GALLERY, detector: Path = DEFAULT_DETECTOR, work:
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(prog="python -m cvoice.app", description=__doc__.splitlines()[0])
     parser.add_argument("--host", default="127.0.0.1")
-    parser.add_argument("--port", type=int, default=7860)
+    parser.add_argument("--port", type=int, default=int(os.environ.get("PORT", "7860")))
     parser.add_argument("--gallery", type=Path, default=GALLERY)
     parser.add_argument("--detector", type=Path, default=DEFAULT_DETECTOR, help="detector.json used for uploads")
     args = parser.parse_args(argv)

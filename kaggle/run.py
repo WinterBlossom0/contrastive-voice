@@ -52,7 +52,7 @@ Reconstruct with your own Kaggle account, starting with only this code:
    Gutenberg uses the archived plain-text edition.
    Equal counts alone do not establish identical data; a different manifest hash needs investigation.
 
-External research corpora use the kaggle/data/fetch.py kernel and the subsets/licences in docs/research/chain/data/PLAN.md. Set
+External research corpora use the kaggle/data/fetch.py kernel and the subsets/licences listed in it. Set
 kaggle/data/kernel-metadata.json id to YOUR_USERNAME/cvoice-data, keep its five public dataset_sources and is_private/enable_internet
 true, then run `kaggle kernels push -p kaggle/data`. The build also needs a second output: a copy of that kernel with id
 YOUR_USERNAME/cvoice-data-vctk whose entry point calls main(["--only", "vctk"]); the build checks this mount but reads no VCTK audio.

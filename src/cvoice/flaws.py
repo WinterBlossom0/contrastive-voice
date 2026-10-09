@@ -1,4 +1,4 @@
-"""Flaw injection with exact sample time maps and labels (DESIGN 2.4 / 2.5).
+"""Flaw injection with exact sample time maps and labels.
 
 Chain A (stored clips): numpy WSOLA for time, Praat PSOLA (parselmouth) for pitch. Chain B (evaluation only, RUSH / DRAG /
 MONOTONE): Praat PSOLA duration + WORLD pitch. Edits are applied right to left; every edit contributes one Warp (a

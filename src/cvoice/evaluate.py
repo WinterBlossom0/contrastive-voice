@@ -1,4 +1,4 @@
-"""Evaluation (Kaggle): every metric and table of DESIGN 8 on the frozen split, as JSON + Markdown tables + PNG figures.
+"""Evaluation (Kaggle): every metric and table of docs/technical.md section 6 on the frozen split, as JSON + Markdown tables + PNG figures.
 
     python -m cvoice.evaluate --dataset /kaggle/working/data --models /kaggle/working/out/models/detector.json \
         --cache /kaggle/working/cache --out /kaggle/working/out [--splits train,val] [--final [--force]]
@@ -42,7 +42,7 @@ from .pool import PreparePool, worker_aligner
 from .protocol import STRICT_ACCOUNTING, exemption_policy, tiers
 from .uncertainty import MIN_BOOTSTRAP_CLUSTERS, cluster_summary, wilson, proportion, poisson
 
-EXPECTED = {  # DESIGN 2.4 expectation table (fixed before evaluation): level -> expectation per regime
+EXPECTED = {  # expectation table, fixed before evaluation: level -> expectation per regime
     "R1": {1: "marginal: detection near or below 50 %; clip score >= 90", 2: "flagged", 3: "flagged"},
     "R2": {1: "must stay silent", 2: "marginal", 3: "flagged for pace, pauses, pitch, volume; D4 and D6 not scored"},
 }

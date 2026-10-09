@@ -1,4 +1,4 @@
-"""Contrastive deltas of DESIGN 5.1 (participant P against baseline B, word i <-> word i) and the time map.
+"""Contrastive deltas (participant P against baseline B, word i <-> word i) and the time map.
 
 Units: D1, D3, D5, D6 have one unit per word (its five-word window); D2 one per word boundary (after word i);
 D4 one per baseline stress word. x is NaN where the unit cannot be scored; for D2 x is defined at every eligible boundary

@@ -1,6 +1,5 @@
 4112c7b573b5fdef9a6942c4f32a245ee8913cd62e57f3d2aae66f26df358994  ./STATUS.json
 9777bf2bd726ca425a08f5c54a0f1515d7d2b3920f1e8e357fc3f48f7ba2c17d  ./addendum.json
-52826bf8fa3ce0592dca05dcacf5dc81bc59a000d4e192541f9f20e88fcd63cb  ./addendum.md
 0f25392b96293daef483b7a10dea9697033883d51091407ccc91f3df0cd1f45f  ./calibration/report.json
 ca2b29d609044eb1915f8730d85fe0cf20f8abdd5751fea6f4d2f8fe9277f563  ./dataset_card.md
 418ff437ad9fe605f05e47f968e7a4db7bf7bafc43f16f9fb44681070d71a874  ./figures/activation_matrix.png
@@ -9,4 +8,3 @@ e464da1a55a7f1df6fe67a9a972201f650d5733002aaf3e58b02f54b96c74de5  ./figures/dete
 3e857c1220289113cd75e39f4be3bb6d60ecc3953b462da80277050a02f727b2  ./figures/false_regions_per_minute.png
 4d13595cc067cd614adbad88898d10410ccd8882b3b45dffcd8400a705c8595f  ./final_evaluations.json
 49a306d9cf9f94bac1a441de8ddeeb386586bde166ef92defbc0a37f942100b1  ./results.json
-aef6292fd85aabd124cc847e5db77db445a24dda3e487c729178115919fc16a9  ./tables_rendered.md

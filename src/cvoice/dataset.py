@@ -30,7 +30,7 @@ from .pool import PreparePool
 from .uncertainty import wilson
 
 MANIFEST = ROOT / "data" / "sources_manifest.json"
-GETTYSBURG_REFERENCE = "gettysburg_amb"  # B for the cross-speaker flawed pairs (DESIGN 2.3)
+GETTYSBURG_REFERENCE = "gettysburg_amb"  # B for the cross-speaker flawed pairs
 # Extra types whose realised measure falls when the edit works; every other extra type raises its measure.
 DECREASING_EXTRA_TYPES = ("NATURAL_RUSH", "LOW_EFFORT", "TRAILING_OFF", "FLAT_FINAL_FALL", "REPEATED_CONTOUR")
 
@@ -549,8 +549,7 @@ def write_card(manifest: dict, path: Path) -> None:
                         not r['reason'].startswith(('text not located:', 'located text failed alignment:'))]
             lines.append(f"| {source} | {count} | {len(excluded)} | {len(excluded)/count:.1%} | {dict(Counter(r['reason'] for r in excluded))} |")
         lines += ['', 'Missing independent prompts: ' + json.dumps(pool.get('missing', []), sort_keys=True)]
-    lines += ["", "Sources: build/work/research/chain/{pace_pauses,disfluency,pitch_emphasis,volume_clarity}/REPORT.md §4; "
-              "SYNTHESIS.md §4; alpha coupling from volume_clarity §2.1. Numeric signal gates, jitter, fit tolerances and release are engineering choices.",
+    lines += ["", "Sources: docs/PAPERS.md (published recipe ranges; alpha coupling from Sundberg & Nordenberg 2006). Numeric signal gates, jitter, fit tolerances and release are engineering choices.",
               "", "| extra type | family / primary | L1 / L2 / L3 named parameters (s, dB, st, factors) | source / chosen values | approximation / omissions |",
               "|---|---|---|---|---|"]
     for typ in C.EXTRA_TYPES:

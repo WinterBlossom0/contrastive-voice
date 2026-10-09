@@ -1,3 +1,4 @@
+# The image needs only src/, models/, gallery/, pyproject.toml, uv.lock, README.md and LICENSE.
 .venv
 .git
 .github
@@ -6,12 +7,13 @@
 **/__pycache__
 **/*.pyc
 build
+out
+video
 tests
 docs
 kaggle
 scripts
-data/dataset
-data/transcripts
+data
 eval
 calibration
 .agents
@@ -23,3 +25,7 @@ calibration
 kaggle.json
 .kaggle
 *.zip
+*.log
+**/*:Zone.Identifier
+fly.toml
+render.yaml

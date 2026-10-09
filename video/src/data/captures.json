@@ -1,0 +1,99 @@
+[
+  {
+    "id": "open_example",
+    "file": "captures/open_example.webm",
+    "durationSec": 13.67,
+    "scene": "s3_demo_summary",
+    "description": "Pointer opens 'Try an example' and switches from Identity to L3A. The page fades over to 86.11, 'Rushed in the middle, then fading', then scrolls to the three biggest fixes: Rushed -4.89, Volume drops -3.81, Missing pause -3.56.",
+    "top": 0,
+    "atLine": 0
+  },
+  {
+    "id": "open_example_still",
+    "file": "captures/open_example.png",
+    "durationSec": 0,
+    "scene": "s3_demo_summary",
+    "description": "Still, last frame of the open_example shot."
+  },
+  {
+    "id": "hero",
+    "file": "captures/hero.webm",
+    "durationSec": 8.53,
+    "scene": "s3_demo_summary",
+    "description": "Fresh page load on the default example: the reference and 'this recording' waveforms draw in, the delivery score ring ticks up, and the rose flag bands light one by one in the time view.",
+    "top": 200,
+    "atLine": 3
+  },
+  {
+    "id": "hero_still",
+    "file": "captures/hero.png",
+    "durationSec": 0,
+    "scene": "s3_demo_summary",
+    "description": "Still, last frame of the hero shot."
+  },
+  {
+    "id": "transcript_karaoke",
+    "file": "captures/transcript_karaoke.webm",
+    "durationSec": 15.0,
+    "scene": "s4_demo_listen",
+    "description": "L3A from 12.02 s: pointer clicks Play recording; the word highlight moves from 'like to stand' past 'morning', 'the Washington Monument and then' and the faded 'humidity is low you can see past the'.",
+    "alignSec": 2.58,
+    "firstStill": "captures/transcript_karaoke_first.png",
+    "top": 0
+  },
+  {
+    "id": "transcript_karaoke_still",
+    "file": "captures/transcript_karaoke.png",
+    "durationSec": 0,
+    "scene": "s4_demo_listen",
+    "description": "Still, last frame of the transcript_karaoke shot."
+  },
+  {
+    "id": "finding",
+    "file": "captures/finding.webm",
+    "durationSec": 15.0,
+    "scene": "s5_demo_finding",
+    "description": "L3A: the Volume drops finding is open; the pointer clicks the flagged words 'the Washington Monument and then'. The panel switches to #3 Rushed -4.89 pts (0.87 s in your reading, 1.62 s in the reference, how to fix). Then it clicks Listen and playback runs.",
+    "top": 220
+  },
+  {
+    "id": "finding_still",
+    "file": "captures/finding.png",
+    "durationSec": 0,
+    "scene": "s5_demo_finding",
+    "description": "Still, last frame of the finding shot."
+  },
+  {
+    "id": "clean",
+    "file": "captures/clean.webm",
+    "durationSec": 13.13,
+    "scene": "s6_demo_clean_and_upload",
+    "description": "Pointer opens the example menu and picks Identity (placebo chain): score 100.00, 'The reference itself: nothing to fix', no flag bands, plain transcript, 'Nothing crosses its threshold: this reading matches the reference.', Every finding (0).",
+    "top": 0,
+    "atLine": 0
+  },
+  {
+    "id": "clean_still",
+    "file": "captures/clean.png",
+    "durationSec": 0,
+    "scene": "s6_demo_clean_and_upload",
+    "description": "Still, last frame of the clean shot."
+  },
+  {
+    "id": "upload",
+    "file": "captures/upload.webm",
+    "durationSec": 13.7,
+    "scene": "s6_demo_clean_and_upload",
+    "description": "Upload form: L3A.wav chosen as your recording, Reference set to 'Upload my own reference recording', reagan_farewell_1989.wav chosen, transcript already filled in. Ends on the Analyse button; nothing is submitted.",
+    "top": 60,
+    "atLine": 2,
+    "playbackRate": 2
+  },
+  {
+    "id": "upload_still",
+    "file": "captures/upload.png",
+    "durationSec": 0,
+    "scene": "s6_demo_clean_and_upload",
+    "description": "Still, last frame of the upload shot."
+  }
+]

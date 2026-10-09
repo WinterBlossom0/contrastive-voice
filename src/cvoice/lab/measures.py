@@ -51,64 +51,64 @@ def sentence_match(x, b, key):
 
 
 def within_phrase_count(x, b=None):
-    """docs/research/chain/pace_pauses/REPORT.md §4 #1: count pauses ≥200 ms at unpunctuated word gaps; punctuation proxy for clauses."""
+    """Count pauses ≥200 ms at unpunctuated word gaps; punctuation proxy for clauses."""
     v = np.sum((x['sil'] >= PAUSE_S) & ~x['punct'][:-1])
     return v if b is None else v - within_phrase_count(b)
 
 
 def within_phrase_duration(x, b=None):
-    """docs/research/chain/pace_pauses/REPORT.md §4 #1: summed within-phrase pause seconds, against the reference."""
+    """Summed within-phrase pause seconds, against the reference."""
     v = x['sil'][~x['punct'][:-1]].sum()
     return v if b is None else v - within_phrase_duration(b)
 
 
 def pause_count_ratio(x, b=None):
-    """docs/research/chain/pace_pauses/REPORT.md §4 #2: pause-count ratio; zero reference count is undefined, no pseudo-count."""
+    """Pause-count ratio; zero reference count is undefined, no pseudo-count."""
     v = np.sum(x['sil'] >= PAUSE_S)
     return v if b is None else (v / pause_count_ratio(b) if pause_count_ratio(b) else np.nan)
 
 
 def mean_pause_ratio(x, b=None):
-    """docs/research/chain/pace_pauses/REPORT.md §4 #2: mean pause-duration ratio; no pauses makes it undefined."""
+    """Mean pause-duration ratio; no pauses makes it undefined."""
     v = mean(x['sil'][x['sil'] >= PAUSE_S])
     return v if b is None else v / mean_pause_ratio(b)
 
 
 def mean_run(x, b=None):
-    """docs/research/chain/pace_pauses/REPORT.md §4 #4: words per run between ≥200 ms pauses; count both edge runs."""
+    """Words per run between ≥200 ms pauses; count both edge runs."""
     v = len(x['norm']) / (1 + np.sum(x['sil'] >= PAUSE_S))
     return v if b is None else v - mean_run(b)
 
 
 def latency_contour(x, b=None):
-    """docs/research/chain/pace_pauses/REPORT.md §2.1 C, §4 #3: per-sentence Pearson latency match; missing-value penalty; silence before word."""
+    """Per-sentence Pearson latency match; missing-value penalty; silence before word."""
     return sentence_match(x, b, 'latency')
 
 
 def production_contour(x, b=None):
-    """docs/research/chain/pace_pauses/REPORT.md §4 #3: per-sentence Pearson word-production match; raw CTC span, invariant to median scaling."""
+    """Per-sentence Pearson word-production match; raw CTC span, invariant to median scaling."""
     return sentence_match(x, b, 'production')
 
 
 def latency_residual(x, b=None):
-    """docs/research/chain/pace_pauses/REPORT.md §4 #3: largest per-word latency residual after own-median normalisation; zero median undefined."""
+    """Largest per-word latency residual after own-median normalisation; zero median undefined."""
     v = relative(x['latency'])
     return v if b is None else v - relative(b['latency'])
 
 
 def production_residual(x, b=None):
-    """docs/research/chain/pace_pauses/REPORT.md §4 #3: normalised per-word production residual; CTC spikes impose timing error."""
+    """Normalised per-word production residual; CTC spikes impose timing error."""
     v = relative(x['production'])
     return v if b is None else v - relative(b['production'])
 
 
 def tempo_irregularity(x, b=None):
-    """docs/research/chain/pace_pauses/REPORT.md §4 #5: SD of median-centred five-word ln speech-time ratio (chosen SD rather than MAD)."""
+    """SD of median-centred five-word ln speech-time ratio (chosen SD rather than MAD)."""
     return np.std(finite(x['win_T'])) if b is None else np.std(finite(product_delta(x, b, 'D1')))
 
 
 def tempo_drift(x, b=None):
-    """docs/research/chain/pace_pauses/REPORT.md §4 #6: ln(last-third/first-third speech time), then subtract reference drift; thirds by word."""
+    """ln(last-third/first-third speech time), then subtract reference drift; thirds by word."""
     n = len(x['norm']) // 3
     if n < 2:
         return np.nan
@@ -119,27 +119,27 @@ def tempo_drift(x, b=None):
 
 
 def breath_candidates(x, b=None):
-    """docs/research/chain/pace_pauses/REPORT.md §4 #7, corrected Wang: ≥250 ms pause candidates; NOT confirmed breaths; count."""
+    """≥250 ms pause candidates; NOT confirmed breaths; count."""
     v = np.sum(x['sil'] >= BREATH_S)
     return v if b is None else v - breath_candidates(b)
 
 
 def breath_position(x, b=None):
-    """docs/research/chain/pace_pauses/REPORT.md §4 #7: share of ≥250 ms candidates without punctuation; syntax unavailable."""
+    """Share of ≥250 ms candidates without punctuation; syntax unavailable."""
     mask = x['sil'] >= BREATH_S
     v = mean(~x['punct'][:-1][mask])
     return v if b is None else v - breath_position(b)
 
 
 def pre_boundary_lengthening(x, b=None):
-    """docs/research/chain/pace_pauses/REPORT.md §4 #8: boundary word duration divided by syllables and own median duration/syllable."""
+    """Boundary word duration divided by syllables and own median duration/syllable."""
     v = x['production'] / x['syll']
     v = relative(v)[x['punct']]
     return v if b is None else v - pre_boundary_lengthening(b)
 
 
 def silence_share(x, b=None):
-    """docs/research/chain/pace_pauses/REPORT.md §4 #9: silent frame seconds/clip seconds; all frames below product floor and unvoiced."""
+    """Silent frame seconds/clip seconds; all frames below product floor and unvoiced."""
     return subtract(x['silence_share'], b, 'silence_share')
 
 
@@ -153,75 +153,75 @@ def product_delta(x, b, dim):
 
 
 def five_word_pace(x, b=None):
-    """docs/research/chain/pace_pauses/REPORT.md §3; product compare.d1_pace: median-centred five-word ln ratio, product pause eligibility."""
+    """Product compare.d1_pace: median-centred five-word ln ratio, product pause eligibility."""
     return product_delta(x, b, 'D1')
 
 
 def five_word_pause(x, b=None):
-    """docs/research/chain/pace_pauses/REPORT.md §3; product compare.d2_pauses: eligible raw acoustic pause differences in seconds."""
+    """Product compare.d2_pauses: eligible raw acoustic pause differences in seconds."""
     return product_delta(x, b, 'D2')
 
 
 def inserted_material(x, b=None):
-    """docs/research/chain/disfluency/REPORT.md §4 #1: greedy insertions per 100 prompt words; copies/prefixes recorded separately."""
+    """Greedy insertions per 100 prompt words; copies/prefixes recorded separately."""
     return subtract(x['insertions_per100'], b, 'insertions_per100')
 
 
 def orphan_voiced_gap(x, b=None):
-    """docs/research/chain/disfluency/REPORT.md §2.6 M3, §4 #2: voiced seconds outside aligned word regions; Praat voicing replaces VAD."""
+    """Voiced seconds outside aligned word regions; Praat voicing replaces VAD."""
     return subtract(x['orphan_seconds'], b, 'orphan_seconds')
 
 
 def stability_run(x, b=None):
-    """docs/research/chain/disfluency/REPORT.md §2.6 M4, §4 #3: 5-frame pitch and 10-frame band-envelope OLS stability run seconds; chosen thresholds, not Goto P_fp."""
+    """5-frame pitch and 10-frame band-envelope OLS stability run seconds; chosen thresholds, not Goto P_fp."""
     return subtract(x['stable_seconds'], b, 'stable_seconds')
 
 
 def within_word_silence(x, b=None):
-    """docs/research/chain/disfluency/REPORT.md §4 #4: longest silent run ≥250 ms within raw aligned word span; seconds, reference subtraction."""
+    """Longest silent run ≥250 ms within raw aligned word span; seconds, reference subtraction."""
     return subtract(x['word_silence'], b, 'word_silence')
 
 
 def word_duration_ratio(x, b=None):
-    """docs/research/chain/disfluency/REPORT.md §4 #5: word duration ratio after removing each clip's overall word-duration median."""
+    """Word duration ratio after removing each clip's overall word-duration median."""
     v = relative(x['production'])
     return v if b is None else log_ratio(v, relative(b['production']))
 
 
 def character_duration_ratio(x, b=None):
-    """docs/research/chain/disfluency/REPORT.md §4 #5: normalised aligned character-span ln ratios; spikes are not phone boundaries."""
+    """Normalised aligned character-span ln ratios; spikes are not phone boundaries."""
     v = relative(x['char_duration'])
     return v if b is None else log_ratio(v, relative(b['char_duration']))
 
 
 def percentile_span(x, b=None):
-    """docs/research/chain/pitch_emphasis/REPORT.md §2.1 #1: whole-clip voiced P90-P10 semitone span (before local centring)."""
+    """Whole-clip voiced P90-P10 semitone span (before local centring)."""
     return subtract(x['pitch_span'], b, 'pitch_span')
 
 
 def five_word_range(x, b=None):
-    """docs/research/chain/pitch_emphasis/REPORT.md §3; product d3_pitch: regularised median-centred five-word ln range ratio."""
+    """Product d3_pitch: regularised median-centred five-word ln range ratio."""
     return product_delta(x, b, 'D3')
 
 
 def pitch_match(x, b=None):
-    """docs/research/chain/pitch_emphasis/REPORT.md §2.1 #3: §4 #1: per-sentence Pearson word median F0 (clip-centred st), multiplied by defined share; report 1-match."""
+    """Per-sentence Pearson word median F0 (clip-centred st), multiplied by defined share; report 1-match."""
     return sentence_match(x, b, 'med_s')
 
 
 def prominence_agreement(x, b=None):
-    """docs/research/chain/pitch_emphasis/REPORT.md §2.2, §4 #3: equal-weight own median/MAD z-score prominence-vector agreement; 1-Pearson."""
+    """Equal-weight own median/MAD z-score prominence-vector agreement; 1-Pearson."""
     return sentence_match(x, b, 'prominence')
 
 
 def stress_spread(x, b=None):
-    """docs/research/chain/pitch_emphasis/REPORT.md §4 #3: SD of equal-weight prominence points (chosen SD; no published cutoff)."""
+    """SD of equal-weight prominence points (chosen SD; no published cutoff)."""
     v = np.std(finite(x['prominence'])) if len(finite(x['prominence'])) else np.nan
     return v if b is None else v - stress_spread(b)
 
 
 def two_sided_emphasis(x, b=None):
-    """docs/research/chain/pitch_emphasis/REPORT.md §4 #6: lost reference prominence plus new function-word prominence; list is chosen prior."""
+    """Lost reference prominence plus new function-word prominence; list is chosen prior."""
     p = x['prominence']
     function = np.array([w in FUNCTION_WORDS for w in x['norm']])
     if b is None:
@@ -234,64 +234,64 @@ def two_sided_emphasis(x, b=None):
 
 
 def final_pitch_change(x, b=None):
-    """docs/research/chain/pitch_emphasis/REPORT.md §2.3: §4 #4: median final-word last 200 ms minus preceding word stretch in st; full stops only."""
+    """Median final-word last 200 ms minus preceding word stretch in st; full stops only."""
     return subtract(x['final_pitch'], b, 'final_pitch')
 
 
 def declination(x, b=None):
-    """docs/research/chain/pitch_emphasis/REPORT.md §2.3: OLS through all voiced sentence points, st/s; centring does not change slope."""
+    """OLS through all voiced sentence points, st/s; centring does not change slope."""
     return subtract(x['declination'], b, 'declination')
 
 
 def contour_repetition(x, b=None):
-    """docs/research/chain/pitch_emphasis/REPORT.md §4 #8 proposal: mean correlation of 32-point time-normalised sentence F0 contours."""
+    """Mean correlation of 32-point time-normalised sentence F0 contours."""
     v = mean([correlation(a, z) for i, a in enumerate(x['contours']) for z in x['contours'][i + 1:]])
     return v if b is None else v - contour_repetition(b)
 
 
 def five_word_level(x, b=None):
-    """docs/research/chain/volume_clarity/REPORT.md §3; product d5_volume: median-centred five-word level delta in dB."""
+    """Product d5_volume: median-centred five-word level delta in dB."""
     return product_delta(x, b, 'D5')
 
 
 def alpha_ratio(x, b=None):
-    """docs/research/chain/volume_clarity/REPORT.md §2.1: 10log10 energy(1000-5000)/energy(50-1000), voiced words, dB; retain whole shift."""
+    """10log10 energy(1000-5000)/energy(50-1000), voiced words, dB; retain whole shift."""
     return subtract(x['alpha'], b, 'alpha')
 
 
 def alpha_relative(x, b=None):
-    """docs/research/chain/volume_clarity/REPORT.md §2.1, §4 #2: word alpha ratio minus own clip median, minus reference local value, dB."""
+    """Word alpha ratio minus own clip median, minus reference local value, dB."""
     return subtract(x['alpha_relative'], b, 'alpha_relative')
 
 
 def spectral_emphasis(x, b=None):
-    """docs/research/chain/volume_clarity/REPORT.md §2.1: L-L0 dB, 4th-order Butterworth at 1.5F0; frame-local filter approximation."""
+    """L-L0 dB, 4th-order Butterworth at 1.5F0; frame-local filter approximation."""
     return subtract(x['spectral_emphasis'], b, 'spectral_emphasis')
 
 
 def phrase_level_slope(x, b=None):
-    """docs/research/chain/volume_clarity/REPORT.md §2.2: voiced-frame level OLS dB/s over text-punctuation phrases (chosen shared boundaries)."""
+    """Voiced-frame level OLS dB/s over text-punctuation phrases (chosen shared boundaries)."""
     return subtract(x['level_slopes'], b, 'level_slopes')
 
 
 def last_word_drop(x, b=None):
-    """docs/research/chain/volume_clarity/REPORT.md §2.2: last-word voiced level minus phrase voiced median in dB, then reference subtraction."""
+    """Last-word voiced level minus phrase voiced median in dB, then reference subtraction."""
     return subtract(x['last_drops'], b, 'last_drops')
 
 
 def posterior_relative(x, b=None):
-    """docs/research/chain/volume_clarity/REPORT.md §4 #1: aligned character posterior per word minus own clip median, minus reference value."""
+    """Aligned character posterior per word minus own clip median, minus reference value."""
     v = x['compat'] - median(x['compat'])
     return v if b is None else v - (b['compat'] - median(b['compat']))
 
 
 def greedy_word_error(x, b=None):
-    """docs/research/chain/volume_clarity/REPORT.md §4 #4: greedy word substitutions/deletions against prompt, binary per word; insertions separate."""
+    """Greedy word substitutions/deletions against prompt, binary per word; insertions separate."""
     return subtract(x['decode_errors'], b, 'decode_errors')
 
 
 def band_envelope_match(x, b=None):
-    """docs/research/chain/volume_clarity/REPORT.md §2.4, §4 #5: mean band envelope correlation after 32-point word warping; P-ESTOI-style proxy."""
+    """Mean band envelope correlation after 32-point word warping; P-ESTOI-style proxy."""
     if b is None:
         return x['band_envelopes']
     return np.array([1 - mean([correlation(a, r) for a, r in zip(w, z)])
@@ -299,23 +299,23 @@ def band_envelope_match(x, b=None):
 
 
 def modulation_depth(x, b=None):
-    """docs/research/chain/volume_clarity/REPORT.md §4 #8: RMS 0.5-10 Hz envelope fluctuation / DC level; chosen band, not trained EMS/SRMR."""
+    """RMS 0.5-10 Hz envelope fluctuation / DC level; chosen band, not trained EMS/SRMR."""
     return subtract(x['modulation_depth'], b, 'modulation_depth')
 
 
 def mid_band_share(x, b=None):
-    """docs/research/chain/volume_clarity/REPORT.md §2.4, §4 #8: spectrum power share at 1-3 kHz on speech frames; dimensionless."""
+    """Spectrum power share at 1-3 kHz on speech frames; dimensionless."""
     return subtract(x['mid_share'], b, 'mid_share')
 
 
 def pause_share(x, b=None):
-    """docs/research/chain/pace_pauses/REPORT.md §4 #10 open: total acoustic inter-word pause seconds divided by recording seconds."""
+    """Total acoustic inter-word pause seconds divided by recording seconds."""
     v = np.sum(x['sil']) / float(x['duration'])
     return v if b is None else v - pause_share(b)
 
 
 def rhythm_metrics(x, b=None):
-    """docs/research/chain/pace_pauses/REPORT.md §4 #10 open: orthographic vowel %/VarcoV/nPVI on CTC character intervals; NOT phonetic rhythm."""
+    """Orthographic vowel %/VarcoV/nPVI on CTC character intervals; NOT phonetic rhythm."""
     ds = x['char_duration']
     v = ds[np.array([c in 'AEIOUY' for c in x['chars']])]
     if len(v) < 2 or v.mean() <= 0:
@@ -326,12 +326,12 @@ def rhythm_metrics(x, b=None):
 
 
 def pitch_level_baseline(x, b=None):
-    """docs/research/chain/pitch_emphasis/REPORT.md §2.1 B; docs/research/chain/volume_clarity/REPORT.md §2.3: median voiced F0 own-baseline difference in st; no anxiety labels."""
+    """Median voiced F0 own-baseline difference in st; no anxiety labels."""
     return x['pitch_level'] if b is None else log_ratio(x['pitch_level'], b['pitch_level']) * 12 / np.log(2)
 
 
 def silence_baseline(x, b=None):
-    """docs/research/chain/pace_pauses/REPORT.md §2.1 B: silence-share difference against same-speaker baseline; styles do not label anxiety."""
+    """Silence-share difference against same-speaker baseline; styles do not label anxiety."""
     return silence_share(x, b)
 
 
