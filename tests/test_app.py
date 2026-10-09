@@ -66,10 +66,10 @@ def server(tmp_path, monkeypatch):
 
 
 def multipart(fields):
-    """fields: {name: str | (filename, bytes)} -> (body, content type)."""
+    """fields: {name: str | (filename, bytes)}, or a list of (name, value) pairs to repeat a name -> (body, content type)."""
     b = uuid.uuid4().hex
     out = b""
-    for name, v in fields.items():
+    for name, v in (fields.items() if isinstance(fields, dict) else fields):
         if isinstance(v, tuple):
             out += f'--{b}\r\nContent-Disposition: form-data; name="{name}"; filename="{v[0]}"\r\nContent-Type: application/octet-stream\r\n\r\n'.encode() + v[1] + b"\r\n"
         else:
@@ -89,9 +89,14 @@ def call(url, fields=None, headers=None):
         return e.code, e.read(), e.headers
 
 
-def wav_bytes(tmp_path, name="u.wav"):
-    audio.write_wav(tmp_path / name, tone())
+def wav_bytes(tmp_path, name="u.wav", seconds=2.0):
+    audio.write_wav(tmp_path / name, tone(seconds))
     return (tmp_path / name).read_bytes()
+
+
+def own_references(tmp_path, count):
+    """count reference uploads of different lengths (1.0, 1.1, ... s), so a test can tell them apart and check their order."""
+    return [("baseline_audio", (f"r{k}.wav", wav_bytes(tmp_path, f"r{k}.wav", 1.0 + 0.1 * k))) for k in range(count)]
 
 
 def wait_done(base, jid):
@@ -108,6 +113,8 @@ def test_health_static_and_gallery(server):
     base, _, _ = server
     h = json.loads(call(f"{base}/api/health")[1])
     assert h["ok"] and h["analysis"]["available"] and h["limits"]["max_seconds"] == C.MAX_UPLOAD_S
+    assert h["limits"]["max_references"] == C.CONSENSUS_K == 5   # the page copy says "five"
+    assert h["limits"]["max_total_bytes"] == appmod.max_request_bytes() and h["flag_limits"] == {}   # the stub detector has no regimes
     assert b"Contrastive Voice" in call(f"{base}/")[1]
     assert json.loads(call(f"{base}/gallery/index.json")[1])["baseline"]["id"] == "base"
     assert call(f"{base}/gallery/..%2f..%2fetc/passwd")[0] == 404
@@ -126,7 +133,7 @@ def test_upload_runs_as_r2_and_serves_decoded_audio(server):
     assert res["participant"]["audio"] == f"api/jobs/{jid}/participant.wav" and res["baseline"]["audio"] == "gallery/audio/base.wav"
     s, data, hdr = call(f"{base}/api/jobs/{jid}/participant.wav", headers={"Range": "bytes=0-99"})
     assert s == 206 and len(data) == 100
-    assert not (tmp / "evil.wav").exists() and not list((tmp / "work" / jid).glob("*recording"))   # raw uploads are deleted
+    assert not (tmp / "evil.wav").exists() and not list((tmp / "work" / jid).glob("*recording*"))   # raw uploads are deleted
 
 
 def test_uploaded_baseline_is_served_back(server):
@@ -148,6 +155,60 @@ def test_bank_choice_passes_every_reading_and_states_consensus_mode(server):
     assert job["reference"] == {"reference_mode": "consensus5", "reference_count": 5, "references_available": 6}
     res = json.loads(call(f"{base}/{job['result']}")[1])
     assert res["baseline"]["audio"] == "gallery/audio/bank0.wav" and res["detection"]["reference_mode"] == "consensus5"
+
+
+@pytest.mark.parametrize("count,mode", [(5, "consensus5"), (3, "single")])
+def test_own_reference_bank_is_passed_in_upload_order(server, count, mode):
+    base, seen, tmp = server
+    fields = [("audio", ("a.wav", wav_bytes(tmp))), ("transcript", TEXT), *own_references(tmp, count)]
+    s, body, _ = call(f"{base}/api/analyze", fields)
+    assert s == 200, body
+    jid = json.loads(body)["job_id"]
+    job = wait_done(base, jid)
+    assert job["state"] == "done" and seen["baseline"] == "uploaded_baseline" and seen["regime"] == "R2"
+    assert seen["references"] == [int((1.0 + 0.1 * k) * C.SR) for k in range(count)] and seen["ref"] == seen["references"][0]   # exemplar first
+    assert job["reference"]["reference_mode"] == mode and job["reference"]["references_available"] == count
+    (tmp / "served.wav").write_bytes(call(f"{base}/api/jobs/{jid}/baseline.wav")[1])
+    assert len(audio.read_wav(tmp / "served.wav")) == seen["ref"]   # the page plays the first reference
+    assert not list((tmp / "work" / jid).glob("*recording*"))
+
+
+def test_too_many_own_references_are_refused_in_plain_words(server):
+    base, seen, tmp = server
+    fields = [("audio", ("a.wav", wav_bytes(tmp))), ("transcript", TEXT), *own_references(tmp, appmod.MAX_REFERENCES + 1)]
+    s, body, _ = call(f"{base}/api/analyze", fields)
+    assert s == 422 and json.loads(body)["detail"] == "Upload at most 5 reference recordings of the same text."
+    assert not seen
+
+
+def test_each_file_and_the_whole_request_are_size_limited(server):
+    base, _, _ = server
+    over = [("audio", ("a.wav", b"RIFF" + b"\0" * C.MAX_UPLOAD_BYTES)), ("transcript", TEXT), ("baseline_id", "base")]
+    s, body, _ = call(f"{base}/api/analyze", over)   # one file above the per-file limit, the request under the total
+    assert s == 413 and "Each recording" in json.loads(body)["detail"]
+    total = appmod.max_request_bytes()
+    assert total == C.MAX_UPLOAD_BYTES * (1 + appmod.MAX_REFERENCES)   # room for every file of a full upload at its own limit
+    reply = declared_length_reply(base, total + 1)
+    assert reply.startswith(b"HTTP/1.1 413") and f"{total // 2**20} MB".encode() in reply
+
+
+def test_flag_limits_match_the_result_rows_of_the_frozen_detector():
+    """The health endpoint's smallest flagged changes per mode equal the row thresholds that the pipeline writes for that mode."""
+    from pathlib import Path
+    from cvoice.pipeline import DEFAULT_DETECTOR, ROOT
+    limits = appmod.upload_limits(DEFAULT_DETECTOR)
+    assert set(limits) == {"single", "consensus5"} and all(set(v) == set(appmod.LIMIT_ROWS.values()) for v in limits.values())
+    assert limits["consensus5"]["pace"][0] < limits["single"]["pace"][0]   # five readings flag a smaller rush
+    assert appmod.upload_limits(Path("missing.json")) == {}
+    for name, mode in (("r2_consensus", "consensus5"), ("greenman_botched", "single")):
+        path = ROOT / "gallery" / "results" / f"{name}.json"
+        if not path.exists():
+            continue
+        result = json.loads(path.read_text())
+        if result["detection"].get("reference_mode") != mode:
+            continue
+        rows = {r["key"]: r["tol"] for r in result["rows"]}
+        assert {k: rows[k] for k in appmod.LIMIT_ROWS.values()} == limits[mode]
 
 
 def test_bank_choice_refuses_another_text(server):
@@ -176,17 +237,23 @@ def test_upload_refusals(server, fields, status):
     assert json.loads(body)["detail"]
 
 
-def test_oversize_body_is_413_before_it_is_read_and_unknown_job_404(server):
-    base, _, _ = server
+def declared_length_reply(base, length):
+    """The reply to a POST that sends only its headers: a refusal can come from the declared length alone."""
     host, port = base.removeprefix("http://").split(":")
-    with socket.create_connection((host, int(port))) as c:   # headers only: the declared length alone is refused
-        c.sendall(b"POST /api/analyze HTTP/1.1\r\nHost: x\r\nContent-Type: multipart/form-data; boundary=b\r\nContent-Length: 999999999\r\n\r\n")
+    with socket.create_connection((host, int(port))) as c:
+        c.sendall(f"POST /api/analyze HTTP/1.1\r\nHost: x\r\nContent-Type: multipart/form-data; boundary=b\r\nContent-Length: {length}\r\n\r\n".encode())
         c.settimeout(10)
         reply = b""
         chunk = c.recv(4096)
         while chunk:  # the server closes the connection; headers and body can arrive in separate packets
             reply += chunk
             chunk = c.recv(4096)
+    return reply
+
+
+def test_oversize_body_is_413_before_it_is_read_and_unknown_job_404(server):
+    base, _, _ = server
+    reply = declared_length_reply(base, 999999999)
     assert reply.startswith(b"HTTP/1.1 413") and b"MB" in reply
     assert call(f"{base}/api/jobs/{'0' * 32}")[0] == 404
     assert call(f"{base}/api/jobs/{'0' * 32}/participant.wav")[0] == 404
@@ -249,5 +316,7 @@ def test_dashboard_script_copies_of_python_strings():
     assert literal("SYNTHETIC_TEXT") == explain.SYNTHETIC_ONLY_CLAUSE
     modes = re.search(r"^const MODE_TEXT = (\{.*\});", script, re.M).group(1)
     assert json.loads(re.sub(r"(\w+):", r'"\1":', modes)) == gallery.MODE_TEXT
+    rows = re.search(r"^const LIMIT_ROWS = (\[.*\]);", script, re.M).group(1)
+    assert json.loads(rows) == list(appmod.LIMIT_ROWS.values())
     stages = re.search(r"showStages\((\[[^\]]*\]), \"decode\"\)", script).group(1)
     assert tuple(json.loads(stages)) == appmod.STAGES

@@ -198,7 +198,7 @@ function showAlert(msg) {
 }
 
 // ---------------------------------------------------------------------------------------------------- state
-const S = { result: null, sel: null, filter: null, rid: 0, limits: null, ws: null, regions: null, ref: new Audio(),
+const S = { result: null, sel: null, filter: null, rid: 0, limits: null, flagLimits: null, ws: null, regions: null, ref: new Audio(),
   refTimer: null, bothTimer: null, tl: null, chart: null, hasLibs: false, selKind: "flaw", allDimensions: false, openId: 0,
   mediaId: 0, youReady: false, refReady: false, inSpan: new Set(), listenAt: null, audio: null, sources: new WeakMap(), levelOn: false, countId: 0, counted: false, side: "you", wsRef: null, playId: 0, priority: null, pattern: null };
 
@@ -329,6 +329,46 @@ function renderSummary(r) {
   $("#see-all").textContent = `See all ${n} ${n === 1 ? "finding" : "findings"}`;
 }
 
+// Rows whose flag threshold is a plain physical change; the same rows as app.LIMIT_ROWS (tests/test_app.py compares them).
+const LIMIT_ROWS = ["pace", "pauses", "volume"];
+const roughFactor = (v) => `×${Math.exp(v).toFixed(1)}`;   // an ln threshold as a speed factor
+
+/** "about ×1.7 faster or ×2.1 slower" from a row's [below, above] thresholds; one number when both round the same; null without either. */
+function pairWords(below, above, show, lower, higher) {
+  if (below == null && above == null) return null;
+  if (below == null) return `about ${show(above)} ${higher}`;
+  if (above == null) return `about ${show(below)} ${lower}`;
+  return show(below) === show(above) ? `about ${show(below)} ${lower} or ${higher}` : `about ${show(below)} ${lower} or ${show(above)} ${higher}`;
+}
+
+const paceWords = (tol) => pairWords(...(tol || []), roughFactor, "faster", "slower");
+
+/** The smallest flagged change of each LIMIT_ROWS row in plain words, from {row key: [below, above]}. */
+function limitWords(tol) {
+  const pace = paceWords(tol.pace);
+  const pauses = pairWords(...(tol.pauses || []), (v) => `${v.toFixed(1)} s`, "shorter", "longer");
+  const volume = pairWords(...(tol.volume || []), (v) => `${Math.round(v)} dB`, "quieter", "louder");
+  return [pace && `pace ${pace}`, pauses && `a pause ${pauses}`, volume && `volume ${volume}`].filter(Boolean);
+}
+
+/** The reference mode used and the smallest changes it flags, from the result's own row thresholds; null when no row has one. */
+function limitLine(r) {
+  const tol = Object.fromEntries((r.rows || []).filter((row) => LIMIT_ROWS.includes(row.key)).map((row) => [row.key, row.tol]));
+  const parts = limitWords(tol);
+  if (!parts.length) return null;
+  const d = r.detection || {}, consensus = d.reference_mode === "consensus5";
+  const unused = !consensus && d.references_available > 1 ? `Only the first of ${d.references_available} reference readings was used: five are needed to combine them. ` : "";
+  const lead = consensus ? `With ${d.reference_count} reference readings` : "With one reference reading";
+  const five = r.regime === "R2" && !consensus ? paceWords(S.flagLimits?.consensus5?.pace) : null;
+  return `${unused}${lead}, changes smaller than these may not be flagged: ${parts.join(", ")}.` + (five ? ` With five readings, pace ${five} can be flagged.` : "");
+}
+
+function renderLimit(r) {
+  const line = limitLine(r);
+  $("#detect-limit").hidden = !line;
+  $("#detect-limit").textContent = line || "";
+}
+
 function renderLedger(r) {
   const o = r.scores.overall;
   showScore(o);
@@ -340,6 +380,7 @@ function renderLedger(r) {
   $("#reference-mode .badge").textContent = consensus ? `Compared with ${r.detection.reference_count} readings of the same text` : "";
   $("#key-ref").textContent = r.detection?.reference_mode === "consensus5" ? `Reference: median of ${r.detection.reference_count} readings` : "Reference rendition";
   renderSummary(r);
+  renderLimit(r);
   const cards = $("#cards");
   cards.replaceChildren();
   for (const g of dimGroups(r)) {
@@ -609,8 +650,8 @@ function renderExplain() {
       pts ? el("p", { class: "ex-pts" }, pts, el("small", { text: f.counted === false ? "carried by the group" : "from your score" })) : null),
     el("p", { class: "ex-words", text: quotedWords(r, f) }),
     el("p", { class: "ex-what", text: plainLine(f) }),
-    why ? el("p", { class: "ex-why", text: why }) : null,
-    diff ? null : thresholdGauge(f),
+    why ? el("p", { class: "ex-why", text: why }) : "",
+    diff ? "" : thresholdGauge(f) ?? "",
     el("button", { type: "button", class: "listen-btn", "data-audio": "both", ...(diff ? {} : { "data-listen": S.sel }), onclick: () => listen(S.sel, S.selKind) }, "Listen",
       el("span", { class: "sub-h", text: ` yours ${span(f.p)}, then the reference ${span(f.b)}` })));
   if (!diff && f.fix) box.append(el("p", { class: "fix" }, el("b", { text: "How to fix" }), f.fix));
@@ -1582,22 +1623,34 @@ function baselineText(b) {
   if (!refs.length) return { label: `${b.title}: bundled, one reading`, note: "Compared with one reference reading." };
   const k = b.consensus_k || 5;
   return { label: `${b.title}: bundled bank of ${refs.length} readings`,
-    note: refs.length >= k ? `Compared with the word-by-word median of the first ${k} of ${refs.length} LibriVox readings (public domain); you hear and see the first reading, by ${refs[0].reader}. Readers: ${refs.map((r) => r.reader).join(", ")}.`
-      : `Compared with the first of ${refs.length} readings, by ${refs[0].reader}: consensus mode needs ${k}.` };
+    note: refs.length >= k ? `Compared with ${k} readings of this text by different people (LibriVox, public domain); you hear and see the first, by ${refs[0].reader}. Readers: ${refs.slice(0, k).map((r) => r.reader).join(", ")}.`
+      : `Compared with the first of ${refs.length} readings, by ${refs[0].reader}: five are needed to combine them.` };
+}
+
+const OWN_REFERENCE_NOTE = "Add up to five readings of the same text by different people. With five, the comparison catches far more timing problems.";
+
+/** The note under the reference field when the user uploads their own references: the advice, then what the chosen files give. */
+function ownReferenceNote(files) {
+  const n = files.length;
+  if (n > 5) return "Choose at most five reference recordings.";
+  if (n === 5) return `All five readings are combined; you hear and see the first, ${files[0].name}.`;
+  if (n > 1) return `${OWN_REFERENCE_NOTE} With ${n}, only the first, ${files[0].name}, is used: five are needed to combine them.`;
+  return OWN_REFERENCE_NOTE;
 }
 
 async function setupUpload(index) {
   const sel = $("#f-baseline");
   const bundled = index.baselines || [index.baseline];
   sel.replaceChildren(...bundled.map((b) => el("option", { value: b.id, text: baselineText(b).label })),
-    el("option", { value: "", text: "Upload my own reference recording" }));
+    el("option", { value: "", text: "Upload my own reference recordings" }));
   const prefill = () => {
     const own = sel.value === "", b = bundled.find((x) => x.id === sel.value);
     $("#own-baseline").hidden = !own;
-    $("#baseline-note").textContent = own ? "Compared with your one reference recording." : baselineText(b).note;
+    $("#baseline-note").textContent = own ? ownReferenceNote($("#f-baseline-audio").files) : baselineText(b).note;
     if (!own && !$("#f-text").dataset.edited) $("#f-text").value = b.text || "";
   };
   sel.addEventListener("change", prefill);
+  $("#f-baseline-audio").addEventListener("change", prefill);
   $("#f-text").addEventListener("input", () => { $("#f-text").dataset.edited = "1"; });
   $("#f-text-file").addEventListener("change", async (e) => {
     const f = e.target.files[0];
@@ -1614,7 +1667,11 @@ async function setupUpload(index) {
     return disableUpload("Uploads need the local server. Run `python -m cvoice.app` and open http://127.0.0.1:7860 (see the README); this static copy only shows the bundled examples.");
   }
   S.limits = health.limits;
-  $("#limits").textContent = `${Math.round(health.limits.max_bytes / 2 ** 20)} MB per upload, ${health.limits.max_seconds} s of audio per recording`;
+  S.flagLimits = health.flag_limits || {};
+  if (S.result) renderLimit(S.result);   // an example that loaded before the server answered gains its five-reading line
+  const mb = (bytes) => Math.round(bytes / 2 ** 20);
+  $("#limits").textContent = `${mb(health.limits.max_bytes)} MB per file` + (health.limits.max_total_bytes ? `, ${mb(health.limits.max_total_bytes)} MB in all` : "")
+    + `, ${health.limits.max_seconds} s of audio per recording`;
   if (!health.analysis.available) disableUpload(health.analysis.reason);
 }
 
@@ -1635,15 +1692,18 @@ async function submitUpload(ev) {
   ev.preventDefault();
   const msg = $("#stage-msg");
   msg.className = "note"; msg.textContent = "";
-  const audio = $("#f-audio").files[0], own = $("#f-baseline").value === "", ownFile = $("#f-baseline-audio").files[0];
+  const audio = $("#f-audio").files[0], own = $("#f-baseline").value === "", ownFiles = own ? [...$("#f-baseline-audio").files] : [];
   if (!audio) return fail("Choose your recording.");
-  if (own && !ownFile) return fail("Choose the reference recording, or pick the bundled one.");
+  if (own && !ownFiles.length) return fail("Choose your reference recordings, or pick a bundled one.");
+  if (ownFiles.length > (S.limits?.max_references || 5)) return fail("Choose at most five reference recordings.");
   if (!$("#f-text").value.trim()) return fail("Enter the transcript: the exact words both recordings read.");
-  if (S.limits && [audio, ownFile].some((f) => f && f.size > S.limits.max_bytes)) return fail(`A file is larger than ${Math.round(S.limits.max_bytes / 2 ** 20)} MB.`);
+  const files = [audio, ...ownFiles];
+  if (S.limits && files.some((f) => f.size > S.limits.max_bytes)) return fail(`A file is larger than ${Math.round(S.limits.max_bytes / 2 ** 20)} MB.`);
+  if (S.limits?.max_total_bytes && files.reduce((sum, f) => sum + f.size, 0) > S.limits.max_total_bytes) return fail(`The files together are larger than ${Math.round(S.limits.max_total_bytes / 2 ** 20)} MB.`);
   const fd = new FormData();
   fd.append("audio", audio);
   fd.append("transcript", $("#f-text").value);
-  if (own) fd.append("baseline_audio", ownFile); else fd.append("baseline_id", $("#f-baseline").value);
+  if (own) for (const f of ownFiles) fd.append("baseline_audio", f); else fd.append("baseline_id", $("#f-baseline").value);
   $("#submit").disabled = true;
   document.body.classList.add("busy");
   showStages(["decode", "align", "features", "compare", "detect"], "decode");

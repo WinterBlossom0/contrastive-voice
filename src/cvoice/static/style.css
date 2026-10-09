@@ -132,6 +132,7 @@ a:hover { text-decoration-color: var(--ink); }
 .regime-badge { display: inline-block; padding: 2px 12px; border-radius: 999px; font-size: 13px; color: var(--ink2); background: var(--panel-2); border: 1px solid var(--line); }
 .summary-line { font-size: 16px; line-height: 1.45; margin-top: 6px; color: var(--ink2); }
 .sub { color: var(--ink2); font-size: 14px; margin-top: 6px; }
+.limit-line { font-size: 13px; }
 .badge { display: inline-block; max-width: 100%; color: var(--ink2); font-size: 15px; overflow-wrap: anywhere; }
 .fixes { margin-top: 26px; }
 .fixes h2 { font-size: 22px; }
