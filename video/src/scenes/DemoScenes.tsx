@@ -29,8 +29,8 @@ const DemoScene: React.FC<{ scene: SceneTiming; headings: DemoHeading[]; childre
             style={{
               position: "absolute",
               left: FRAME.left,
-              top: 52,
-              fontSize: 54,
+              top: 30,
+              fontSize: 50,
               opacity: rise(frame, start, 16) * fadeOut(frame, end, 10),
               translate: `0px ${interpolate(rise(frame, start, 16), [0, 1], [14, 0])}px`,
             }}
@@ -47,8 +47,9 @@ const DemoScene: React.FC<{ scene: SceneTiming; headings: DemoHeading[]; childre
 
 export const S3DemoSummary: React.FC<{ scene: SceneTiming }> = ({ scene }) => (
   <DemoScene scene={scene} headings={[
-      { text: "An example from the gallery", atLine: 0 },
-      { text: "The top three fixes come first", atLine: 3 },
+      { text: "A gallery example: an edited speech", atLine: 0 },
+      { text: "Biggest fixes first", atLine: 3 },
+      { text: "Delivery score: 86.11", atLine: 5 },
     ]} />
 );
 
@@ -64,7 +65,7 @@ const ListeningPill: React.FC<{ scene: SceneTiming }> = ({ scene }) => {
       style={{
         position: "absolute",
         right: FRAME.left,
-        top: 58,
+        top: 30,
         display: "flex",
         alignItems: "center",
         gap: 14,
@@ -91,7 +92,7 @@ const ListeningPill: React.FC<{ scene: SceneTiming }> = ({ scene }) => {
 export const S4DemoListen: React.FC<{ scene: SceneTiming }> = ({ scene }) => (
   <DemoScene scene={scene} headings={[
       { text: "The transcript follows the audio", atLine: 0 },
-      { text: "Each highlight sits on the words you heard", atLine: 3 },
+      { text: "Flags mark the exact words", atLine: 3 },
     ]}>
     <ListeningPill scene={scene} />
   </DemoScene>
@@ -99,9 +100,9 @@ export const S4DemoListen: React.FC<{ scene: SceneTiming }> = ({ scene }) => (
 
 export const S5DemoFinding: React.FC<{ scene: SceneTiming }> = ({ scene }) => (
   <DemoScene scene={scene} headings={[
-      { text: "Click a flag", atLine: 0 },
-      { text: "Both measured values and the threshold", atLine: 1 },
-      { text: "Your reading, then the reference", atLine: "clip" },
+      { text: "One finding in detail", atLine: 0 },
+      { text: "Measured against the reference", atLine: 1 },
+      { text: "A/B playback", atLine: "clip" },
       { text: "One concrete fix", atLine: 4 },
     ]} >
     <ListeningPill scene={scene} />
@@ -110,7 +111,7 @@ export const S5DemoFinding: React.FC<{ scene: SceneTiming }> = ({ scene }) => (
 
 export const S6DemoCleanAndUpload: React.FC<{ scene: SceneTiming }> = ({ scene }) => (
   <DemoScene scene={scene} headings={[
-      { text: "A clean reading gets no flags", atLine: 0 },
+      { text: "Placebo check", atLine: 0 },
       { text: "Upload your own pair", atLine: 2 },
     ]} />
 );

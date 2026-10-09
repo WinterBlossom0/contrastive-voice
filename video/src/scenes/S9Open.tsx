@@ -5,8 +5,8 @@ import { Heading, SceneShell } from "../components/SceneShell";
 import { color, font } from "../theme";
 import { beatFrame, type SceneTiming } from "../timeline";
 
-// The commands from the README section "Run with Docker".
-const COMMANDS = ["docker build -t cvoice .", "docker run --rm -p 7860:7860 cvoice"];
+// The two commands of the README section "Run with Docker", joined into the one command that the narration names.
+const COMMAND = "docker build -t cvoice . && docker run --rm -p 7860:7860 cvoice";
 const CHARS_PER_FRAME = 1.1;
 
 const LINKS = [
@@ -19,7 +19,7 @@ export const S9Open: React.FC<{ scene: SceneTiming }> = ({ scene }) => {
   const typingStart = 14;
   const openPage = beatFrame(scene, 1);
   const links = beatFrame(scene, 2);
-  let typedBefore = 0;
+  const typed = Math.min(COMMAND.length, Math.max(0, Math.floor((frame - typingStart) * CHARS_PER_FRAME)));
   return (
     <SceneShell>
       <Heading style={{ position: "absolute", left: 260, top: 110, fontSize: 72, opacity: rise(frame, 0, 18) }}>Open, and runs on your machine</Heading>
@@ -42,20 +42,12 @@ export const S9Open: React.FC<{ scene: SceneTiming }> = ({ scene }) => {
             <div key={dot} style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: color.panel3 }} />
           ))}
         </div>
-        <div style={{ padding: "30px 36px", fontFamily: "ui-monospace, 'DejaVu Sans Mono', monospace", fontSize: 40, lineHeight: 1.7 }}>
-          {COMMANDS.map((command) => {
-            const typed = Math.max(0, Math.floor((frame - typingStart) * CHARS_PER_FRAME) - typedBefore);
-            typedBefore += command.length + 8;
-            const visible = command.slice(0, Math.min(command.length, typed));
-            const typing = typed > 0 && typed < command.length + 8;
-            return (
-              <div key={command} style={{ opacity: typed > 0 ? 1 : 0 }}>
-                <span style={{ color: color.accentText }}>$ </span>
-                {visible}
-                {typing && Math.floor(frame / 8) % 2 === 0 ? <span style={{ color: color.accentText }}>▍</span> : null}
-              </div>
-            );
-          })}
+        <div style={{ padding: "30px 36px", fontFamily: "ui-monospace, 'DejaVu Sans Mono', monospace", fontSize: 34, lineHeight: 1.9 }}>
+          <div style={{ whiteSpace: "nowrap" }}>
+            <span style={{ color: color.accentText }}>$ </span>
+            {COMMAND.slice(0, typed)}
+            {typed < COMMAND.length && Math.floor(frame / 8) % 2 === 0 ? <span style={{ color: color.accentText }}>▍</span> : null}
+          </div>
           <div style={{ color: color.ink2, opacity: rise(frame, openPage, 16) }}>Then open localhost:7860 in your browser</div>
         </div>
       </div>

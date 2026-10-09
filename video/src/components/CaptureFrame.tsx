@@ -1,15 +1,55 @@
 import { Video } from "@remotion/media";
 import React from "react";
-import { AbsoluteFill, Img, interpolate, Sequence, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
+import { AbsoluteFill, Easing, Img, interpolate, Sequence, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
 import { color, font } from "../theme";
-import type { TimedCapture } from "../timeline";
+import type { TimedCameraKey, TimedCapture } from "../timeline";
 import { fadeOut, rise } from "./anim";
 
-export const FRAME = { left: 320, top: 150, width: 1280, chrome: 40 } as const;
-const INNER_HEIGHT = Math.round((FRAME.width * 9) / 16);
-// The dashboard page is a centred column at x 280 to 1639 of the 1920 px capture; the frame shows that column only, so its text stays legible.
-const CROP = { left: 264, width: 1392 };
-const CROP_SCALE = FRAME.width / CROP.width;
+// The frame ends above the subtitle band (theme.ts SUBTITLE_TOP 930).
+export const FRAME = { left: 80, top: 116, width: 1760, height: 800, chrome: 36 } as const;
+const VIEW = { width: FRAME.width, height: FRAME.height - FRAME.chrome };
+// A new capture fades in over the previous one, which stays visible underneath for these frames.
+export const CAPTURE_FADE_FRAMES = 10;
+// A held camera keeps a slow push-in, so a still shot does not look frozen; the unit is zoom gained per second.
+const DRIFT_PER_SEC = 0.006;
+const cameraEase = Easing.bezier(0.45, 0, 0.55, 1);
+
+type Camera = { x: number; y: number; zoom: number };
+
+const drifted = (camera: Camera, frames: number, fps: number): Camera => ({ ...camera, zoom: camera.zoom * (1 + (DRIFT_PER_SEC * Math.max(0, frames)) / fps) });
+
+// Each key starts a move from wherever the camera is at that frame, so a key that comes early never makes the camera jump.
+const cameraAt = (keys: TimedCameraKey[], frame: number, fps: number): Camera => {
+  const first = keys[0];
+  let camera: Camera = { x: first.x, y: first.y, zoom: first.zoom };
+  let settledAt = first.frame;
+  for (const key of keys.slice(1)) {
+    if (frame < key.frame) {
+      break;
+    }
+    const start = drifted(camera, key.frame - settledAt, fps);
+    const progress = interpolate(frame, [key.frame, key.frame + key.moveFrames], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: cameraEase });
+    camera = {
+      x: start.x + (key.x - start.x) * progress,
+      y: start.y + (key.y - start.y) * progress,
+      zoom: start.zoom + (key.zoom - start.zoom) * progress,
+    };
+    settledAt = key.frame + key.moveFrames;
+    if (progress < 1) {
+      return camera;
+    }
+  }
+  return drifted(camera, frame - settledAt, fps);
+};
+
+// The view never leaves the media; a media edge smaller than the view is centred.
+const clampCentre = (centre: number, mediaSize: number, viewSize: number): number => {
+  const half = viewSize / 2;
+  if (mediaSize <= viewSize) {
+    return mediaSize / 2;
+  }
+  return Math.min(mediaSize - half, Math.max(half, centre));
+};
 
 const Placeholder: React.FC<{ capture: TimedCapture }> = ({ capture }) => (
   <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", backgroundColor: color.panel, gap: 18, padding: 80 }}>
@@ -19,9 +59,7 @@ const Placeholder: React.FC<{ capture: TimedCapture }> = ({ capture }) => (
   </AbsoluteFill>
 );
 
-const Still: React.FC<{ file: string }> = ({ file }) => (
-  <Img src={staticFile(file)} style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top" }} />
-);
+const Still: React.FC<{ file: string }> = ({ file }) => <Img src={staticFile(file)} style={{ display: "block", width: "100%", height: "auto" }} />;
 
 // A screen recording plays once and then holds on its still, so the pointer never jumps back to the start.
 const CaptureMedia: React.FC<{ capture: TimedCapture }> = ({ capture }) => {
@@ -44,7 +82,7 @@ const CaptureMedia: React.FC<{ capture: TimedCapture }> = ({ capture }) => {
         </Sequence>
       ) : null}
       <Sequence name={`Recording ${capture.id}`} from={lead} durationInFrames={playFrames} premountFor={fps}>
-        <Video src={staticFile(capture.file)} muted playbackRate={rate} objectFit="cover" style={{ width: "100%", height: "100%" }} />
+        <Video src={staticFile(capture.file)} muted playbackRate={rate} style={{ display: "block", width: "100%", height: "auto" }} />
       </Sequence>
       {capture.still !== null && lead + playFrames < capture.durationInFrames ? (
         <Sequence name={`Still ${capture.id}`} from={lead + playFrames} premountFor={fps}>
@@ -55,19 +93,31 @@ const CaptureMedia: React.FC<{ capture: TimedCapture }> = ({ capture }) => {
   );
 };
 
-const CroppedCapture: React.FC<{ capture: TimedCapture }> = ({ capture }) => (
-  <div
-    style={{
-      position: "absolute",
-      left: -CROP.left * CROP_SCALE,
-      top: -(capture.top ?? 0) * CROP_SCALE,
-      width: 1920 * CROP_SCALE,
-      height: 1080 * CROP_SCALE,
-    }}
-  >
-    <CaptureMedia capture={capture} />
-  </div>
-);
+const CameraView: React.FC<{ capture: TimedCapture; fadeIn: boolean }> = ({ capture, fadeIn }) => {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const [mediaWidth, mediaHeight] = capture.size;
+  const keys = capture.cameraKeys.length > 0 ? capture.cameraKeys : [{ frame: 0, x: mediaWidth / 2, y: mediaHeight / 2, zoom: VIEW.width / mediaWidth, moveFrames: 0 }];
+  const camera = cameraAt(keys, capture.from + frame, fps);
+  const x = clampCentre(camera.x, mediaWidth, VIEW.width / camera.zoom);
+  const y = clampCentre(camera.y, mediaHeight, VIEW.height / camera.zoom);
+  return (
+    <div
+      style={{
+        position: "absolute",
+        left: 0,
+        top: 0,
+        width: mediaWidth,
+        height: mediaHeight,
+        transformOrigin: "0 0",
+        transform: `translate(${VIEW.width / 2 - x * camera.zoom}px, ${VIEW.height / 2 - y * camera.zoom}px) scale(${camera.zoom})`,
+        opacity: fadeIn ? rise(frame, 0, CAPTURE_FADE_FRAMES) : 1,
+      }}
+    >
+      <CaptureMedia capture={capture} />
+    </div>
+  );
+};
 
 export const CaptureFrame: React.FC<{ captures: TimedCapture[]; sceneDuration: number }> = ({ captures, sceneDuration }) => {
   const frame = useCurrentFrame();
@@ -79,7 +129,7 @@ export const CaptureFrame: React.FC<{ captures: TimedCapture[]; sceneDuration: n
         left: FRAME.left,
         top: FRAME.top,
         width: FRAME.width,
-        height: INNER_HEIGHT + FRAME.chrome,
+        height: FRAME.height,
         borderRadius: 18,
         overflow: "hidden",
         backgroundColor: color.surface,
@@ -93,29 +143,18 @@ export const CaptureFrame: React.FC<{ captures: TimedCapture[]; sceneDuration: n
         {[0, 1, 2].map((dot) => (
           <div key={dot} style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: color.panel3 }} />
         ))}
-        <div
-          style={{
-            marginLeft: 22,
-            padding: "3px 16px",
-            borderRadius: 8,
-            backgroundColor: color.base,
-            color: color.ink2,
-            fontSize: 22,
-          }}
-        >
-          localhost:7860
-        </div>
+        <div style={{ marginLeft: 22, padding: "2px 16px", borderRadius: 8, backgroundColor: color.base, color: color.ink2, fontSize: 20 }}>localhost:7860</div>
       </div>
-      <div style={{ position: "relative", width: FRAME.width, height: INNER_HEIGHT, overflow: "hidden", backgroundColor: color.base }}>
-        {captures.map((capture) => (
+      <div style={{ position: "relative", width: VIEW.width, height: VIEW.height, overflow: "hidden", backgroundColor: color.base }}>
+        {captures.map((capture, index) => (
           <Sequence
             key={capture.id}
             name={`Capture ${capture.id}`}
             from={capture.from}
-            durationInFrames={capture.durationInFrames}
+            durationInFrames={index < captures.length - 1 ? capture.durationInFrames + CAPTURE_FADE_FRAMES : capture.durationInFrames}
             premountFor={fps}
           >
-            <CroppedCapture capture={capture} />
+            <CameraView capture={capture} fadeIn={index > 0} />
           </Sequence>
         ))}
       </div>

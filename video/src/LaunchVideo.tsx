@@ -25,6 +25,9 @@ const SCENE_COMPONENTS: Record<SceneId, React.FC<{ scene: SceneTiming }>> = {
   s10_close: S10Close,
 };
 
+// The closing scene shows its narration as on-screen text, so subtitles there would repeat it word for word.
+const SCENES_WITHOUT_SUBTITLES: ReadonlySet<SceneId> = new Set<SceneId>(["s10_close"]);
+
 // Missing audio files are skipped, so the video still renders before the narration exists.
 const SceneAudio: React.FC<{ scene: SceneTiming }> = ({ scene }) => {
   const { fps } = useVideoConfig();
@@ -57,7 +60,7 @@ export const LaunchVideo: React.FC<LaunchVideoProps> = ({ scenes }) => {
             <Series.Sequence key={scene.id} name={scene.id} durationInFrames={scene.durationInFrames} premountFor={fps}>
               <SceneComponent scene={scene} />
               <SceneAudio scene={scene} />
-              <Subtitles scene={scene} />
+              {SCENES_WITHOUT_SUBTITLES.has(scene.id) ? null : <Subtitles scene={scene} />}
             </Series.Sequence>
           );
         })}

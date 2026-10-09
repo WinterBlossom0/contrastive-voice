@@ -7,7 +7,8 @@ import { yourWords } from "../components/words";
 import { color } from "../theme";
 import { beatFrame, type SceneTiming } from "../timeline";
 
-const GUESSES = ["Too fast?", "A pause in the wrong place?", "Too quiet at the end?"];
+// Short tags, so the screen does not repeat the narrated questions word for word.
+const GUESSES = ["Pace?", "Pauses?", "Volume?"];
 
 export const S1Hook: React.FC<{ scene: SceneTiming }> = ({ scene }) => {
   const frame = useCurrentFrame();

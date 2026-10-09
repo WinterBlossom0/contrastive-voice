@@ -26,12 +26,17 @@ export type Capture = {
   alignSec?: number;
   // The first frame of the recording, shown while the recording waits for the clip.
   firstStill?: string;
-  // The first visible row of the 1920x1080 capture, so the action stays inside the cropped frame.
-  top?: number;
   // The narration line at which the capture starts; without it, captures share the scene in proportion to their durations.
   atLine?: number;
   playbackRate?: number;
+  // The size of the media in capture px; the camera keyframes use the same px.
+  size: [number, number];
+  camera?: CameraKey[];
 };
+
+// The camera moves to (x, y) at `zoom` output px per capture px; the move starts at narration line `at` (or at the clip) plus `sec`.
+export type CameraKey = { at: number | "clip"; sec?: number; x: number; y: number; zoom: number; moveFrames?: number };
+export type TimedCameraKey = { frame: number; x: number; y: number; zoom: number; moveFrames: number };
 
 export const SCENE_IDS = [
   "s1_hook",
@@ -49,7 +54,14 @@ export type SceneId = (typeof SCENE_IDS)[number];
 
 export type TimedLine = NarrationLine & { from: number; durationInFrames: number; fileExists: boolean };
 export type TimedClip = NarrationClip & { from: number; durationInFrames: number; fileExists: boolean };
-export type TimedCapture = Capture & { from: number; durationInFrames: number; fileExists: boolean; still: string | null; leadFrames: number };
+export type TimedCapture = Capture & {
+  from: number;
+  durationInFrames: number;
+  fileExists: boolean;
+  still: string | null;
+  leadFrames: number;
+  cameraKeys: TimedCameraKey[];
+};
 
 export type SceneTiming = {
   id: SceneId;
@@ -65,6 +77,7 @@ export const narration = narrationData as Narration;
 export const captures = captureData as Capture[];
 
 const toFrame = (seconds: number) => Math.round(seconds * FPS);
+const DEFAULT_MOVE_FRAMES = 30;
 
 const clipLineIndex = (scene: NarrationScene): number => {
   if (scene.clip === null) {
@@ -139,6 +152,13 @@ export const computeTimeline = async (signal?: AbortSignal): Promise<SceneTiming
       const to = startFrame(index + 1);
       const still = captures.find((other) => other.id === `${capture.id}_still` && existence.get(other.file) === true);
       const leadFrames = capture.alignSec !== undefined && clip !== null ? Math.max(0, (clip as TimedClip).from - from - toFrame(capture.alignSec)) : 0;
+      const cameraKeys = (capture.camera ?? []).map((key) => {
+        if (key.at === "clip" && clip === null) {
+          throw new Error(`captures.json: ${capture.id} has a camera key at the clip, but scene ${id} has no clip`);
+        }
+        const base = key.at === "clip" ? (clip as TimedClip).from : lines[key.at].from;
+        return { frame: base + toFrame(key.sec ?? 0), x: key.x, y: key.y, zoom: key.zoom, moveFrames: key.moveFrames ?? DEFAULT_MOVE_FRAMES };
+      });
       return {
         ...capture,
         from,
@@ -146,6 +166,7 @@ export const computeTimeline = async (signal?: AbortSignal): Promise<SceneTiming
         fileExists: existence.get(capture.file) === true,
         still: still === undefined ? null : still.file,
         leadFrames,
+        cameraKeys,
       };
     });
 

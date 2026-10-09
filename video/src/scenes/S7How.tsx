@@ -150,10 +150,10 @@ export const S7How: React.FC<{ scene: SceneTiming }> = ({ scene }) => {
         </div>
         <div style={{ marginTop: 30, fontSize: 30, color: color.ink2 }}>Volume against your own median level, pitch against your own median pitch</div>
         <div style={{ marginTop: 56, fontSize: 38, lineHeight: 1.45, maxWidth: 1450, opacity: rise(frame, beatFrame(scene, 5), 20) }}>
-          A quiet microphone or a deep voice is not a flaw. Only a change from the reference is.
+          Not a flaw: a quiet microphone, a deep voice
         </div>
         <div style={{ marginTop: 30, fontSize: 34, lineHeight: 1.45, color: color.ink2, maxWidth: 1450, opacity: rise(frame, beatFrame(scene, 6), 20) }}>
-          Flagged only past a threshold fitted on comparisons with no flaws.
+          Flag threshold: fitted on flawless comparisons
         </div>
       </Panel>
     </SceneShell>
