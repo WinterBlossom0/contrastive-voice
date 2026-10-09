@@ -228,3 +228,14 @@ def test_registry_is_complete_and_extra_recipes_use_its_parameters():
 def test_no_eligible_extra_type_is_recorded_as_skipped(rec):
     plan = flaws.plan_clip(rec, [("BLOCK", 3)], 7)
     assert not plan.edits and plan.skipped == [{"type": "BLOCK", "level": 3, "reason": "no eligible position"}]
+
+
+def test_splice_whole_near_clip_edges_keeps_length_and_interior():
+    rng = np.random.default_rng(0)
+    x, y = rng.standard_normal(4000), rng.standard_normal(4000)
+    f = int(round(C.SPLICE_FADE_S * C.SR))
+    for a, b in ((f // 2, 2000), (1000, 4000 - 50), (10, 4000 - 10)):
+        out = flaws.splice_whole(x, y, a, b, b)
+        assert len(out) == len(x) and np.array_equal(out[a:b], y[a:b])
+    out = flaws.splice_whole(x, y, 1000, 2000, 2000)
+    assert np.array_equal(out[:1000 - f], x[:1000 - f]) and np.array_equal(out[2000 + f:], x[2000 + f:])

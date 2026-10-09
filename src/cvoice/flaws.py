@@ -300,12 +300,17 @@ def splice_whole(x: np.ndarray, y: np.ndarray, a: int, b: int, b2: int, equal_po
     """Keep y[a:b2] (a whole-clip resynthesis) in place of x[a:b], cross-faded over SPLICE_FADE_S on the original side
     of both edges; everything outside [a - f, b + f) is x, bit-identical."""
     f = int(round(C.SPLICE_FADE_S * SR))
-    fi = _xfade(f)
-    up, dn = (np.sqrt(fi), np.sqrt(1 - fi)) if equal_power else (fi, 1 - fi)
-    y = np.pad(y, (0, max(0, b2 + f - len(y))))
-    head = x[a - f:a] * dn + y[a - f:a] * up
-    tail = y[b2:b2 + f] * dn + x[b:b + f] * up
-    return np.concatenate([x[:a - f], head, y[a:b2], tail, x[b + f:]])
+    # an edit that starts or ends closer than one fade to a clip edge gets a shorter fade on that side
+    fh, ft = min(f, a), min(f, len(x) - b)
+
+    def ramps(n):
+        fi = _xfade(n)
+        return (np.sqrt(fi), np.sqrt(1 - fi)) if equal_power else (fi, 1 - fi)
+    (up_h, dn_h), (up_t, dn_t) = ramps(fh), ramps(ft)
+    y = np.pad(y, (0, max(0, b2 + ft - len(y))))
+    head = x[a - fh:a] * dn_h + y[a - fh:a] * up_h
+    tail = y[b2:b2 + ft] * dn_t + x[b:b + ft] * up_t
+    return np.concatenate([x[:a - fh], head, y[a:b2], tail, x[b + ft:]])
 
 
 def flatten_span(x: np.ndarray, a: int, b: int, strength: float, ramp: float = C.FLATTEN_RAMP_S) -> np.ndarray:
