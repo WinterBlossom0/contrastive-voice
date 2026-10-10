@@ -5,7 +5,7 @@ description = "Contrastive Voice: reference-relative speech delivery analysis wi
 requires-python = ">=3.12,<3.13"
 readme = "README.md"
 license = "MIT"
-license-files = ["LICENSE", "src/cvoice/static/vendor/LICENSE-*.txt"]
+license-files = ["LICENSE", "src/cvoice/static/vendor/LICENSE-*.txt", "src/cvoice/static/vendor/fonts/OFL-*.txt"]
 authors = [{ name = "WinterBlossom0" }]
 dependencies = [
     "numpy",
