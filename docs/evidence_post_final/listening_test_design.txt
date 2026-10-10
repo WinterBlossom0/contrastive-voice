@@ -1,0 +1,159 @@
+# Listening test of "fix your speech": pre-registered design and analysis
+
+Written 2026-10-10 (IST), before any listener data. Kit version: `kit_version` in `key.json` (a877f972 at writing);
+every listener CSV carries the version, and `score.py` refuses rows of another version. Any change to this file after
+the first listener CSV arrives goes under "Changes after data" at the end, with the reason.
+
+## 1. Question
+
+Does the shipped repair (`repair.fix_finding`, `pitch_method="own"`, the product default) make the delivery of a flagged
+spot better for human listeners, and what does it cost in naturalness? The detector's "no longer flagged" result cannot
+answer this (stage review: academic findings 1 and 10; the target and the judge are the same detector).
+
+## 2. Design (MUSHRA-style, after ITU-R BS.1534-3, adapted)
+
+Per item: one spot (the words of one finding) with 1 s of context on each side, in four versions, in a random order
+labelled A to D:
+
+| condition | what it is |
+|---|---|
+| reference (hidden) | the clean source recording before the injected edit, cut at the same words; its context is sample-identical to the flawed clip (normalised correlation 1.000 at both ends for every item, `key.json` `reference_match`) |
+| original | the flawed clip as the product receives it |
+| fixed | the flawed clip after `repair.fix_finding(..., pitch_method="own")`, cut at the mapped words (`repair.listen_pairs`) |
+| anchor (low) | the original low-passed at 3.5 kHz (Butterworth order 10, zero phase): the BS.1534-3 low anchor |
+
+Two ratings per version, 0-100 sliders with the five MUSHRA labels (bad, poor, fair, good, excellent):
+- Delivery of the marked spot, for the aspect of the item (pace, pause, pitch movement, steady volume, stress).
+- Naturalness: "does it sound like a real, unedited recording? 0 = clearly processed, robotic or muffled; 100 =
+  completely natural".
+
+Each version must be played to the end once, and both sliders must be set, before the next screen. There is no
+labelled (open) reference: listeners judge delivery by their own standard, and the hidden reference shows where a clean
+reading sits on that scale. This deviates from BS.1534-3 (open reference, expert listeners).
+
+Part 2 (two-choice pairs): for each item, original and fixed in random order (A, B), with one question in the direction
+of the fix ("Which one is less rushed?", "... less slow and dragged out?", "... has the better pause?", "... has more
+varied pitch (less flat)?", "... has steadier volume (less fading)?", "... stresses the marked word more clearly?").
+Part 2 tests that the intended change is audible; Part 1 tests whether it is an improvement.
+
+Other settings:
+- Order: item order, A-D positions per item, pair order and A/B sides are shuffled per listener with a seed from the
+  listener id (cyrb53 hash, mulberry32 generator). One practice item comes first and is not scored.
+- Loudness: each stimulus is gained so that its context (the audio outside the finding's words) has the same BS.1770-4
+  gated loudness (-23 LUFS); the finding's words keep their own level difference, which a volume fix changes on purpose.
+  Peaks at or below -1 dBFS; 20 ms raised-cosine fades at both ends.
+- Stimuli have random file names; the condition of each file is only in `key.json`, which listeners never get.
+- Expected time: 12 to 15 minutes (12 items x about 55 s, 12 pairs x about 12 s, instructions).
+
+## 3. Items (12 scored + 1 practice)
+
+Each item is one finding that matches an injected edit of a known clean source; no 1 s context contains another injected
+edit (`key.json` `other_edits_in_context` is empty for every item). Stimulus durations 2.3 to 4.9 s.
+
+| item | dimension | clip (source) | finding | fix (own) | status, share of the wanted change |
+|---|---|---|---|---|---|
+| s01 | pace | L3A (gallery, Reagan, level 3) | d1-003 RUSH | stretch x1.40 (slower) | capped, 0.54 |
+| s02 | pace | L2A (gallery, Reagan, level 2) | d1-003 RUSH | stretch x1.40 | capped, 0.89 |
+| s03 | pace | L2B (gallery, Reagan, level 2) | d1-001 DRAG | stretch x0.70 (faster) | capped, 0.99 |
+| s04 | pause | L3A | d2-002 PAUSE_DROPPED | pause insert 0.71 s | applied, 1.00 |
+| s05 | pause | L3B (gallery, Reagan, level 3) | d2-001 PAUSE_INTRUSIVE | pause shorten | applied, 1.00 |
+| s06 | pause | greenman_edited (gallery, Greenman reading, R2) | d2-002 PAUSE_INTRUSIVE | pause shorten | applied, 1.00 |
+| s07 | pitch | eisenhower_farewell_1961__single_L2A (final dataset, val split) | d3-002 MONOTONE | pitch excursion x1.5 | capped, 0.29 |
+| s08 | pitch | obama_weekly_2009__G3 (final dataset, train split) | d3-002 MONOTONE | pitch excursion x1.5 | capped, 0.34 |
+| s09 | volume | L2A | d5-002 FADE | gain +6.0 dB | capped, 0.77 |
+| s10 | volume | L3A | d5-005 FADE | gain +6.0 dB | capped, 0.53 |
+| s11 | volume | greenman_edited | d5-001 FADE | gain +5.1 dB (clipping limit) | capped, 0.46 |
+| s12 | emphasis | L3B | d4-002 DEEMPHASIS | emphasis x1.40, 3 st, 4.3 dB | capped, 0.71 |
+| practice | pause | L2B | d2-002 PAUSE_INTRUSIVE | pause shorten | applied, 1.00 (not scored) |
+
+Why the pitch items come from the final dataset: with `pitch_method="own"` all three gallery MONOTONE findings (L3A,
+G3, L2A d3-001) are skipped (the allowed edit changes the range by 0.0 to 0.9 st, below the 1.5 st floor), so the gallery
+has no pitch item that the product changes. Of the 15 level-1/level-2 MONOTONE clips of the five non-Reagan train/val
+baselines, 12 findings were flagged and 2 get an edit with "own" (s07, s08); the other 10 are skipped (0.4 to 1.3 st).
+The test split was not read. The clean source of a dataset clip is its baseline recording.
+
+## 4. Screening (decided before the data)
+
+A listener is left out of all analyses when either holds:
+1. The MUSHRA part is incomplete (fewer than 12 scored items with all 8 ratings).
+2. On naturalness, the low anchor is rated at or above the hidden reference in more than 25 % of the scored items (more
+   than 3 of 12). The screen uses only the reference and the anchor, never the original or the fixed version, so it
+   cannot favour either side of H1 or H2.
+
+With more than one session per listener id, the most complete session is used (then the latest finished one). Listeners
+without headphones are kept; their number is reported.
+
+## 5. Primary analysis
+
+Unit: the per-listener mean over the 12 scored items of the paired difference fixed minus original (one value per
+listener). Tests: exact Wilcoxon signed-rank (zeros dropped, average ranks for ties).
+
+- H1 (delivery): delivery(fixed) > delivery(original). One-sided exact Wilcoxon on the listener means.
+- H2 (naturalness, non-inferiority): naturalness(fixed) > naturalness(original) - 10. One-sided exact Wilcoxon on
+  (listener mean + 10). Margin 10 points = half a MUSHRA category (20 points).
+- Family-wise error: Holm-Bonferroni over H1 and H2, alpha 0.05.
+- Effect sizes: grand mean difference with a 95 % interval from a two-way bootstrap (listeners and items resampled
+  independently with replacement, 10 000 replicates, seed 20261010); for H2 also the one-sided 95 % lower bound.
+- Generalisation over items: the same test on the 12 item means (each averaged over kept listeners); reported beside H1;
+  it decides the wording (section 7).
+- Minimum listeners: 6 kept listeners for any test (with 6, the smallest one-sided exact p is 1/64; one listener of the
+  opposite sign at rank 1 still gives 2/64). Planned: owner + 8 to 10 friends. With fewer than 6, `score.py` reports
+  means and intervals only, and no hypothesis is tested.
+- Power (simulation of this exact test; normal listener means; dz = mean / SD of listener means; 2000 runs):
+  6 listeners: dz 0.8 -> 0.49, 1.0 -> 0.65, 1.2 -> 0.78; 8 listeners: 0.59, 0.77, 0.87; 10 listeners: 0.69, 0.87, 0.95.
+  Only large, consistent effects are detectable. A null result is not evidence of no effect.
+
+## 6. Secondary analyses (descriptive; no claims of their own)
+
+- Naturalness fixed - original, two-sided exact Wilcoxon (any naturalness cost).
+- Manipulation check: delivery(reference) > delivery(original), one-sided. If it fails, the panel did not hear the
+  injected flaws and H1 cannot be interpreted; report that.
+- Naturalness reference - fixed; anchor check (naturalness reference - anchor).
+- Share of the delivery gap closed: mean(fixed - original) / mean(reference - original), two-way bootstrap interval.
+- Pairs: share of choices for the fixed version, overall and per dimension; overall one-sided exact Wilcoxon on
+  (listener share - 0.5).
+- Per dimension (pace 3, pause 3, pitch 2, volume 3, emphasis 1 items) and per item: the same differences with
+  intervals. Too few items for tests; no per-dimension claim.
+- Mixed-model sensitivity (only when statsmodels is installed): the fixed-minus-original difference per listener and
+  item = intercept + crossed random intercepts of listener and item (REML), i.e. random slopes of the condition.
+  Reported with its convergence flag; it does not replace the primary test.
+- Owner sensitivity: the owner knows the design. Rerun with `--exclude <owner id>`; report both runs.
+
+## 7. Wording of the result (decided before the data)
+
+- H1 supported by listeners and by items: "In a blind listening test with N listeners, the fixed version was rated
+  better on delivery than the flawed version (mean +X of 100 points, 95 % CI [a, b])."
+- H1 supported by listeners only: the same, plus "the improvement was not consistent across the 12 spots".
+- H1 not supported: "Listeners did not rate the fixed version better on delivery (mean X, 95 % CI [a, b])."
+- H2 supported: add "and not more than 10 points less natural". H2 not supported: report the naturalness difference with
+  its interval as a cost.
+- Always state: synthetic flaws on 5 source recordings, 12 spots, untrained listeners who know the owner, pitch tested
+  on 2 spots, per-dimension results descriptive.
+
+## 8. Known limits
+
+- All flaws are synthetic recipe edits of clean recordings; no naturally produced flaw is tested. Human listeners remove
+  the closed loop for perception, not the synthetic-flaw limit.
+- 12 items (pace 3, pause 3, pitch 2, volume 3, emphasis 1); no dimension alone supports a claim.
+- 10 of 12 fixes are capped (share 0.29 to 0.99 of the wanted change); the test measures the shipped, capped fix.
+- Durations differ between versions of the pace and pause items, so a listener can group versions by length.
+- The page lists, per item, which two files form the original/fixed pair (Part 2 needs it); a listener who reads the
+  page source learns the pair, not which file is fixed.
+- No open reference and untrained listeners: MUSHRA-like, not a BS.1534-3 test.
+- The low anchor is a bandwidth anchor; it bounds naturalness, not delivery.
+
+## 9. Files
+
+- `share/` (the only folder listeners get): `listening_test.html` (the whole test; ratings stay in the browser until the
+  CSV download) and `stimuli/*.wav`.
+- `key.json`: condition and provenance of every stimulus. Never share it.
+- `make_kit.py`: rebuilds `share/` and `key.json` (a rebuild with changed audio changes `kit_version`).
+- `score.py`: this analysis; writes `results.json` and `results.md`.
+- `check_page.cjs`: headless end-to-end check (7 fake sessions, then `score.py`, then a comparison with the entered
+  values); outputs in `check/`, which is not listener data.
+- `sources/`: analysis results of the two dataset clips.
+- `old/`: the earlier A/B kit (never run; superseded).
+
+## Changes after data
+
+None.

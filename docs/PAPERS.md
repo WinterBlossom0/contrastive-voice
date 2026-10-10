@@ -1,10 +1,10 @@
 # Papers used and what was taken from each
 
-One row per cited source. The numbers are the reference numbers of `docs/technical.md`. Each row gives the read status, what was taken from the source and the part of the system that uses it. The chain table links each flaw to its detection method and to the module that implements it. Measured results are in `docs/technical.md` and `docs/evidence_final_782d7df7/`.
+One row per cited source. The numbers are the reference numbers of `docs/technical.md`. Each row gives the read status, what was taken from the source and the part of the system that uses it. The chain table links each flaw to its detection method and to the module that implements it. Measured results are in `docs/technical.md`, `docs/evidence_final_782d7df7/` and, for the two features added after the final evaluation, `docs/evidence_post_final/`.
 
-**Read status.** *full* = the full text was read; *full-F* = full text read through a fetch tool that returns a model-written extraction (numbers marked "to re-check"; the citation check confirmed those used here); *abstract* = only the abstract was read; *secondary* = read through the named source; *metadata* = only the bibliographic record. A claim from an abstract or a secondary source is weaker support.
+**Read status.** *full* = the full text was read; *parts* = the full text was opened and the named sections were read; *doc* = vendor documentation; *full-F* = full text read through a fetch tool that returns a model-written extraction (numbers marked "to re-check"; the citation check confirmed those used here); *abstract* = only the abstract was read; *secondary* = read through the named source; *metadata* = only the bibliographic record. A claim from an abstract or a secondary source is weaker support.
 
-**Used in:** D1 pace, D2 pauses, D3 pitch range, D4 emphasis, D5 volume, D6 clarity proxy, D7 word time and disfluency, D8 sentence ending, D9 speech tempo and natural rushing, FAM hesitation and word-by-word families, AL alignment, REF reference-relative comparison, SYN controlled edits, EVAL evaluation, EXP explanations.
+**Used in:** D1 pace, D2 pauses, D3 pitch range, D4 emphasis, D5 volume, D6 clarity proxy, D7 word time and disfluency, D8 sentence ending, D9 speech tempo and natural rushing, FAM hesitation and word-by-word families, AL alignment, REF reference-relative comparison, SYN controlled edits, EVAL evaluation, EXP explanations, FIX edit of the reading toward each finding's target (`repair.py`, added after the final evaluation), SELF rough check without a reference (`selfref.py`, `norms.py`, added after the final evaluation).
 
 ## Chain from flaw to method to system part
 
@@ -56,11 +56,11 @@ One row per cited source. The numbers are the reference numbers of `docs/technic
 | # | Source | Read | What was taken | Used in |
 |---|---|---|---|---|
 | 13 | Quené 2007, tempo JND | full (author preprint) | JND for speech tempo about 5 %; the D1 floor ln 1.10 lies above it | D1 |
-| 14 | de Jong & Wempe 2009 | full | Speaking rate includes pauses, articulation rate excludes them: D1 removes pauses from speech time | D1 |
+| 14 | de Jong & Wempe 2009 | full | Speaking rate includes pauses, articulation rate excludes them: D1 removes pauses from speech time; the syllable-nucleus method is one detector-free check of the timing edits (`repair.py` validation) | D1, FIX |
 | 15 | Trouvain & Grice 1999 | full | Fast reading: articulation rate +13 % and +18 % (two of three readers), speaking rate up to +28 %, pauses removed or shortened. Source of the natural-rush recipe rates ×1.13 / ×1.15 / ×1.18 | D1, D2, D9 |
 | 16 | Janse 2004 | full | Natural fast speech is not uniform compression; unstressed syllables shrink more; listeners preferred linear compression | D1, D9 |
 | 17 | Crystal & House 1990 | abstract | Durations of comparable runs of different talkers on one text are highly correlated: supports run-by-run comparison on a fixed text | D1, REF |
-| 18 | Jacewicz et al. 2009 | full-F (confirmed) | Read sentences 3.40 syllables/s, SD 0.42 across speakers: habitual rate differs between speakers | D1 |
+| 18 | Jacewicz et al. 2009 | full-F (confirmed) | Read sentences 3.40 syllables/s, SD 0.42 across speakers: habitual rate differs between speakers; the norm of the listed articulation rate without a reference (`selfref.py`) | D1, SELF |
 | 19 | Cucchiarini, Strik & Boves 2000 | abstract | Read speech: rate of speech correlated 0.90–0.93 with expert fluency ratings | D9 |
 | 20 | Suzuki, Kormos & Uchihara 2021 | full (accepted manuscript) | Meta-analysis of 22 second-language studies: articulation rate r = .62, speech rate .76, pause frequency −.59 with rated fluency | D9 |
 | 21 | Hofmann et al. 1997 | abstract | Speakers with social phobia paused more often and longer in public speaking | D1, D7 |
@@ -77,7 +77,7 @@ One row per cited source. The numbers are the reference numbers of `docs/technic
 
 | # | Source | Read | What was taken | Used in |
 |---|---|---|---|---|
-| 30 | Campione & Véronis 2002 | full | Pause classes brief < 200 ms, medium, long > 1000 ms "only in spontaneous speech"; English read speech median 493 ms, modes 126 and 512 ms (basis of the 0.5 s rule for dropped pauses) | D2 |
+| 30 | Campione & Véronis 2002 | full | Pause classes brief < 200 ms, medium, long > 1000 ms "only in spontaneous speech"; English read speech median 493 ms, modes 126 and 512 ms (basis of the 0.5 s rule for dropped pauses); the 1 s listed long-pause note without a reference (`selfref.py`) | D2, SELF |
 | 31 | de Jong & Bosker 2013 | full | Published pause thresholds run from 100 to 1000 ms; 250 ms is the classic convention (the feature research recommended 250 ms; the build uses 0.20 s) | D2 |
 | 32 | Hallur et al. 2026 | full (preprint) | 0.2 s as a practical pause threshold; reference-based evaluation with speech rate, articulation rate and pause ratio; limit: does "not yet map deviations to perceptual thresholds" | D2, REF |
 | 33 | Lövgren & van Doorn 2005 | full | Silences of 57 / 117 / 212 / 403 ms judged disfluent in 12.5 / 34.4 / 71.9 / 93.8 % of samples | D2, FAM |
@@ -92,7 +92,7 @@ One row per cited source. The numbers are the reference numbers of `docs/technic
 
 | # | Source | Read | What was taken | Used in |
 |---|---|---|---|---|
-| 40 | 't Hart 1981 | abstract | Pitch-distance JND 1.5–2 st; only differences above 3 st matter in communication: basis of the 1 st regularisation of range ratios | D3 |
+| 40 | 't Hart 1981 | abstract | Pitch-distance JND 1.5–2 st; only differences above 3 st matter in communication: basis of the 1 st regularisation of range ratios; a pitch edit that changes the range by less than 1.5 st is skipped (`repair.MIN_AUDIBLE_ST`) | D3, FIX |
 | 41 | Hincks & Edlund 2009 | full | Semitones relative to the speaker as perceptual normalisation; SD of semitones over a moving 10 s window | D3 |
 | 42 | Hincks 2005 | full | PVQ below .15 over 10 s "generally rated as on the monotone side"; does not transfer to read text | D3 |
 | 43 | Niebuhr & Skarnitzl 2019 | full | P90 − P10 range r = .52 with charisma, SD .35, max − min .04 (40–98 s excerpts): choice of the percentile range | D3 |
@@ -128,11 +128,11 @@ One row per cited source. The numbers are the reference numbers of `docs/technic
 
 | # | Source | Read | What was taken | Used in |
 |---|---|---|---|---|
-| 66 | Caswell-Midwinter & Whitmer 2019 | full | Level JND 1.5 dB, 3 dB noticeable (hearing-impaired listeners, speech-shaped noise): above them lies the D5 floor of 2 dB | D5 |
+| 66 | Caswell-Midwinter & Whitmer 2019 | full | Level JND 1.5 dB, 3 dB noticeable (hearing-impaired listeners, speech-shaped noise): above them lies the D5 floor of 2 dB; the JND is a lower limit for a gain edit, not a cap (`repair.MAX_GAIN_DB`) | D5, FIX |
 | 67 | Liénard & Di Benedetto 1999 | abstract | Effort raises high-frequency harmonics more than level ("a change in spectral tilt"); F0 and F1 rise with effort | D5, FAM |
 | 68 | Sundberg & Nordenberg 2006 | abstract | Alpha ratio ranges 19.0 / 11.7 dB over about 28 dB of level (women / men): basis of the LOW_EFFORT tilt recipe (0.55 dB per dB) | D5, FAM |
-| 69 | Eriksson & Traunmüller 1999 | full | Listeners tell increased effort from decreased distance on phonated vowels: effort and gain are separable | D5 |
-| 70 | Pierrehumbert 1979 | abstract | Amplitude downdrift accompanies F0 declination (trailing-off pattern) | D5, FAM |
+| 69 | Eriksson & Traunmüller 1999 | full | Listeners tell increased effort from decreased distance on phonated vowels: effort and gain are separable; a gain edit does not restore effort (limit text of `repair.py` and `app.py`) | D5, FIX |
+| 70 | Pierrehumbert 1979 | abstract | Amplitude downdrift accompanies F0 declination (trailing-off pattern); support for the sentence-position offsets without a reference | D5, FAM, SELF |
 | 71 | Ní Chasaide, Yanushevskaya & Gobl 2015 | full | Source strength declines −7.3 dB/s in short declaratives with laxer phonation | D5, FAM |
 | 72 | Zhang & Hansen 2007 | full | The absolute SPL of a recording may be unknown because of recording levels and AGC | D5 |
 
@@ -174,7 +174,7 @@ One row per cited source. The numbers are the reference numbers of `docs/technic
 |---|---|---|---|---|
 | 95 | Chung & Bidelman 2022 | full | Sentence-final pitch change as a reading-prosody measure (Mandarin-speaking children; predicted reading rate only, VF correction) | D8 |
 | 96 | Ritchart & Arvaniti 2014 | full | Uptalk: late rise on the last word of statements; 45 % of floor-holding utterances | D8 |
-| 97 | Yuan & Liberman 2014 | full | Only 71.5 % of professional read-news phrases fall; slope 2.68 to 1.23 st/s by length | D8 |
+| 97 | Yuan & Liberman 2014 | full | Only 71.5 % of professional read-news phrases fall; slope 2.68 to 1.23 st/s by length; basis of the D3 sentence-quarter declination offsets without a reference (`selfref.fit_position`) | D8, SELF |
 | 98 | Rosenberg 2010, AuToBI | full | Final-200 ms features give 54.95 % on five boundary tones: only direction is defensible | D8 |
 | 99 | Drugman, Kane & Gobl 2014 | full | Phrase-final creak at 40–70 Hz damages pitch tracks | D8 |
 
@@ -198,13 +198,49 @@ One row per cited source. The numbers are the reference numbers of `docs/technic
 | 113 | Shute 2008 | full (ETS RR-07-11 version) | Focus on the task, be specific, be cautious with overall grades | EXP |
 | 114 | Miller 2019 | full | Accepted explanations are contrastive and select one or two causes | EXP |
 | 115 | Wachter, Mittelstadt & Russell 2018 | abstract | Counterfactual: what would need to change; basis of "score with this penalty removed" | EXP |
-| 116 | Pearl 2019 | full | A claim at one causal level needs evidence from that level: repair test, no claims about listeners | EXP, EVAL |
+| 116 | Pearl 2019 | full | A claim at one causal level needs evidence from that level: repair test, no claims about listeners; the edit-and-re-analyse feature is an intervention judged by the same detector, so it makes no listener claim | EXP, EVAL, FIX |
 | 117 | Atil et al. 2024 | abstract | LLM output not repeatable at "deterministic" settings: templates instead | EXP |
 | 118 | Tanveer, Lin & Hoque 2015, Rhema | abstract | Speakers preferred sparse to continuous feedback | EXP |
 
+## 11. Added after the final evaluation: edit toward the target, and the check without a reference
+
+The two features of `docs/technical.md` section 10. The caps of `repair.py` are chosen limits: the sources give quality against whole-utterance change, and no listening test of local word-level edits was found.
+
+| # | Source | Read | What was taken | Used in |
+|---|---|---|---|---|
+| 120 | Choi et al. 2021, NANSY | full (Tables 6–7) | Praat (Parselmouth) PSOLA MOS: 3.93 at 0 st, 3.75 / 3.55 at +3 / −3 st; 3.95 at ×1, 3.68 / 3.66 at ×1.5 / ×1/1.5, 2.85 / 2.55 at ×2 / ×1/2: about 0.2–0.4 MOS lost at ±3 st or ×1.5, 1.1–1.4 at ×2 (`repair.MAX_SLOW_FACTOR`, `HARD_SLOW_FACTOR`, `MAX_FRAME_ST`) | FIX |
+| 121 | Rudresh et al. 2018, ESOLA | full (Tables V–VI) | WSOLA time-scale MOS 4.15 (×0.5) to 3.10 (×2): slowing costs more quality than speeding (asymmetric duration caps) | FIX |
+| 122 | Roberts & Paliwal 2020 | full (text) | For inverse rate pairs the slowed version is worse; objective time-scale measures predict subjective quality poorly (asymmetric caps; validation by more than one measure) | FIX |
+| 123 | Charpentier & Moulines 1989 | full (Eurospeech version) | Slowing unvoiced speech by ×2 or more repeats segments and gives tonal noise (`repair.UNVOICED_STRETCH_LIMIT`) | FIX |
+| 124 | Bae & Joo 2022 | full (Table 1, Fig. 6) | Speaker identity judged "same" for about 70 % or more of samples shifted by at most 3 st (`repair.MAX_FRAME_ST`) | FIX |
+| 125 | Hirose, Gendrin & Minematsu 2003 | full | Detect a prosody error, then edit the learner's own utterance by TD-PSOLA toward a teacher reading, deleting short pauses absent in the teacher: precedent for the reference mode and for pause shortening; no automatic re-score | FIX |
+| 126 | Morrison et al. 2020 | full | PSOLA resynthesis MOS above WORLD (4.10 against 3.61 with the original F0); artefacts grow with the size of the pitch shift: PSOLA for the user-facing audio | FIX |
+| 127 | Morrison et al. 2021 | full | Praat TD-PSOLA through Parselmouth, 20 ms cross-fades and A-weighted loudness for speech edits; a prosody-corrected file can sound no better than the flawed one (splice cross-fades; A-weighted level check of the gain edits) | FIX, EVAL |
+| 128 | Bissiri, Pfitzinger & Tillmann 2006 | full | Own-voice resynthesis with the reference F0 divided by its mean and multiplied by the learner's mean: keep the learner's level, transfer the excursions in semitones (option "reference melody", `repair.py` pitch_contour) | FIX |
+| 129 | Nolan 2003 | full | Semitones (and ERB) best match intonational equivalence across speakers; Hz, mel, Bark worse (the reference melody in semitones re the speaker's median) | FIX |
+| 130 | Peabody & Seneff 2006 | full | Corrected tone contours re-scored by a tone classifier, without a perception test: the published form of the closed-loop limit (controls and stated limit of `repair.verify`) | FIX, EVAL |
+| 131 | Ai & Xu 2015, ACL-IJCNLP system demonstration | full | Forced alignment and DTW compare learner and gold reading; FD-PSOLA transplants the gold prosody into the learner's voice; a scale-factor gate blocks large changes; the next attempt is re-scored, not the transplant (novelty check: reference mode anticipated) | FIX |
+| 132 | Zhao, Koh & Luke 2012 | full (method, evaluation) | PSOLA-modified own-voice learner audio scored automatically by a phone-posterior accentedness score (novelty check: automatic scoring of modified own-voice audio anticipated) | FIX |
+| 133 | Zhang et al. 2021 | parts (evaluation, through a fetch extraction) | The wrong unit regenerated in the learner's own voice, scored by an independent ASR and a listener vote (novelty check) | FIX |
+| 134 | Felps, Bortfeld & Gutierrez-Osuna 2009 | full-F | Own voice with native prosody by FD-PSOLA, time-scale capped to [0.25, 4] and pitch-scale to [0.5, 2]; prosody-only modification lowered quality MOS from 4.0 to 2.96 without reducing accent: large edits cost more than they gain (caps are a choice) | FIX |
+| 135 | Jügler et al. 2016 | full | Ask the target judgement and natural or artificial: only 121 of 600 manipulated items were judged natural (the listening-test design rates delivery and naturalness) | EVAL |
+| 136 | Morrison et al. 2023, penn | full (Table I) | Pitch-tracker errors 21–110 cents: an independent tracker must measure the change of range, with a tolerance above its error (Harvest check, 1 st) | EVAL |
+| 137 | Raina, Gales & Knill 2020 | abstract | An automatic score can move without the construct moving; check with an independent scorer (detector-free instruments of the repair validation) | EVAL |
+| 138 | Duong & Mostow 2010 | full | A normative phone-duration model from 20 adult narrators rated oral reading without a narration of the same sentence, as well as the narration method (text-expected time without a reference) | SELF |
+| 139 | Cheng 2011 | full | Phone-duration and inter-word-silence log-likelihoods against native norms from an unrelated corpus (r = 0.76 and 0.54 with prosody ratings) | SELF |
+| 140 | Suzuki, Kato & Tamura 2022 | full | A model trained on LibriTTS predicts log phone duration from text with R² 0.818, F0 only 0.17–0.20: text predicts timing, not pitch (expected time from the text; no text-predicted pitch) | SELF |
+| 141 | Taylor & Black 1998 | parts (metrics, Table 1, §5.1) | Punctuation alone finds 54 % of the breaks of read speech with 0.85 % false insertions: a pause at punctuation is expected, a pause at an unpunctuated juncture is not by itself a flaw (pause classes of `selfref.py`; limit of its pause edits) | SELF |
+| 142 | Dhamne, Raman & Rao 2025 | parts | About 30 % of pauses at non-punctuation positions; text predicts "forbidden" pause positions (option tight_pauses, tested on val and not shipped) | SELF |
+| 143 | Trouvain et al. 1998 | parts | Energy declines over a phrase, resets at a new phrase, and drops on the last syllable of a sentence (option final_bins, tested and not shipped) | SELF |
+| 144 | Ferreira 1993 | abstract and parts | Final lengthening and pause fill one timing interval set by boundary strength (option boundary_strength, tested and not shipped) | SELF |
+| 145 | Bailly et al. 2022 | parts | Deviation of a syllable plus its following pause from an expected duration (option boundary_strength, tested and not shipped) | SELF |
+| 146 | Microsoft Azure AI Speech, pronunciation assessment | doc | A scripted reading graded from its text only, with word-level missing-break, unexpected-break and monotone results: the no-reference check makes no novelty claim | SELF |
+
+Word-duration norms were fitted on LibriTTS (Zen et al. 2019, arXiv:1904.02882; CC BY 4.0, OpenSLR SLR60) by `norms.py`. They are a data source, not a cited paper; the norms were tried for D1 and not adopted.
+
 ## Recorded as read and not cited
 
-- **Not cited because no reading was recorded.** Verhelst & Roelands 1993 (WSOLA), Moulines & Charpentier 1990 (PSOLA), Morise et al. 2016 (WORLD) and Baevski et al. 2020 (wav2vec 2.0). The edit tools and the acoustic model are named without a paper citation.
+- **Not cited because no reading was recorded.** Verhelst & Roelands 1993 (WSOLA), Moulines & Charpentier 1990 (PSOLA) and Baevski et al. 2020 (wav2vec 2.0). Morise et al. 2016 (WORLD) was read for the edit feature (section 11) and is not cited, because WORLD is not used there. The edit tools and the acoustic model are named without a paper citation.
 - **Could not be opened.** Goberman, Hughes & Haydock 2011 (acoustics of public-speaking anxiety). Laukka et al. 2008 is read only through [22].
 - **Read and set aside.** Interval rhythm metrics (contradictory results); envelope modulation spectrum (needs a trained discriminant); trained disfluency, prominence, creak and breath detectors (outside the no-training constraint); jitter, shimmer and tremor indices as nervousness cues (directions disagree; defined on sustained vowels).
 
@@ -373,3 +409,33 @@ One row per cited source. The numbers are the reference numbers of `docs/technic
 **Added for sentence endings**
 
 119. Vaughan-Johnston, Guyer, Fabrigar, Lamprinakos & Brinol (2024). Falling vocal intonation signals speaker confidence and conditionally boosts persuasion. *Personality and Social Psychology Bulletin*, 52(1), 3–21. doi:10.1177/01461672241262180. Full.
+
+**Added after the final evaluation**
+
+120. Choi et al. (2021). Neural analysis and synthesis: Reconstructing speech from self-supervised representations. *Advances in Neural Information Processing Systems 34 (NeurIPS 2021)*. arXiv:2110.14513. Full (Tables 6–7).
+121. Rudresh, Vasisht, Vijayan & Seelamantula (2018). Epoch-synchronous overlap-add (ESOLA) for time- and pitch-scale modification of speech signals. arXiv:1801.06492. Full (Tables V–VI).
+122. Roberts & Paliwal (2020). A time-scale modification dataset with subjective quality labels. *Journal of the Acoustical Society of America*, 148(1). arXiv:2006.00848. Full (text).
+123. Charpentier & Moulines (1989). Pitch-synchronous waveform processing techniques for text-to-speech synthesis using diphones. *Proc. Eurospeech 1989*, 2013–2019. Full.
+124. Bae & Joo (2022). Enhancement of pitch controllability using timbre-preserving pitch augmentation in FastPitch. arXiv:2204.05753. Full (Table 1, Fig. 6).
+125. Hirose, Gendrin & Minematsu (2003). A pronunciation training system for Japanese lexical accents with corrective feedback in learner's voice. *Proc. Eurospeech 2003*, 3149–3152. Full.
+126. Morrison, Jin, Salamon, Bryan & Mysore (2020). Controllable neural prosody synthesis. *Proc. Interspeech 2020*. arXiv:2008.03388. Full.
+127. Morrison, Rencker, Jin, Bryan, Caceres & Pardo (2021). Context-aware prosody correction for text-based speech editing. *Proc. ICASSP 2021*. arXiv:2102.08328. Full.
+128. Bissiri, Pfitzinger & Tillmann (2006). Lexical stress training of German compounds for Italian speakers by means of resynthesis and emphasis. *Proc. SST 2006*, 24–29. Full.
+129. Nolan (2003). Intonational equivalence: An experimental evaluation of pitch scales. *Proc. 15th ICPhS*, Barcelona. Full.
+130. Peabody & Seneff (2006). Towards automatic tone correction in non-native Mandarin. *Proc. ISCSLP 2006* (LNCS 4274). Full.
+131. Ai & Xu (2015). System demonstration of the DFKI "Sprinter" pronunciation tutor (the title is not recorded in the research notes). *Proc. ACL-IJCNLP 2015, System Demonstrations*, ACL Anthology P15-4001. Full.
+132. Zhao, Koh & Luke (2012). Accent reduction for computer-aided language learning. *Proc. EUSIPCO 2012*. Full (method, evaluation).
+133. Zhang et al. (2021). Masked acoustic unit for mispronunciation detection and correction. arXiv:2108.05517. Parts (evaluation).
+134. Felps, Bortfeld & Gutierrez-Osuna (2009). Foreign accent conversion in computer assisted pronunciation training. *Speech Communication*, 51(10), 920–932. doi:10.1016/j.specom.2008.11.004. Full-F.
+135. Jügler, Zimmerer, Trouvain & Möbius (2016). The perceptual effect of L1 prosody transplantation on L2 speech: The case of French accented German. *Proc. Interspeech 2016*, 67–71. doi:10.21437/Interspeech.2016-1268. Full.
+136. Morrison, Hsieh, Pruyne & Pardo (2023). Cross-domain neural pitch and periodicity estimation. arXiv:2301.12258. Full (Table I).
+137. Raina, Gales & Knill (2020). Universal adversarial attacks on spoken language assessment systems. *Proc. Interspeech 2020*. Abstract.
+138. Duong & Mostow (2010). Adapting a duration synthesis model to rate children's oral reading prosody. *Proc. Interspeech 2010*, 769–772. doi:10.21437/Interspeech.2010-281. Full.
+139. Cheng (2011). Automatic assessment of prosody in high-stakes English tests. *Proc. Interspeech 2011*, 1589–1592. doi:10.21437/Interspeech.2011-477. Full.
+140. Suzuki, Kato & Tamura (2022). Automatic prosody evaluation of L2 English read speech in reference to accent dictionary with Transformer encoder. *Proc. Interspeech 2022*, 4466–4470. doi:10.21437/Interspeech.2022-10344. Full.
+141. Taylor & Black (1998). Assigning phrase breaks from part-of-speech sequences. *Computer Speech & Language*, 12, 99–117. Parts (metrics, Table 1, §5.1).
+142. Dhamne, Raman & Rao (2025). Predicting prosodic boundaries for children's texts. *Proc. EMNLP 2025*, 31875–31885. Parts.
+143. Trouvain, Barry, Nielsen & Andersen (1998). Implications of energy declination for speech synthesis. *Proc. 3rd ESCA/COCOSDA Workshop on Speech Synthesis*, 47–52. Parts.
+144. Ferreira (1993). Creation of prosody during sentence production. *Psychological Review*, 100(2), 233–253. Abstract and parts.
+145. Bailly, Godde, Piat-Marchand & Bosse (2022). Automatic assessment of oral readings of young pupils. *Speech Communication*, 138, 67–79. doi:10.1016/j.specom.2022.01.008. Parts.
+146. Microsoft. Azure AI Speech, pronunciation assessment (scripted mode with prosody assessment). Product documentation, https://learn.microsoft.com/en-us/azure/ai-services/speech-service/how-to-pronunciation-assessment. Doc.

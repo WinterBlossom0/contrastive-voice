@@ -12,19 +12,19 @@ Contrastive Voice compares a spoken reading with a reference reading of the same
 
 ![Dashboard: gallery example "Level 3, Set A", same-recording regime R1](docs/img/readme_dashboard.png)
 
-The screenshot shows the local app on the gallery example **Level 3, Set A**: the Reagan passage with four injected level-3 edits, compared with the unedited recording (regime R1). The score is 86.11. Six flagged regions are listed on the right; the selected finding **#3 Rushed** gives the words, both time spans, the measurement (0.87 s against 1.62 s), the 4.89 points it costs and a fix. Below are the waveform, the pitch and level contours, and one row per dimension with its tolerance band.
+The screenshot shows the local app on the gallery example **Level 3, Set A**: the Reagan passage with four injected level-3 edits, compared with the unedited recording (regime R1). The score is 86.11. The time view marks the costliest findings on both readings: **#2 Missing pause** (−3.56 points), **#3 Rushed** (−4.89), **#5 Volume drops** (−3.81) and **#1 Flat pitch**. Below it (not in the screenshot) are the three biggest fixes, each with the words, both measured values, the points it costs, a fix, A/B listening and **Hear it fixed**; then the text with every finding marked, the full list of findings and the charts of every measurement.
 
-**Documents:** [technical report](docs/technical.md) ([PDF](docs/technical.pdf)) · [papers used and the chain from each flaw to its method](docs/PAPERS.md) · [evidence of the final evaluation](docs/evidence_final_782d7df7/)
+**Documents:** [technical report](docs/technical.md) ([PDF](docs/technical.pdf)) · [papers used and the chain from each flaw to its method](docs/PAPERS.md) · [evidence of the final evaluation](docs/evidence_final_782d7df7/) · [evidence of the two features added after it](docs/evidence_post_final/)
 
 ## Where each judging criterion is covered
 
 | Criterion (weight) | Technical report | Code and evidence |
 |---|---|---|
-| Data engineering and stress testing (30 %) | §2 Data engineering, §6.4 Stress matrix | `kaggle/data/fetch.py`, `src/cvoice/dataset.py`, `flaws.py`, `edits_extra.py`, `r2pool.py`, `stress.py`; [dataset card](docs/evidence_final_782d7df7/dataset_card.md); **Stress matrix** panel in the app |
-| Causal explainability and temporal grounding (25 %) | §5 Causal explainability and temporal grounding | `src/cvoice/patterns.py`, `explain.py`, `score.py`; every finding in the app (words, time spans, measured values, threshold, points, fix, A/B playback) |
+| Data engineering and stress testing (30 %) | §2 Data engineering, §6.4 Stress matrix | `kaggle/data/fetch.py`, `src/cvoice/dataset.py`, `flaws.py`, `edits_extra.py`, `r2pool.py`, `stress.py`; [dataset card](docs/evidence_final_782d7df7/dataset_card.md) |
+| Causal explainability and temporal grounding (25 %) | §5 Causal explainability and temporal grounding | `src/cvoice/patterns.py`, `explain.py`, `score.py`, `repair.py`; every finding in the app (words, time spans, measured values, threshold, points, fix, A/B playback, **Hear it fixed**); report §10.1 |
 | Feature extraction (20 %) | §3 Feature extraction, §4 Detection and calibration | `src/cvoice/align.py`, `features.py`, `compare.py`, `detect.py`, `calibrate.py`; [papers and citation chains](docs/PAPERS.md) |
 | Dashboard (15 %) | §7 Dashboard | [Quick start](#quick-start) below; `src/cvoice/app.py`, `src/cvoice/static/` |
-| Reproducibility and code quality (10 %) | §8 Reproducibility and code quality | [Reproduce from public origins](#reproduce-from-public-origins), [Tests](#tests); [evidence files with checksums](docs/evidence_final_782d7df7/); `uv.lock`, `Dockerfile`, `.github/workflows/ci.yml` |
+| Reproducibility and code quality (10 %) | §8 Reproducibility and code quality | [Reproduce from public origins](#reproduce-from-public-origins), [Tests](#tests); [evidence files with checksums](docs/evidence_final_782d7df7/), [post-final evidence](docs/evidence_post_final/); `uv.lock`, `Dockerfile`, `.github/workflows/ci.yml` |
 
 ## Three regimes
 
@@ -65,6 +65,8 @@ The budget was 0.5 false regions per minute and 0.05 whole-passage flags per cli
 
 Full results, the stress matrix, baselines and the cause-label accuracy are in the [technical report](docs/technical.md).
 
+**Added after the final evaluation.** Editing a reading toward each finding's target ("Hear it fixed") and the rough check without a reference were added after the single final evaluation. The frozen detector and every number above are unchanged; their own evidence is in section 10 of the [technical report](docs/technical.md) and in [`docs/evidence_post_final/`](docs/evidence_post_final/).
+
 ## Quick start
 
 ### Prerequisites
@@ -95,9 +97,9 @@ uv run --extra cpu python -m cvoice.app
 
 Open `http://127.0.0.1:7860`. Options: `--host`, `--port`, `--gallery DIR`, `--detector FILE` (default `models/detector.json`, the frozen detector). `GET /api/health` reports whether analysis is available.
 
-**Gallery.** The page opens on a precomputed example. The **Examples** rows hold 17 examples, each with its score: **Identity**, **Level 1** to **Level 3** (**Set A**, **Set B**), the **Ladder** (**G1**, **G3**, **G5**), **Other performance** (**Greenman**, **Greenman edited**, **Greenman botched**, **Listed entries**, **Median of five**), **Channel** (**MP3 64 kbit/s**) and **Natural rushing**. **How well it works** shows the evaluation (pre-registered accounting first); **Stress matrix** shows how the output moves when only the recording conditions change.
+**Gallery.** The page opens on a precomputed example. **Try an example** (and **More examples**) holds 18 examples, each with its score: **Identity**, **Level 1** to **Level 3** (**Set A**, **Set B**, and **Set A, no reference**), the **Ladder** (**G1**, **G3**, **G5**), **Other performance** (**Greenman**, **Greenman edited**, **Greenman botched**, **Listed entries**, **Median of five**), **Channel** (**MP3 64 kbit/s**) and **Natural rushing**. The evaluation and the stress matrix are in the technical report, linked at the foot of the page.
 
-**Upload your own reading.** Open **Analyse your own recording**, choose your file under **Your recording**, pick a **Reference** (the bundled Reagan passage, one reading; the bundled Gettysburg Address, median of five readings; or your own reference recording), fill in **Transcript: the exact words both recordings read** (or load it from a text file), and press **Analyse**. The page shows the stages decode, align, features, compare and detect while the job runs. Every upload is analysed as R2. Limits: 50 MiB per request, 180 s per recording, one analysis at a time. A recording whose words do not match the transcript is refused.
+**Upload your own reading.** Open **Analyse your reading**, choose your file under **Your recording**, pick a **Reference** (the bundled Reagan passage, one reading; the bundled Gettysburg Address, median of five readings; your own reference recordings; or **No reference: grade my reading on its own**), fill in **Transcript: the exact words both recordings read** (or load it from a text file), and press **Analyse**. The page shows the stages decode, align, features, compare and detect while the job runs. Every upload with a reference is analysed as R2. Limits: 50 MiB per request, 180 s per recording, one analysis at a time. A recording whose words do not match the transcript is refused.
 
 The same analysis from the command line (use `--regime R1` only for an edited copy of the reference recording itself):
 
@@ -105,6 +107,26 @@ The same analysis from the command line (use `--regime R1` only for an edited co
 uv run --extra cpu python -m cvoice.pipeline --participant my_reading.wav --baseline gallery/audio/reagan_farewell_1989.wav \
   --transcript words.txt --regime R2 --out result.json
 ```
+
+### Hear it fixed
+
+Each of the three biggest fixes, and the selected finding in the side panel, has **Hear it fixed**. The app edits your own recording at those words toward the finding's target (slower or faster words, a longer or shorter pause, a wider pitch range, more stress on a word, a steadier level), analyses the edited recording again, and loops **Yours**, **Edited** and **Target** (the reference at the same words), each with a second before and after. The heading says what happened: **No longer flagged**, **Still flagged · partly changed**, **Not edited** (with the reason) or **Can't be fixed by editing**. Each edit stops at a chosen limit so that your voice does not sound processed, so a large problem is often changed only part of the way. For a flat-pitch finding with a reference, **Try the reference's melody** puts the reference's intonation on your words instead of widening your own.
+
+Treat it as a preview of the change. It shows what the same detector measures after the edit; it does not show that listeners hear a better reading (no listening test has been run yet).
+
+![Hear it fixed on finding #3 Rushed of "Level 3, Set A": still flagged, partly changed; score change +3.07 points; the checks that passed; the Yours / Edited / Target loop](docs/img/readme_hear_fixed.png)
+
+### Fix everything and listen
+
+**Fix everything and listen** (under the score) applies every fix at once and plays your whole reading as **Yours** or **Edited**. It shows the score before and after (on "Level 3, Set A": 86.11 → 96.17) and, under **What each fix did**, the outcome of each finding with its own loop. Clarity, sentence endings, repetitions, fillers and other disfluencies cannot be fixed by editing a recording, and the list says so. The ticks under the player are the checks that passed: your unedited recording analysed again gives the same result, and every word of the edited recording is found where the edit moved it. The score change is shown only when the first check passes.
+
+![Fix everything and listen on "Level 3, Set A"](docs/img/readme_fix_all.png)
+
+### No reference: a rough check
+
+Choose **No reference: grade my reading on its own** when you have no reference reading. Each stretch of your reading is compared with how you read the rest: pace and speech tempo after allowing for the length of the words, pauses against your own pauses at the same kind of boundary (sentence end, other punctuation, none), pitch range after allowing for the usual fall towards a sentence end, volume and the clarity proxy against your own typical level. Emphasis, word time and endings need a reference and are not checked. The result counts the spots that stand out instead of giving a score.
+
+It is a rough check. It cannot see a problem that runs through the whole reading, such as reading fast or flat throughout; it finds fewer of the test edits than a comparison with a reference (test F1 0.36, against 0.81 to 0.88 with a reference; report section 10.2); and a clean reading can still show spots that are natural phrasing. **Hear it closer to your typical delivery** previews an edit toward your own typical delivery: listen before you change how you read. The gallery example **Level 3, Set A, no reference** shows 3 spots for the audio that gives 6 findings with the reference.
 
 ### Run with Docker
 
@@ -192,22 +214,25 @@ uv run --extra cpu pytest -q -m slow tests/test_smoke.py
 uv run --extra cpu ruff check --select F,E9 src kaggle tests
 ```
 
-The second command runs 564 tests (all pass, about 85 s on a laptop CPU); two slow tests are deselected by default. The third runs the one-clip smoke test (it needs the alignment checkpoint; about 6 s once the checkpoint is cached). The other slow test (`tests/test_integration.py`, a mini dataset build through the gallery) did not finish on the laptop and was not run for the final checks. A few tests read the final-run outputs under `build/`, which is not part of the repository; in a fresh clone they are skipped. `.github/workflows/ci.yml` runs the first three commands.
+The second command runs 631 tests (all pass, about 94 s on a laptop CPU, 2026-10-10 IST); 11 slow tests are deselected by default. The third runs the one-clip smoke test (it needs the alignment checkpoint; about 6 s once the checkpoint is cached). The slow tests of the two later features are in `tests/test_repair.py` and `tests/test_selfref.py` (`pytest -m slow`). The slow test `tests/test_integration.py` (a mini dataset build through the gallery) passes: `uv run --extra cpu --group build pytest -q -m slow tests/test_integration.py` gave 1 passed in 1110.57 s (18 min 31 s) on 2026-10-10 IST. A few tests read the final-run outputs under `build/`, which is not part of the repository; in a fresh clone they are skipped. `.github/workflows/ci.yml` runs the first three commands.
 
 ## Repository layout
 
 | Path | Contents |
 |---|---|
-| `src/cvoice/` | Analysis: `config`, `audio`, `align`, `features`, `reference`, `compare`, `detect`, `patterns`, `score`, `explain`, `pipeline`. Build and evaluation: `passages`, `flaws`, `edits_extra`, `dataset`, `r2pool`, `pool`, `calibrate`, `protocol`, `evaluate`, `events`, `stress`, `uncertainty`, `addendum`, `gallery`, `lab/` (measurement lab). Dashboard: `app.py`, `static/` |
+| `src/cvoice/` | Analysis: `config`, `audio`, `align`, `features`, `reference`, `compare`, `detect`, `patterns`, `score`, `explain`, `pipeline`. Build and evaluation: `passages`, `flaws`, `edits_extra`, `dataset`, `r2pool`, `pool`, `calibrate`, `protocol`, `evaluate`, `events`, `stress`, `uncertainty`, `addendum`, `gallery`, `lab/` (measurement lab). Fix your speech: `repair`. No reference: `selfref`, `norms` (word-duration norms; tried, not used by the shipped detector). Dashboard: `app.py`, `static/` |
 | `models/detector.json` | The frozen detector: scales, thresholds and score constants for R1, R2 and R2 median of five |
+| `models/detector_selfref.json` | The detector of the no-reference rough check (added after the final evaluation; tested once, hashes in `docs/evidence_post_final/INDEX.txt`) |
+| `models/duration_norms.json` | Word-duration norms fitted on LibriTTS; tried for the no-reference check and not adopted |
 | `models/final_evaluations.json` | Record of test-split evaluations (configurations `32cdd86f…` and `782d7df7…`) |
-| `gallery/` | 17 precomputed examples (audio and result JSON), the evaluation panel and the stress matrix shown on the page; rebuilt on CPU after the final evaluation with the frozen detector (`gallery/index.json` `provenance`) |
+| `gallery/` | 18 precomputed examples (audio and result JSON) and the evaluation and stress-matrix data; the 17 examples of the final evaluation were rebuilt on CPU with the frozen detector (`gallery/index.json` `provenance`), and **Level 3, Set A, no reference** was added with the rough check |
 | `data/sources_manifest.json`, `data/transcripts/` | The 19 source recordings (URL, SHA-256, licence basis, split) and the transcript snapshots with their hashes |
 | `docs/technical.md`, `docs/technical.pdf` | Technical report |
 | `docs/PAPERS.md` | Papers used, what was taken from each, and the chain from each flaw to its method and module |
 | `docs/evidence_final_782d7df7/`, `docs/evidence_final_32cdd86f3d6e/` | Evidence of the final evaluation and of the earlier look at the test split |
+| `docs/evidence_post_final/` | Evidence of the two features added after the final evaluation (`INDEX.txt`, `SHA256SUMS`) |
 | `kaggle/run.py`, `kaggle/data/fetch.py`, `kaggle/lab/` | Build kernel, corpus fetch kernel, measurement lab kernel |
-| `scripts/` | `stage_project.sh`, `import_run.sh`, `rebuild_after_final.sh`, `build_pdf.sh`, `make_pipeline_figure.py` |
+| `scripts/` | `stage_project.sh`, `import_run.sh`, `rebuild_after_final.sh`, `build_pdf.sh`, `make_pipeline_figure.py`, `fetch_norms_corpus.py` (LibriTTS download for the duration norms) |
 | `tests/` | Unit and regression tests |
 | `pyproject.toml`, `uv.lock`, `Dockerfile`, `.dockerignore` | Locked environment and container |
 | `fly.toml`, `render.yaml` | Deploy configurations for Fly.io and Render |
@@ -218,8 +243,9 @@ The second command runs 564 tests (all pass, about 85 s on a laptop CPU); two sl
 - **Baselines and gallery audio.** The 9 baseline speeches are public-domain US government recordings (Wikimedia Commons). The reader recordings in the gallery (Gettysburg Address, Reagan farewell address read by John Greenman) are LibriVox readings dedicated to the public domain. All audio in this repository derives from these sources. `data/sources_manifest.json` and the dataset card give the source URL and licence basis of each.
 - **Reader corpora for the R2 calibration and lockbox** (final-run dataset): Speech Accent Archive (779 recordings, CC BY-NC-SA 4.0), EARS (856 recordings, CC BY-NC 4.0), and LibriVox poetry and Gettysburg readings (308 recordings, public domain). They are used under their own terms for calibration and evaluation. Their audio is not in this repository; it stays in private Kaggle outputs and is rebuilt from the origins by `kaggle/data/fetch.py`, which writes the licence of each source to `LICENSES.md`.
 - No data is redistributed against its licence.
-- Third-party components keep their own licences: torchaudio `WAV2VEC2_ASR_BASE_960H` (alignment), Praat through parselmouth (pitch), the WORLD vocoder through pyworld (build only), `cmudict` (syllable counts), Plotly (MIT) and wavesurfer.js (BSD-3-Clause), vendored in `src/cvoice/static/vendor/`.
-- Code licence: not yet chosen by the owner.
+- **Word-duration norms** (`models/duration_norms.json`, not used by the shipped detector) were fitted on LibriTTS dev-clean and test-clean (Zen et al. 2019, arXiv:1904.02882; CC BY 4.0; OpenSLR SLR60). The LibriTTS audio is not in this repository; `scripts/fetch_norms_corpus.py` downloads it and checks its hashes.
+- Third-party components keep their own licences: torchaudio `WAV2VEC2_ASR_BASE_960H` (alignment), Praat through parselmouth (pitch), the WORLD vocoder through pyworld (build only), `cmudict` (syllable counts), Plotly (MIT) and wavesurfer.js (BSD-3-Clause), and the Newsreader and Atkinson Hyperlegible Next typefaces (SIL Open Font License), vendored in `src/cvoice/static/vendor/`.
+- Code licence: MIT (`LICENSE`).
 
 ## AI assistance
 
@@ -238,3 +264,5 @@ Short forms; the full wording and numbers are in section 9 (Limits) of the [tech
 - Pause findings are placed within about 0.15 s. Pace, pitch-range, volume and clarity findings mark an approximate five-word span.
 - Robustness was tested with simulated noise, babble, compression, phone and room effects only. Background talk and phone audio produce many false pause and pace flags.
 - Scores and cause labels were checked only against synthetic edits with a known cause, not against listener ratings.
+- **Hear it fixed** is judged by the same detector that chose the edit, and it was checked only on synthetic edits. A blind listening test is designed but has not been run, so there is no evidence yet that listeners hear an improvement. A flat contour is rarely widened with your own pitch; the reference's melody replaces your intonation.
+- **No reference** finds fewer problems than a comparison with a reference (test F1 0.36), cannot see a problem that covers the whole reading, and can mark natural phrasing; it gives no score.

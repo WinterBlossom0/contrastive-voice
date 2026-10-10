@@ -1,0 +1,278 @@
+{
+ "date_ist": "2026-10-10 09:45 IST",
+ "detector": {
+  "h": {
+   "D1+": 4.5,
+   "D1-": 3.05,
+   "D2+": 2.4,
+   "D2-": 4.95,
+   "D3-": 4.1,
+   "D4-": null,
+   "D5-": 4.75,
+   "D6-": 2.75,
+   "D7+": null,
+   "D8+": null,
+   "D9-": 6.4
+  },
+  "path": "models/detector_selfref.json",
+  "readers": {
+   "minutes": 176.664,
+   "readings": 167,
+   "roles": [
+    "budget"
+   ],
+   "sources": [
+    "gettysburg",
+    "poetry"
+   ]
+  },
+  "selfref_sha256": "3768cdc0f8a9d2ad8f955d33128b4bc359c015afdf98a60ffec65eb4b74dd8c3",
+  "text_model": "phones"
+ },
+ "file_sha256": {
+  "models/detector_selfref.json": "6dd3adc53d7f3a48d7a94fb889a01d0dd9958b9c05769d7765f125c1d6910418",
+  "src/cvoice/selfref.py": "025fd98a4cdefd527aa5bb1775dd5d98193b113273cfc11b50d8ca742da38359"
+ },
+ "fit_phase_readers_by_source": {
+  "accent": {
+   "minutes": 166.943,
+   "per_minute": 0.587,
+   "readers": 394,
+   "regions": 98,
+   "used_in_fit": false
+  },
+  "ears": {
+   "minutes": 111.946,
+   "per_minute": 0.348,
+   "readers": 424,
+   "regions": 39,
+   "used_in_fit": false
+  },
+  "gettysburg": {
+   "minutes": 21.017,
+   "per_minute": 0.619,
+   "readers": 10,
+   "regions": 13,
+   "used_in_fit": true
+  },
+  "poetry": {
+   "minutes": 155.647,
+   "per_minute": 0.527,
+   "readers": 157,
+   "regions": 82,
+   "used_in_fit": true
+  }
+ },
+ "git_commit": "1d160d8a02347d25b9408e2c833caf78c4758f1d",
+ "git_uncommitted_tracked_files": [
+  "models/detector_selfref.json",
+  "src/cvoice/selfref.py",
+  "tests/test_selfref.py"
+ ],
+ "note": "added after the final evaluation; does not replace any pre-registered number",
+ "old_lower_bound": {
+  "core8|L1|test": {
+   "once_f1": 0.077,
+   "once_tp_fp_dup_fn": [
+    1,
+    9,
+    0,
+    15
+   ],
+   "pre_f1": 0.077,
+   "pre_tp_fp_fn": [
+    1,
+    9,
+    15
+   ]
+  },
+  "core8|L2+L3|test": {
+   "once_f1": 0.407,
+   "once_tp_fp_dup_fn": [
+    12,
+    15,
+    0,
+    20
+   ],
+   "pre_f1": 0.407,
+   "pre_tp_fp_fn": [
+    12,
+    15,
+    20
+   ]
+  },
+  "lab_passed|L1|test": {
+   "once_f1": 0.0,
+   "once_tp_fp_dup_fn": [
+    0,
+    4,
+    0,
+    2
+   ],
+   "pre_f1": 0.0,
+   "pre_tp_fp_fn": [
+    0,
+    4,
+    2
+   ]
+  },
+  "lab_passed|L2+L3|test": {
+   "once_f1": 0.0,
+   "once_tp_fp_dup_fn": [
+    0,
+    8,
+    0,
+    4
+   ],
+   "pre_f1": 0.0,
+   "pre_tp_fp_fn": [
+    0,
+    8,
+    4
+   ]
+  },
+  "noise|test": 6,
+  "nulls|test": {
+   "by_key": {
+    "D1-": 18,
+    "D2-": 6
+   },
+   "minutes": 5.888,
+   "per_minute": 4.076,
+   "regions": 24
+  },
+  "synthetic_only|L1|test": {
+   "once_f1": 0.0,
+   "once_tp_fp_dup_fn": [
+    0,
+    16,
+    0,
+    19
+   ],
+   "pre_f1": 0.0,
+   "pre_tp_fp_fn": [
+    0,
+    16,
+    19
+   ]
+  },
+  "synthetic_only|L2+L3|test": {
+   "once_f1": 0.049,
+   "once_tp_fp_dup_fn": [
+    2,
+    39,
+    0,
+    38
+   ],
+   "pre_f1": 0.049,
+   "pre_tp_fp_fn": [
+    2,
+    39,
+    38
+   ]
+  }
+ },
+ "self": {
+  "core8|L1|test": {
+   "once_f1": 0.0,
+   "once_tp_fp_dup_fn": [
+    0,
+    3,
+    0,
+    16
+   ],
+   "pre_f1": 0.0,
+   "pre_tp_fp_fn": [
+    0,
+    3,
+    16
+   ]
+  },
+  "core8|L2+L3|test": {
+   "once_f1": 0.36,
+   "once_tp_fp_dup_fn": [
+    9,
+    9,
+    1,
+    23
+   ],
+   "pre_f1": 0.353,
+   "pre_tp_fp_fn": [
+    9,
+    10,
+    23
+   ]
+  },
+  "lab_passed|L1|test": {
+   "once_f1": 0.0,
+   "once_tp_fp_dup_fn": [
+    0,
+    0,
+    0,
+    2
+   ],
+   "pre_f1": 0.0,
+   "pre_tp_fp_fn": [
+    0,
+    0,
+    2
+   ]
+  },
+  "lab_passed|L2+L3|test": {
+   "once_f1": 0.0,
+   "once_tp_fp_dup_fn": [
+    0,
+    0,
+    0,
+    4
+   ],
+   "pre_f1": 0.0,
+   "pre_tp_fp_fn": [
+    0,
+    0,
+    4
+   ]
+  },
+  "noise|test": 1,
+  "nulls|test": {
+   "by_key": {
+    "D1-": 6,
+    "D2+": 6
+   },
+   "minutes": 5.888,
+   "per_minute": 2.038,
+   "regions": 12
+  },
+  "synthetic_only|L1|test": {
+   "once_f1": 0.0,
+   "once_tp_fp_dup_fn": [
+    0,
+    5,
+    0,
+    19
+   ],
+   "pre_f1": 0.0,
+   "pre_tp_fp_fn": [
+    0,
+    5,
+    19
+   ]
+  },
+  "synthetic_only|L2+L3|test": {
+   "once_f1": 0.036,
+   "once_tp_fp_dup_fn": [
+    1,
+    15,
+    0,
+    39
+   ],
+   "pre_f1": 0.036,
+   "pre_tp_fp_fn": [
+    1,
+    15,
+    39
+   ]
+  }
+ },
+ "split": "test"
+}

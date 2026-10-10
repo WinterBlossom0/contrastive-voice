@@ -1,0 +1,5733 @@
+{
+ "date_ist": "2026-10-10 10:46 IST",
+ "git_head": "e893d5b86454d1926e27650b35dc1cc239e88bda",
+ "sha256": {
+  "src/cvoice/repair.py": "0cf2371cebf986776a54b62420eff2b4e8452791a5218fc536a586a1a1a4a52e",
+  "models/detector.json": "d5935d3f8eeaf928a143b9b04db0c4250604a6c17f5336af87ef124c090758b6",
+  "models/detector_selfref.json": "6dd3adc53d7f3a48d7a94fb889a01d0dd9958b9c05769d7765f125c1d6910418",
+  "build/work/repair/validate.py": "562f0eceb4c3afd20a16a587353eab69d44bd53ff3abf2c8a3575b002ca88ab3"
+ },
+ "data": "gallery clips (train baseline reagan_farewell_1989, val baseline eisenhower_farewell_1961, R2 readers); SELF section: fit-phase reader pickle (gettysburg and poetry fit sources, accent and ears validation sources); no test-split data",
+ "clean_regions": {
+  "trials": 175,
+  "reproduces_session3_counts": true,
+  "old_related_sets": {
+   "stretch": [
+    "D1",
+    "D7",
+    "D9"
+   ],
+   "pause_insert": [
+    "D1",
+    "D2"
+   ],
+   "pause_shorten": [
+    "D1",
+    "D2"
+   ],
+   "pitch_scale": [
+    "D3",
+    "D4",
+    "D8"
+   ],
+   "pitch_contour": [
+    "D3",
+    "D4",
+    "D8"
+   ],
+   "gain": [
+    "D4",
+    "D5"
+   ],
+   "emphasis": [
+    "D1",
+    "D3",
+    "D4",
+    "D5",
+    "D7",
+    "D8",
+    "D9"
+   ]
+  },
+  "old_count": {
+   "new_related": 34,
+   "new_other": 5,
+   "other_dims": {
+    "D9": 5
+   }
+  },
+  "narrowed_emphasis_related": [
+   "D4"
+  ],
+  "rule": "related = the operation's target dimension plus each dimension whose measure the operation moves by at least 1.0 flag threshold (median over its clean trials, units within 2 words of the edit); applied to emphasis only",
+  "median_shift_in_thresholds": {
+   "stretch": {
+    "D1": 0.964,
+    "D2": 0.0,
+    "D3": 0.106,
+    "D4": 0.151,
+    "D5": 0.089,
+    "D6": 0.189,
+    "D9": 1.112
+   },
+   "pause_insert": {
+    "D1": 0.086,
+    "D2": 0.0,
+    "D3": 0.016,
+    "D4": 0.034,
+    "D5": 0.066,
+    "D6": 0.056,
+    "D9": 0.228
+   },
+   "pitch_scale": {
+    "D1": 0.014,
+    "D2": 0.0,
+    "D3": 0.35,
+    "D4": 0.169,
+    "D5": 0.07,
+    "D6": 0.056,
+    "D9": 0.168
+   },
+   "pitch_contour": {
+    "D1": 0.0,
+    "D2": 0.0,
+    "D3": 0.102,
+    "D4": 0.024,
+    "D5": 0.043,
+    "D6": 0.044,
+    "D9": 0.141
+   },
+   "emphasis": {
+    "D1": 0.081,
+    "D2": 0.0,
+    "D3": 0.103,
+    "D4": 0.037,
+    "D5": 0.026,
+    "D6": 0.022,
+    "D9": 0.313
+   },
+   "gain": {
+    "D1": 0.039,
+    "D2": 0.0,
+    "D3": 0.036,
+    "D4": 0.381,
+    "D5": 0.692,
+    "D6": 0.01,
+    "D9": 0.179
+   },
+   "pause_shorten": {
+    "D1": 0.031,
+    "D2": 0.512,
+    "D3": 0.128,
+    "D4": 0.027,
+    "D5": 0.432,
+    "D6": 0.025,
+    "D9": 0.147
+   }
+  },
+  "rule_related": {
+   "stretch": [
+    "D1",
+    "D9"
+   ],
+   "pause_insert": [
+    "D2"
+   ],
+   "pitch_scale": [
+    "D3"
+   ],
+   "pitch_contour": [
+    "D3"
+   ],
+   "emphasis": [
+    "D4"
+   ],
+   "gain": [
+    "D5"
+   ],
+   "pause_shorten": [
+    "D2"
+   ]
+  },
+  "narrowed_count": {
+   "target": 25,
+   "related": 8,
+   "other": 6,
+   "other_dims": {
+    "D9": 5,
+    "D1": 1
+   },
+   "other_trials": [
+    {
+     "clip": "L2B",
+     "region": [
+      36,
+      40
+     ],
+     "operation": "pause_insert",
+     "value": 0.4,
+     "dims": [
+      [
+       "D9",
+       [
+        26,
+        27
+       ]
+      ]
+     ]
+    },
+    {
+     "clip": "L2B",
+     "region": [
+      36,
+      40
+     ],
+     "operation": "pause_shorten",
+     "value": 0.4,
+     "dims": [
+      [
+       "D9",
+       [
+        26,
+        27
+       ]
+      ]
+     ]
+    },
+    {
+     "clip": "L2B",
+     "region": [
+      36,
+      40
+     ],
+     "operation": "pitch_scale",
+     "value": 0.7142857142857143,
+     "dims": [
+      [
+       "D9",
+       [
+        26,
+        27
+       ]
+      ]
+     ]
+    },
+    {
+     "clip": "L2B",
+     "region": [
+      36,
+      40
+     ],
+     "operation": "pitch_contour",
+     "value": 1.0,
+     "dims": [
+      [
+       "D9",
+       [
+        26,
+        27
+       ]
+      ]
+     ]
+    },
+    {
+     "clip": "L2B",
+     "region": [
+      36,
+      40
+     ],
+     "operation": "gain",
+     "value": -4.0,
+     "dims": [
+      [
+       "D9",
+       [
+        26,
+        27
+       ]
+      ]
+     ]
+    },
+    {
+     "clip": "natural_rush",
+     "region": [
+      16,
+      20
+     ],
+     "operation": "emphasis",
+     "value": [
+      1.2,
+      2.0,
+      3.0
+     ],
+     "dims": [
+      [
+       "D1",
+       [
+        32,
+        33
+       ]
+      ]
+     ]
+    }
+   ]
+  },
+  "emphasis_trials": {
+   "trials": 19,
+   "with_any_new_flag": 1,
+   "new_flags_by_dim": {
+    "D1": 1
+   }
+  }
+ },
+ "controls": {
+  "null_chain_reproduction_check": {
+   "runs": 40,
+   "flag_changes": 0,
+   "max_abs_score_delta": 0.0,
+   "note": "every null chain is an identity by construction (stretch 1, gain 0, pause 0, pause shortened to its own length, pitch spliced only where the tier changes), so it checks reproduction, not processing artefacts"
+  },
+  "processing_only_whole_clip": {
+   "clips": 17,
+   "clips_with_a_flag_change": 0,
+   "flag_changes": 0,
+   "score_delta": {
+    "n": 17,
+    "median": 0.0,
+    "q25": 0.0,
+    "q75": 0.11,
+    "min": -0.54,
+    "max": 0.38
+   },
+   "per_clip": {
+    "identity": {
+     "score_delta": 0.0,
+     "removed": [],
+     "new": []
+    },
+    "L1A": {
+     "score_delta": 0.18,
+     "removed": [],
+     "new": []
+    },
+    "L1B": {
+     "score_delta": 0.0,
+     "removed": [],
+     "new": []
+    },
+    "L2A": {
+     "score_delta": 0.11,
+     "removed": [],
+     "new": []
+    },
+    "L2B": {
+     "score_delta": 0.27,
+     "removed": [],
+     "new": []
+    },
+    "L3A": {
+     "score_delta": 0.38,
+     "removed": [],
+     "new": []
+    },
+    "L3B": {
+     "score_delta": 0.23,
+     "removed": [],
+     "new": []
+    },
+    "G1": {
+     "score_delta": 0.01,
+     "removed": [],
+     "new": []
+    },
+    "G3": {
+     "score_delta": 0.1,
+     "removed": [],
+     "new": []
+    },
+    "G5": {
+     "score_delta": 0.01,
+     "removed": [],
+     "new": []
+    },
+    "greenman": {
+     "score_delta": 0.0,
+     "removed": [],
+     "new": []
+    },
+    "greenman_edited": {
+     "score_delta": 0.0,
+     "removed": [],
+     "new": []
+    },
+    "greenman_botched": {
+     "score_delta": -0.09,
+     "removed": [],
+     "new": []
+    },
+    "channel_mp3": {
+     "score_delta": 0.0,
+     "removed": [],
+     "new": []
+    },
+    "natural_rush": {
+     "score_delta": -0.12,
+     "removed": [],
+     "new": []
+    },
+    "r2_listed": {
+     "score_delta": -0.18,
+     "removed": [],
+     "new": []
+    },
+    "r2_consensus": {
+     "score_delta": -0.54,
+     "removed": [],
+     "new": []
+    }
+   }
+  },
+  "processing_only_fix_spans": {
+   "runs": 8,
+   "runs_with_a_flag_change": 0,
+   "flag_changes": 0,
+   "own_pitch_findings_removed_by_processing_alone": 0,
+   "score_delta": {
+    "n": 8,
+    "median": -0.05,
+    "q25": -0.203,
+    "q75": 0.02,
+    "min": -0.54,
+    "max": 0.07
+   },
+   "per_run": [
+    {
+     "clip": "L3A",
+     "pitch_method": "contour",
+     "pitch_findings": [
+      "d3-001"
+     ],
+     "score_delta": -0.01,
+     "removed": [],
+     "own_findings_removed": [],
+     "new": []
+    },
+    {
+     "clip": "L3B",
+     "pitch_method": "own",
+     "pitch_findings": [
+      "d4-002"
+     ],
+     "score_delta": 0.05,
+     "removed": [],
+     "own_findings_removed": [],
+     "new": []
+    },
+    {
+     "clip": "G3",
+     "pitch_method": "contour",
+     "pitch_findings": [
+      "d3-001"
+     ],
+     "score_delta": 0.07,
+     "removed": [],
+     "own_findings_removed": [],
+     "new": []
+    },
+    {
+     "clip": "G5",
+     "pitch_method": "contour",
+     "pitch_findings": [
+      "d3-002"
+     ],
+     "score_delta": 0.01,
+     "removed": [],
+     "own_findings_removed": [],
+     "new": []
+    },
+    {
+     "clip": "greenman_botched",
+     "pitch_method": "contour",
+     "pitch_findings": [
+      "d3-001"
+     ],
+     "score_delta": -0.09,
+     "removed": [],
+     "own_findings_removed": [],
+     "new": []
+    },
+    {
+     "clip": "natural_rush",
+     "pitch_method": "own",
+     "pitch_findings": [
+      "d4-006"
+     ],
+     "score_delta": -0.09,
+     "removed": [],
+     "own_findings_removed": [],
+     "new": []
+    },
+    {
+     "clip": "r2_consensus",
+     "pitch_method": "own",
+     "pitch_findings": [
+      "d3-001"
+     ],
+     "score_delta": -0.54,
+     "removed": [],
+     "own_findings_removed": [],
+     "new": []
+    },
+    {
+     "clip": "r2_consensus",
+     "pitch_method": "contour",
+     "pitch_findings": [
+      "d3-001"
+     ],
+     "score_delta": -0.54,
+     "removed": [],
+     "own_findings_removed": [],
+     "new": []
+    }
+   ]
+  },
+  "sham": {
+   "operations": 71,
+   "shams_run": 45,
+   "by_operation": {
+    "pause_insert": {
+     "operations": 18,
+     "shams_run": 8,
+     "not_run": {
+      "no none boundary without a finding": 2,
+      "no end boundary without a finding": 6,
+      "no comma boundary without a finding": 2
+     },
+     "with_new_target_flag": 2,
+     "with_new_related_flag": 0,
+     "with_new_other_flag": 0,
+     "with_removed_finding": 1,
+     "other_dims": []
+    },
+    "stretch": {
+     "operations": 16,
+     "shams_run": 12,
+     "not_run": {
+      "whole-clip operation": 2,
+      "no 2-word region without a finding": 2
+     },
+     "with_new_target_flag": 9,
+     "with_new_related_flag": 3,
+     "with_new_other_flag": 0,
+     "with_removed_finding": 0,
+     "other_dims": []
+    },
+    "pause_shorten": {
+     "operations": 7,
+     "shams_run": 7,
+     "not_run": {},
+     "with_new_target_flag": 1,
+     "with_new_related_flag": 0,
+     "with_new_other_flag": 0,
+     "with_removed_finding": 0,
+     "other_dims": []
+    },
+    "gain": {
+     "operations": 22,
+     "shams_run": 14,
+     "not_run": {
+      "no 3-word region without a finding": 2,
+      "no 6-word region without a finding": 4,
+      "no 2-word region without a finding": 2
+     },
+     "with_new_target_flag": 0,
+     "with_new_related_flag": 0,
+     "with_new_other_flag": 0,
+     "with_removed_finding": 0,
+     "other_dims": []
+    },
+    "pitch_contour": {
+     "operations": 5,
+     "shams_run": 2,
+     "not_run": {
+      "whole-clip operation": 3
+     },
+     "with_new_target_flag": 0,
+     "with_new_related_flag": 0,
+     "with_new_other_flag": 0,
+     "with_removed_finding": 0,
+     "other_dims": []
+    },
+    "emphasis": {
+     "operations": 2,
+     "shams_run": 2,
+     "not_run": {},
+     "with_new_target_flag": 0,
+     "with_new_related_flag": 0,
+     "with_new_other_flag": 0,
+     "with_removed_finding": 0,
+     "other_dims": []
+    },
+    "pitch_scale": {
+     "operations": 1,
+     "shams_run": 0,
+     "not_run": {
+      "whole-clip operation": 1
+     },
+     "with_new_target_flag": 0,
+     "with_new_related_flag": 0,
+     "with_new_other_flag": 0,
+     "with_removed_finding": 0,
+     "other_dims": []
+    }
+   },
+   "shams_with_any_new_flag": 13,
+   "shams_with_new_unrelated_flag": 0,
+   "target_shift_in_thresholds": {
+    "emphasis": {
+     "n": 2,
+     "median": 0.05,
+     "q25": 0.045,
+     "q75": 0.055,
+     "min": 0.04,
+     "max": 0.06
+    },
+    "gain": {
+     "n": 14,
+     "median": 0.58,
+     "q25": 0.503,
+     "q75": 0.648,
+     "min": 0.378,
+     "max": 1.258
+    },
+    "pause_insert": {
+     "n": 7,
+     "median": 1.736,
+     "q25": 1.395,
+     "q75": 2.171,
+     "min": 0.031,
+     "max": 2.202
+    },
+    "pause_shorten": {
+     "n": 7,
+     "median": 0.992,
+     "q25": 0.853,
+     "q75": 1.101,
+     "min": 0.0,
+     "max": 2.45
+    },
+    "pitch_contour": {
+     "n": 2,
+     "median": 0.36,
+     "q25": 0.223,
+     "q75": 0.497,
+     "min": 0.086,
+     "max": 0.634
+    },
+    "stretch": {
+     "n": 12,
+     "median": 1.524,
+     "q25": 1.419,
+     "q75": 1.564,
+     "min": 0.808,
+     "max": 1.661
+    }
+   }
+  }
+ },
+ "instruments": {
+  "configurations": "round 1, pitch own (product) and contour (option); counts are [agree, rows]",
+  "pause_praat_silences": {
+   "all": [
+    19,
+    25
+   ],
+   "own": [
+    13,
+    18
+   ],
+   "rows": [
+    {
+     "finding": "d2-001",
+     "operation": "pause_insert",
+     "silence_s": [
+      0.392,
+      0.904
+     ],
+     "intended_change_s": 0.51,
+     "measured_change_s": 0.512,
+     "pause_agree": true,
+     "clip": "L1A",
+     "pitch_method": "own"
+    },
+    {
+     "finding": "d2-001",
+     "operation": "pause_shorten",
+     "silence_s": [
+      0.344,
+      0.056
+     ],
+     "intended_change_s": -0.29,
+     "measured_change_s": -0.288,
+     "pause_agree": true,
+     "clip": "L1B",
+     "pitch_method": "own"
+    },
+    {
+     "finding": "d2-005",
+     "operation": "pause_insert",
+     "silence_s": [
+      0.216,
+      0.672
+     ],
+     "intended_change_s": 0.45,
+     "measured_change_s": 0.456,
+     "pause_agree": true,
+     "clip": "L2A",
+     "pitch_method": "own"
+    },
+    {
+     "finding": "d2-005",
+     "operation": "pause_insert",
+     "silence_s": [
+      0.216,
+      0.672
+     ],
+     "intended_change_s": 0.45,
+     "measured_change_s": 0.456,
+     "pause_agree": true,
+     "clip": "L2A",
+     "pitch_method": "contour"
+    },
+    {
+     "finding": "d2-002",
+     "operation": "pause_shorten",
+     "silence_s": [
+      0.592,
+      0.072
+     ],
+     "intended_change_s": -0.53,
+     "measured_change_s": -0.52,
+     "pause_agree": true,
+     "clip": "L2B",
+     "pitch_method": "own"
+    },
+    {
+     "finding": "d2-002",
+     "operation": "pause_insert",
+     "silence_s": [
+      0.144,
+      0.848
+     ],
+     "intended_change_s": 0.71,
+     "measured_change_s": 0.704,
+     "pause_agree": true,
+     "clip": "L3A",
+     "pitch_method": "own"
+    },
+    {
+     "finding": "d2-002",
+     "operation": "pause_insert",
+     "silence_s": [
+      0.144,
+      0.848
+     ],
+     "intended_change_s": 0.71,
+     "measured_change_s": 0.704,
+     "pause_agree": true,
+     "clip": "L3A",
+     "pitch_method": "contour"
+    },
+    {
+     "finding": "d2-001",
+     "operation": "pause_shorten",
+     "silence_s": [
+      1.2,
+      0.064
+     ],
+     "intended_change_s": -1.13,
+     "measured_change_s": -1.136,
+     "pause_agree": true,
+     "clip": "L3B",
+     "pitch_method": "own"
+    },
+    {
+     "finding": "d2-005",
+     "operation": "pause_insert",
+     "silence_s": [
+      0.0,
+      0.88
+     ],
+     "intended_change_s": 0.82,
+     "measured_change_s": 0.88,
+     "pause_agree": false,
+     "clip": "G5",
+     "pitch_method": "own"
+    },
+    {
+     "finding": "d2-008",
+     "operation": "pause_insert",
+     "silence_s": [
+      0.071,
+      1.064
+     ],
+     "intended_change_s": 0.97,
+     "measured_change_s": 0.993,
+     "pause_agree": true,
+     "clip": "G5",
+     "pitch_method": "own"
+    },
+    {
+     "finding": "d2-012",
+     "operation": "pause_insert",
+     "silence_s": [
+      0.064,
+      0.824
+     ],
+     "intended_change_s": 0.73,
+     "measured_change_s": 0.76,
+     "pause_agree": true,
+     "clip": "G5",
+     "pitch_method": "own"
+    },
+    {
+     "finding": "d2-014",
+     "operation": "pause_insert",
+     "silence_s": [
+      0.072,
+      0.96
+     ],
+     "intended_change_s": 0.85,
+     "measured_change_s": 0.888,
+     "pause_agree": true,
+     "clip": "G5",
+     "pitch_method": "own"
+    },
+    {
+     "finding": "d2-017",
+     "operation": "pause_insert",
+     "silence_s": [
+      0.08,
+      0.656
+     ],
+     "intended_change_s": 0.54,
+     "measured_change_s": 0.576,
+     "pause_agree": true,
+     "clip": "G5",
+     "pitch_method": "own"
+    },
+    {
+     "finding": "d2-005",
+     "operation": "pause_insert",
+     "silence_s": [
+      0.0,
+      0.896
+     ],
+     "intended_change_s": 0.82,
+     "measured_change_s": 0.896,
+     "pause_agree": false,
+     "clip": "G5",
+     "pitch_method": "contour"
+    },
+    {
+     "finding": "d2-008",
+     "operation": "pause_insert",
+     "silence_s": [
+      0.071,
+      1.064
+     ],
+     "intended_change_s": 0.97,
+     "measured_change_s": 0.993,
+     "pause_agree": true,
+     "clip": "G5",
+     "pitch_method": "contour"
+    },
+    {
+     "finding": "d2-012",
+     "operation": "pause_insert",
+     "silence_s": [
+      0.064,
+      0.824
+     ],
+     "intended_change_s": 0.73,
+     "measured_change_s": 0.76,
+     "pause_agree": true,
+     "clip": "G5",
+     "pitch_method": "contour"
+    },
+    {
+     "finding": "d2-014",
+     "operation": "pause_insert",
+     "silence_s": [
+      0.072,
+      0.968
+     ],
+     "intended_change_s": 0.85,
+     "measured_change_s": 0.896,
+     "pause_agree": true,
+     "clip": "G5",
+     "pitch_method": "contour"
+    },
+    {
+     "finding": "d2-017",
+     "operation": "pause_insert",
+     "silence_s": [
+      0.08,
+      0.648
+     ],
+     "intended_change_s": 0.54,
+     "measured_change_s": 0.568,
+     "pause_agree": true,
+     "clip": "G5",
+     "pitch_method": "contour"
+    },
+    {
+     "finding": "d2-002",
+     "operation": "pause_shorten",
+     "silence_s": [
+      1.208,
+      0.088
+     ],
+     "intended_change_s": -1.13,
+     "measured_change_s": -1.12,
+     "pause_agree": true,
+     "clip": "greenman_edited",
+     "pitch_method": "own"
+    },
+    {
+     "finding": "d2-001",
+     "operation": "pause_shorten",
+     "silence_s": [
+      0.344,
+      0.0
+     ],
+     "intended_change_s": -0.29,
+     "measured_change_s": -0.344,
+     "pause_agree": false,
+     "clip": "natural_rush",
+     "pitch_method": "own"
+    },
+    {
+     "finding": "d2-005",
+     "operation": "pause_shorten",
+     "silence_s": [
+      0.561,
+      0.088
+     ],
+     "intended_change_s": -0.48,
+     "measured_change_s": -0.472,
+     "pause_agree": true,
+     "clip": "natural_rush",
+     "pitch_method": "own"
+    },
+    {
+     "finding": "d2-007",
+     "operation": "pause_insert",
+     "silence_s": [
+      0.096,
+      0.552
+     ],
+     "intended_change_s": 0.51,
+     "measured_change_s": 0.456,
+     "pause_agree": false,
+     "clip": "natural_rush",
+     "pitch_method": "own"
+    },
+    {
+     "finding": "d2-008",
+     "operation": "pause_shorten",
+     "silence_s": [
+      0.685,
+      0.0
+     ],
+     "intended_change_s": -0.62,
+     "measured_change_s": -0.685,
+     "pause_agree": false,
+     "clip": "natural_rush",
+     "pitch_method": "own"
+    },
+    {
+     "finding": "d2-010",
+     "operation": "pause_insert",
+     "silence_s": [
+      0.064,
+      0.68
+     ],
+     "intended_change_s": 0.56,
+     "measured_change_s": 0.616,
+     "pause_agree": false,
+     "clip": "natural_rush",
+     "pitch_method": "own"
+    },
+    {
+     "finding": "d2-011",
+     "operation": "pause_insert",
+     "silence_s": [
+      0.152,
+      0.944
+     ],
+     "intended_change_s": 0.75,
+     "measured_change_s": 0.792,
+     "pause_agree": true,
+     "clip": "natural_rush",
+     "pitch_method": "own"
+    }
+   ]
+  },
+  "timing_phonation_time": {
+   "local_stretch": [
+    10,
+    14
+   ],
+   "whole_clip_stretch": [
+    2,
+    2
+   ],
+   "emphasis": [
+    1,
+    2
+   ],
+   "ln_error": {
+    "n": 18,
+    "median": 0.001,
+    "q25": -0.02,
+    "q75": 0.071,
+    "min": -0.041,
+    "max": 0.797
+   }
+  },
+  "timing_nucleus_rate": {
+   "local_stretch": [
+    7,
+    14
+   ],
+   "whole_clip_stretch": [
+    0,
+    2
+   ],
+   "emphasis": [
+    2,
+    2
+   ],
+   "nucleus_count_changed": 10,
+   "rows_with_count": 18
+  },
+  "pitch_harvest_window_range": {
+   "moves_over_1st_in_intended_direction": [
+    6,
+    6
+   ],
+   "within_1.1st_of_praat_ac": [
+    5,
+    6
+   ]
+  },
+  "emphasis_pitch_harvest_p90": [
+   1,
+   2
+  ],
+  "emphasis_pitch_harvest_median_added_after_p90": [
+   2,
+   2
+  ],
+  "pause_error_s": {
+   "n": 25,
+   "median": 0.01,
+   "q25": 0.002,
+   "q75": 0.036,
+   "min": -0.065,
+   "max": 0.076
+  },
+  "misses": [
+   {
+    "clip": "L2B",
+    "pitch_method": "own",
+    "finding": "d1-001",
+    "operation": "stretch",
+    "check": "phonation_agree",
+    "phonation_s": [
+     1.336,
+     1.04
+    ],
+    "planned_time_ratio": 0.7,
+    "phonation_ln_error": 0.1062,
+    "nuclei": [
+     9,
+     7
+    ],
+    "nucleus_rate": [
+     6.737,
+     6.731
+    ],
+    "nucleus_rate_planned": 9.624
+   },
+   {
+    "clip": "L2B",
+    "pitch_method": "own",
+    "finding": "d1-001",
+    "operation": "stretch",
+    "check": "nucleus_rate_agree",
+    "phonation_s": [
+     1.336,
+     1.04
+    ],
+    "planned_time_ratio": 0.7,
+    "phonation_ln_error": 0.1062,
+    "nuclei": [
+     9,
+     7
+    ],
+    "nucleus_rate": [
+     6.737,
+     6.731
+    ],
+    "nucleus_rate_planned": 9.624
+   },
+   {
+    "clip": "L3B",
+    "pitch_method": "own",
+    "finding": "d4-002",
+    "operation": "emphasis",
+    "check": "harvest_emphasis_agree",
+    "phonation_s": [
+     0.384,
+     0.552
+    ],
+    "planned_time_ratio": 1.4,
+    "phonation_ln_error": 0.0264,
+    "nuclei": [
+     2,
+     3
+    ],
+    "nucleus_rate": [
+     5.208,
+     5.435
+    ],
+    "nucleus_rate_planned": 3.72,
+    "harvest_p90_st": [
+     82.551,
+     93.727
+    ],
+    "harvest_median_st": [
+     81.302,
+     84.249
+    ],
+    "intended_st": 3.0
+   },
+   {
+    "clip": "L3B",
+    "pitch_method": "own",
+    "finding": "d1-004",
+    "operation": "stretch",
+    "check": "nucleus_rate_agree",
+    "phonation_s": [
+     1.82,
+     1.318
+    ],
+    "planned_time_ratio": 0.7,
+    "phonation_ln_error": 0.0342,
+    "nuclei": [
+     8,
+     7
+    ],
+    "nucleus_rate": [
+     4.397,
+     5.311
+    ],
+    "nucleus_rate_planned": 6.281
+   },
+   {
+    "clip": "G1",
+    "pitch_method": "own",
+    "finding": "d9-001",
+    "operation": "stretch",
+    "check": "nucleus_rate_agree",
+    "phonation_s": [
+     0.856,
+     1.019
+    ],
+    "planned_time_ratio": 1.1972,
+    "phonation_ln_error": -0.0059,
+    "nuclei": [
+     3,
+     4
+    ],
+    "nucleus_rate": [
+     3.505,
+     3.926
+    ],
+    "nucleus_rate_planned": 2.927
+   },
+   {
+    "clip": "G3",
+    "pitch_method": "own",
+    "finding": "d1-003",
+    "operation": "stretch",
+    "check": "nucleus_rate_agree",
+    "phonation_s": [
+     0.612,
+     0.84
+    ],
+    "planned_time_ratio": 1.4,
+    "phonation_ln_error": -0.0198,
+    "nuclei": [
+     3,
+     4
+    ],
+    "nucleus_rate": [
+     4.902,
+     4.762
+    ],
+    "nucleus_rate_planned": 3.501
+   },
+   {
+    "clip": "G3",
+    "pitch_method": "contour",
+    "finding": "d1-003",
+    "operation": "stretch",
+    "check": "nucleus_rate_agree",
+    "phonation_s": [
+     0.612,
+     0.84
+    ],
+    "planned_time_ratio": 1.4,
+    "phonation_ln_error": -0.0198,
+    "nuclei": [
+     3,
+     4
+    ],
+    "nucleus_rate": [
+     4.902,
+     4.762
+    ],
+    "nucleus_rate_planned": 3.501
+   },
+   {
+    "clip": "G5",
+    "pitch_method": "own",
+    "finding": "d1-001",
+    "operation": "stretch",
+    "check": "nucleus_rate_agree",
+    "phonation_s": [
+     10.296,
+     14.672
+    ],
+    "planned_time_ratio": 1.3948,
+    "phonation_ln_error": 0.0214,
+    "nuclei": [
+     83,
+     90
+    ],
+    "nucleus_rate": [
+     8.061,
+     6.134
+    ],
+    "nucleus_rate_planned": 5.78
+   },
+   {
+    "clip": "G5",
+    "pitch_method": "own",
+    "finding": "d2-005",
+    "operation": "pause_insert",
+    "check": "pause_agree",
+    "silence_s": [
+     0.0,
+     0.88
+    ],
+    "intended_change_s": 0.82,
+    "measured_change_s": 0.88
+   },
+   {
+    "clip": "G5",
+    "pitch_method": "own",
+    "finding": "d1-009",
+    "operation": "stretch",
+    "check": "phonation_agree",
+    "phonation_s": [
+     0.139,
+     0.172
+    ],
+    "planned_time_ratio": 1.1348,
+    "phonation_ln_error": 0.0834,
+    "nuclei": [
+     1,
+     1
+    ],
+    "nucleus_rate": [
+     7.189,
+     5.828
+    ],
+    "nucleus_rate_planned": 6.335
+   },
+   {
+    "clip": "G5",
+    "pitch_method": "contour",
+    "finding": "d1-001",
+    "operation": "stretch",
+    "check": "nucleus_rate_agree",
+    "phonation_s": [
+     10.296,
+     14.472
+    ],
+    "planned_time_ratio": 1.3948,
+    "phonation_ln_error": 0.0077,
+    "nuclei": [
+     83,
+     89
+    ],
+    "nucleus_rate": [
+     8.061,
+     6.15
+    ],
+    "nucleus_rate_planned": 5.78
+   },
+   {
+    "clip": "G5",
+    "pitch_method": "contour",
+    "finding": "d3-002",
+    "operation": "pitch_contour",
+    "check": "harvest_agrees_with_ac",
+    "harvest_window_range_st": [
+     2.37,
+     4.47
+    ],
+    "ac_window_range_st": [
+     0.109,
+     3.863
+    ]
+   },
+   {
+    "clip": "G5",
+    "pitch_method": "contour",
+    "finding": "d2-005",
+    "operation": "pause_insert",
+    "check": "pause_agree",
+    "silence_s": [
+     0.0,
+     0.896
+    ],
+    "intended_change_s": 0.82,
+    "measured_change_s": 0.896
+   },
+   {
+    "clip": "G5",
+    "pitch_method": "contour",
+    "finding": "d1-009",
+    "operation": "stretch",
+    "check": "phonation_agree",
+    "phonation_s": [
+     0.139,
+     0.172
+    ],
+    "planned_time_ratio": 1.1348,
+    "phonation_ln_error": 0.0834,
+    "nuclei": [
+     1,
+     1
+    ],
+    "nucleus_rate": [
+     7.189,
+     5.828
+    ],
+    "nucleus_rate_planned": 6.335
+   },
+   {
+    "clip": "natural_rush",
+    "pitch_method": "own",
+    "finding": "d2-001",
+    "operation": "pause_shorten",
+    "check": "pause_agree",
+    "silence_s": [
+     0.344,
+     0.0
+    ],
+    "intended_change_s": -0.29,
+    "measured_change_s": -0.344
+   },
+   {
+    "clip": "natural_rush",
+    "pitch_method": "own",
+    "finding": "d1-003",
+    "operation": "stretch",
+    "check": "phonation_agree",
+    "phonation_s": [
+     0.2,
+     0.63
+    ],
+    "planned_time_ratio": 1.4192,
+    "phonation_ln_error": 0.7973,
+    "nuclei": [
+     3,
+     5
+    ],
+    "nucleus_rate": [
+     15.0,
+     7.937
+    ],
+    "nucleus_rate_planned": 10.569
+   },
+   {
+    "clip": "natural_rush",
+    "pitch_method": "own",
+    "finding": "d1-003",
+    "operation": "stretch",
+    "check": "nucleus_rate_agree",
+    "phonation_s": [
+     0.2,
+     0.63
+    ],
+    "planned_time_ratio": 1.4192,
+    "phonation_ln_error": 0.7973,
+    "nuclei": [
+     3,
+     5
+    ],
+    "nucleus_rate": [
+     15.0,
+     7.937
+    ],
+    "nucleus_rate_planned": 10.569
+   },
+   {
+    "clip": "natural_rush",
+    "pitch_method": "own",
+    "finding": "d4-006",
+    "operation": "emphasis",
+    "check": "phonation_agree",
+    "phonation_s": [
+     0.079,
+     0.146
+    ],
+    "planned_time_ratio": 1.5,
+    "phonation_ln_error": 0.2,
+    "nuclei": [
+     1,
+     1
+    ],
+    "nucleus_rate": [
+     12.589,
+     6.871
+    ],
+    "nucleus_rate_planned": 8.392,
+    "harvest_p90_st": [
+     83.635,
+     86.549
+    ],
+    "harvest_median_st": [
+     83.458,
+     85.827
+    ],
+    "intended_st": 3.0
+   },
+   {
+    "clip": "natural_rush",
+    "pitch_method": "own",
+    "finding": "d2-007",
+    "operation": "pause_insert",
+    "check": "pause_agree",
+    "silence_s": [
+     0.096,
+     0.552
+    ],
+    "intended_change_s": 0.51,
+    "measured_change_s": 0.456
+   },
+   {
+    "clip": "natural_rush",
+    "pitch_method": "own",
+    "finding": "d2-008",
+    "operation": "pause_shorten",
+    "check": "pause_agree",
+    "silence_s": [
+     0.685,
+     0.0
+    ],
+    "intended_change_s": -0.62,
+    "measured_change_s": -0.685
+   },
+   {
+    "clip": "natural_rush",
+    "pitch_method": "own",
+    "finding": "d9-009",
+    "operation": "stretch",
+    "check": "nucleus_rate_agree",
+    "phonation_s": [
+     1.119,
+     1.305
+    ],
+    "planned_time_ratio": 1.2092,
+    "phonation_ln_error": -0.0364,
+    "nuclei": [
+     8,
+     11
+    ],
+    "nucleus_rate": [
+     7.146,
+     8.427
+    ],
+    "nucleus_rate_planned": 5.91
+   },
+   {
+    "clip": "natural_rush",
+    "pitch_method": "own",
+    "finding": "d2-010",
+    "operation": "pause_insert",
+    "check": "pause_agree",
+    "silence_s": [
+     0.064,
+     0.68
+    ],
+    "intended_change_s": 0.56,
+    "measured_change_s": 0.616
+   }
+  ],
+  "level_frame_check_recomputed": [
+   24,
+   24
+  ],
+  "level_a_weighted": {
+   "span_check_first_criterion": [
+    19,
+    24
+   ],
+   "frame_check_revised_criterion": [
+    24,
+    24
+   ],
+   "note": "the span check (A-weighted RMS over the re-aligned words, intended = the sum of the gains without ramps) was the first criterion; the frame check (same edited frames through the time map, intended gain curve with the editor's ramps and overlaps) was introduced in session 3 after the span check missed 5 rows; the tolerance (1.5 dB) did not change. The span check uses the aligner for its words."
+  }
+ },
+ "recovery": {
+  "own": {
+   "clips": [
+    "G1",
+    "G3",
+    "G5",
+    "L1A",
+    "L1B",
+    "L2A",
+    "L2B",
+    "L3A",
+    "L3B",
+    "natural_rush"
+   ],
+   "per_operation": {
+    "emphasis | level_db": {
+     "rows": 2,
+     "measurable": 2,
+     "recovered": {
+      "n": 2,
+      "median": 0.524,
+      "q25": 0.485,
+      "q75": 0.562,
+      "min": 0.447,
+      "max": 0.601
+     },
+     "within_0.5_to_1.5": 1,
+     "below_0": 0,
+     "above_1.5": 0,
+     "not_measured": 0,
+     "no_injected_change": 0,
+     "no_injected_change_moved_away": {
+      "n": 0
+     }
+    },
+    "emphasis | ln_nucleus_rate": {
+     "rows": 2,
+     "measurable": 0,
+     "recovered": {
+      "n": 0
+     },
+     "within_0.5_to_1.5": 0,
+     "below_0": 0,
+     "above_1.5": 0,
+     "not_measured": 0,
+     "no_injected_change": 2,
+     "no_injected_change_moved_away": {
+      "n": 2,
+      "median": -0.007,
+      "q25": -0.011,
+      "q75": -0.004,
+      "min": -0.014,
+      "max": 0.0
+     }
+    },
+    "emphasis | ln_phonation_s": {
+     "rows": 2,
+     "measurable": 1,
+     "recovered": {
+      "n": 1,
+      "median": 0.97,
+      "q25": 0.97,
+      "q75": 0.97,
+      "min": 0.97,
+      "max": 0.97
+     },
+     "within_0.5_to_1.5": 1,
+     "below_0": 0,
+     "above_1.5": 0,
+     "not_measured": 0,
+     "no_injected_change": 1,
+     "no_injected_change_moved_away": {
+      "n": 1,
+      "median": 0.0,
+      "q25": 0.0,
+      "q75": 0.0,
+      "min": 0.0,
+      "max": 0.0
+     }
+    },
+    "emphasis | median_st": {
+     "rows": 2,
+     "measurable": 2,
+     "recovered": {
+      "n": 2,
+      "median": 1.054,
+      "q25": 0.534,
+      "q75": 1.574,
+      "min": 0.015,
+      "max": 2.093
+     },
+     "within_0.5_to_1.5": 0,
+     "below_0": 0,
+     "above_1.5": 1,
+     "not_measured": 0,
+     "no_injected_change": 0,
+     "no_injected_change_moved_away": {
+      "n": 0
+     }
+    },
+    "emphasis | peak_st": {
+     "rows": 2,
+     "measurable": 2,
+     "recovered": {
+      "n": 2,
+      "median": 2.624,
+      "q25": 1.299,
+      "q75": 3.95,
+      "min": -0.027,
+      "max": 5.275
+     },
+     "within_0.5_to_1.5": 0,
+     "below_0": 1,
+     "above_1.5": 1,
+     "not_measured": 0,
+     "no_injected_change": 0,
+     "no_injected_change_moved_away": {
+      "n": 0
+     }
+    },
+    "gain | level_db": {
+     "rows": 7,
+     "measurable": 6,
+     "recovered": {
+      "n": 6,
+      "median": 0.534,
+      "q25": 0.419,
+      "q75": 1.13,
+      "min": 0.362,
+      "max": 1.323
+     },
+     "within_0.5_to_1.5": 3,
+     "below_0": 0,
+     "above_1.5": 0,
+     "not_measured": 0,
+     "no_injected_change": 1,
+     "no_injected_change_moved_away": {
+      "n": 1,
+      "median": 2.232,
+      "q25": 2.232,
+      "q75": 2.232,
+      "min": 2.232,
+      "max": 2.232
+     }
+    },
+    "pause_insert | silence_s": {
+     "rows": 11,
+     "measurable": 11,
+     "recovered": {
+      "n": 11,
+      "median": 0.989,
+      "q25": 0.967,
+      "q75": 1.01,
+      "min": 0.957,
+      "max": 6.214
+     },
+     "within_0.5_to_1.5": 10,
+     "below_0": 0,
+     "above_1.5": 1,
+     "not_measured": 0,
+     "no_injected_change": 0,
+     "no_injected_change_moved_away": {
+      "n": 0
+     }
+    },
+    "pause_shorten | silence_s": {
+     "rows": 6,
+     "measurable": 5,
+     "recovered": {
+      "n": 5,
+      "median": 0.878,
+      "q25": 0.837,
+      "q75": 0.947,
+      "min": -4.75,
+      "max": 1.0
+     },
+     "within_0.5_to_1.5": 4,
+     "below_0": 1,
+     "above_1.5": 0,
+     "not_measured": 0,
+     "no_injected_change": 1,
+     "no_injected_change_moved_away": {
+      "n": 1,
+      "median": 0.0,
+      "q25": 0.0,
+      "q75": 0.0,
+      "min": 0.0,
+      "max": 0.0
+     }
+    },
+    "stretch | ln_nucleus_rate": {
+     "rows": 11,
+     "measurable": 7,
+     "recovered": {
+      "n": 7,
+      "median": 0.724,
+      "q25": 0.356,
+      "q75": 1.04,
+      "min": -0.074,
+      "max": 2.073
+     },
+     "within_0.5_to_1.5": 3,
+     "below_0": 1,
+     "above_1.5": 1,
+     "not_measured": 0,
+     "no_injected_change": 4,
+     "no_injected_change_moved_away": {
+      "n": 4,
+      "median": 0.13,
+      "q25": 0.087,
+      "q75": 0.149,
+      "min": 0.001,
+      "max": 0.166
+     }
+    },
+    "stretch | ln_phonation_s": {
+     "rows": 11,
+     "measurable": 11,
+     "recovered": {
+      "n": 11,
+      "median": 0.877,
+      "q25": 0.558,
+      "q75": 1.052,
+      "min": 0.298,
+      "max": 1.436
+     },
+     "within_0.5_to_1.5": 9,
+     "below_0": 0,
+     "above_1.5": 0,
+     "not_measured": 0,
+     "no_injected_change": 0,
+     "no_injected_change_moved_away": {
+      "n": 0
+     }
+    }
+   },
+   "per_operation_on_a_matching_injected_edit": {
+    "emphasis | level_db": {
+     "rows": 1,
+     "measurable": 1,
+     "recovered": {
+      "n": 1,
+      "median": 0.601,
+      "q25": 0.601,
+      "q75": 0.601,
+      "min": 0.601,
+      "max": 0.601
+     },
+     "within_0.5_to_1.5": 1,
+     "below_0": 0,
+     "above_1.5": 0,
+     "not_measured": 0,
+     "no_injected_change": 0,
+     "no_injected_change_moved_away": {
+      "n": 0
+     }
+    },
+    "emphasis | ln_nucleus_rate": {
+     "rows": 1,
+     "measurable": 0,
+     "recovered": {
+      "n": 0
+     },
+     "within_0.5_to_1.5": 0,
+     "below_0": 0,
+     "above_1.5": 0,
+     "not_measured": 0,
+     "no_injected_change": 1,
+     "no_injected_change_moved_away": {
+      "n": 1,
+      "median": -0.014,
+      "q25": -0.014,
+      "q75": -0.014,
+      "min": -0.014,
+      "max": -0.014
+     }
+    },
+    "emphasis | ln_phonation_s": {
+     "rows": 1,
+     "measurable": 1,
+     "recovered": {
+      "n": 1,
+      "median": 0.97,
+      "q25": 0.97,
+      "q75": 0.97,
+      "min": 0.97,
+      "max": 0.97
+     },
+     "within_0.5_to_1.5": 1,
+     "below_0": 0,
+     "above_1.5": 0,
+     "not_measured": 0,
+     "no_injected_change": 0,
+     "no_injected_change_moved_away": {
+      "n": 0
+     }
+    },
+    "emphasis | median_st": {
+     "rows": 1,
+     "measurable": 1,
+     "recovered": {
+      "n": 1,
+      "median": 2.093,
+      "q25": 2.093,
+      "q75": 2.093,
+      "min": 2.093,
+      "max": 2.093
+     },
+     "within_0.5_to_1.5": 0,
+     "below_0": 0,
+     "above_1.5": 1,
+     "not_measured": 0,
+     "no_injected_change": 0,
+     "no_injected_change_moved_away": {
+      "n": 0
+     }
+    },
+    "emphasis | peak_st": {
+     "rows": 1,
+     "measurable": 1,
+     "recovered": {
+      "n": 1,
+      "median": 5.275,
+      "q25": 5.275,
+      "q75": 5.275,
+      "min": 5.275,
+      "max": 5.275
+     },
+     "within_0.5_to_1.5": 0,
+     "below_0": 0,
+     "above_1.5": 1,
+     "not_measured": 0,
+     "no_injected_change": 0,
+     "no_injected_change_moved_away": {
+      "n": 0
+     }
+    },
+    "gain | level_db": {
+     "rows": 5,
+     "measurable": 5,
+     "recovered": {
+      "n": 5,
+      "median": 0.485,
+      "q25": 0.397,
+      "q75": 0.584,
+      "min": 0.362,
+      "max": 1.312
+     },
+     "within_0.5_to_1.5": 2,
+     "below_0": 0,
+     "above_1.5": 0,
+     "not_measured": 0,
+     "no_injected_change": 0,
+     "no_injected_change_moved_away": {
+      "n": 0
+     }
+    },
+    "pause_insert | silence_s": {
+     "rows": 8,
+     "measurable": 8,
+     "recovered": {
+      "n": 8,
+      "median": 0.973,
+      "q25": 0.961,
+      "q75": 0.992,
+      "min": 0.957,
+      "max": 1.0
+     },
+     "within_0.5_to_1.5": 8,
+     "below_0": 0,
+     "above_1.5": 0,
+     "not_measured": 0,
+     "no_injected_change": 0,
+     "no_injected_change_moved_away": {
+      "n": 0
+     }
+    },
+    "pause_shorten | silence_s": {
+     "rows": 3,
+     "measurable": 3,
+     "recovered": {
+      "n": 3,
+      "median": 0.878,
+      "q25": 0.857,
+      "q75": 0.912,
+      "min": 0.837,
+      "max": 0.947
+     },
+     "within_0.5_to_1.5": 3,
+     "below_0": 0,
+     "above_1.5": 0,
+     "not_measured": 0,
+     "no_injected_change": 0,
+     "no_injected_change_moved_away": {
+      "n": 0
+     }
+    },
+    "stretch | ln_nucleus_rate": {
+     "rows": 9,
+     "measurable": 6,
+     "recovered": {
+      "n": 6,
+      "median": 0.807,
+      "q25": 0.492,
+      "q75": 1.114,
+      "min": -0.074,
+      "max": 2.073
+     },
+     "within_0.5_to_1.5": 3,
+     "below_0": 1,
+     "above_1.5": 1,
+     "not_measured": 0,
+     "no_injected_change": 3,
+     "no_injected_change_moved_away": {
+      "n": 3,
+      "median": 0.116,
+      "q25": 0.059,
+      "q75": 0.141,
+      "min": 0.001,
+      "max": 0.166
+     }
+    },
+    "stretch | ln_phonation_s": {
+     "rows": 9,
+     "measurable": 9,
+     "recovered": {
+      "n": 9,
+      "median": 0.877,
+      "q25": 0.561,
+      "q75": 0.926,
+      "min": 0.48,
+      "max": 1.436
+     },
+     "within_0.5_to_1.5": 8,
+     "below_0": 0,
+     "above_1.5": 0,
+     "not_measured": 0,
+     "no_injected_change": 0,
+     "no_injected_change_moved_away": {
+      "n": 0
+     }
+    }
+   },
+   "per_operation_on_no_matching_injected_edit": {
+    "emphasis | level_db": {
+     "rows": 1,
+     "distance_to_clean_change": {
+      "n": 1,
+      "median": -5.761,
+      "q25": -5.761,
+      "q75": -5.761,
+      "min": -5.761,
+      "max": -5.761
+     },
+     "moved_away_beyond_resolution": 0
+    },
+    "emphasis | ln_nucleus_rate": {
+     "rows": 1,
+     "distance_to_clean_change": {
+      "n": 1,
+      "median": 0.0,
+      "q25": 0.0,
+      "q75": 0.0,
+      "min": 0.0,
+      "max": 0.0
+     },
+     "moved_away_beyond_resolution": 0
+    },
+    "emphasis | ln_phonation_s": {
+     "rows": 1,
+     "distance_to_clean_change": {
+      "n": 1,
+      "median": 0.0,
+      "q25": 0.0,
+      "q75": 0.0,
+      "min": 0.0,
+      "max": 0.0
+     },
+     "moved_away_beyond_resolution": 0
+    },
+    "emphasis | median_st": {
+     "rows": 1,
+     "distance_to_clean_change": {
+      "n": 1,
+      "median": -0.03,
+      "q25": -0.03,
+      "q75": -0.03,
+      "min": -0.03,
+      "max": -0.03
+     },
+     "moved_away_beyond_resolution": 0
+    },
+    "emphasis | peak_st": {
+     "rows": 1,
+     "distance_to_clean_change": {
+      "n": 1,
+      "median": 0.04,
+      "q25": 0.04,
+      "q75": 0.04,
+      "min": 0.04,
+      "max": 0.04
+     },
+     "moved_away_beyond_resolution": 0
+    },
+    "gain | level_db": {
+     "rows": 2,
+     "distance_to_clean_change": {
+      "n": 2,
+      "median": 0.124,
+      "q25": -0.929,
+      "q75": 1.178,
+      "min": -1.983,
+      "max": 2.232
+     },
+     "moved_away_beyond_resolution": 1
+    },
+    "pause_insert | silence_s": {
+     "rows": 3,
+     "distance_to_clean_change": {
+      "n": 3,
+      "median": -0.584,
+      "q25": -0.672,
+      "q75": -0.056,
+      "min": -0.76,
+      "max": 0.472
+     },
+     "moved_away_beyond_resolution": 1
+    },
+    "pause_shorten | silence_s": {
+     "rows": 3,
+     "distance_to_clean_change": {
+      "n": 3,
+      "median": 0.0,
+      "q25": -0.172,
+      "q75": 0.228,
+      "min": -0.344,
+      "max": 0.456
+     },
+     "moved_away_beyond_resolution": 1
+    },
+    "stretch | ln_nucleus_rate": {
+     "rows": 2,
+     "distance_to_clean_change": {
+      "n": 2,
+      "median": -0.039,
+      "q25": -0.13,
+      "q75": 0.052,
+      "min": -0.221,
+      "max": 0.143
+     },
+     "moved_away_beyond_resolution": 1
+    },
+    "stretch | ln_phonation_s": {
+     "rows": 2,
+     "distance_to_clean_change": {
+      "n": 2,
+      "median": -0.396,
+      "q25": -0.483,
+      "q75": -0.309,
+      "min": -0.571,
+      "max": -0.221
+     },
+     "moved_away_beyond_resolution": 0
+    }
+   },
+   "per_injected_edit_all": {
+    "DEEMPHASIS | level_db": {
+     "rows": 3,
+     "measurable": 3,
+     "recovered": {
+      "n": 3,
+      "median": 0.0,
+      "q25": -0.007,
+      "q75": 0.3,
+      "min": -0.014,
+      "max": 0.601
+     },
+     "within_0.5_to_1.5": 1,
+     "below_0": 1,
+     "above_1.5": 0,
+     "not_measured": 0,
+     "no_injected_change": 0,
+     "no_injected_change_moved_away": {
+      "n": 0
+     }
+    },
+    "DEEMPHASIS | ln_nucleus_rate": {
+     "rows": 3,
+     "measurable": 0,
+     "recovered": {
+      "n": 0
+     },
+     "within_0.5_to_1.5": 0,
+     "below_0": 0,
+     "above_1.5": 0,
+     "not_measured": 0,
+     "no_injected_change": 3,
+     "no_injected_change_moved_away": {
+      "n": 3,
+      "median": -0.009,
+      "q25": -0.012,
+      "q75": -0.004,
+      "min": -0.014,
+      "max": 0.001
+     }
+    },
+    "DEEMPHASIS | ln_phonation_s": {
+     "rows": 3,
+     "measurable": 3,
+     "recovered": {
+      "n": 3,
+      "median": 0.026,
+      "q25": 0.016,
+      "q75": 0.498,
+      "min": 0.006,
+      "max": 0.97
+     },
+     "within_0.5_to_1.5": 1,
+     "below_0": 0,
+     "above_1.5": 0,
+     "not_measured": 0,
+     "no_injected_change": 0,
+     "no_injected_change_moved_away": {
+      "n": 0
+     }
+    },
+    "DEEMPHASIS | median_st": {
+     "rows": 3,
+     "measurable": 2,
+     "recovered": {
+      "n": 2,
+      "median": 1.046,
+      "q25": 0.523,
+      "q75": 1.57,
+      "min": 0.0,
+      "max": 2.093
+     },
+     "within_0.5_to_1.5": 0,
+     "below_0": 0,
+     "above_1.5": 1,
+     "not_measured": 0,
+     "no_injected_change": 1,
+     "no_injected_change_moved_away": {
+      "n": 1,
+      "median": 0.031,
+      "q25": 0.031,
+      "q75": 0.031,
+      "min": 0.031,
+      "max": 0.031
+     }
+    },
+    "DEEMPHASIS | peak_st": {
+     "rows": 3,
+     "measurable": 3,
+     "recovered": {
+      "n": 3,
+      "median": 0.0,
+      "q25": -0.013,
+      "q75": 2.638,
+      "min": -0.026,
+      "max": 5.275
+     },
+     "within_0.5_to_1.5": 0,
+     "below_0": 1,
+     "above_1.5": 1,
+     "not_measured": 0,
+     "no_injected_change": 0,
+     "no_injected_change_moved_away": {
+      "n": 0
+     }
+    },
+    "DRAG | ln_nucleus_rate": {
+     "rows": 3,
+     "measurable": 1,
+     "recovered": {
+      "n": 1,
+      "median": 0.262,
+      "q25": 0.262,
+      "q75": 0.262,
+      "min": 0.262,
+      "max": 0.262
+     },
+     "within_0.5_to_1.5": 0,
+     "below_0": 0,
+     "above_1.5": 0,
+     "not_measured": 0,
+     "no_injected_change": 2,
+     "no_injected_change_moved_away": {
+      "n": 2,
+      "median": 0.002,
+      "q25": 0.001,
+      "q75": 0.003,
+      "min": 0.0,
+      "max": 0.004
+     }
+    },
+    "DRAG | ln_phonation_s": {
+     "rows": 3,
+     "measurable": 3,
+     "recovered": {
+      "n": 3,
+      "median": 0.396,
+      "q25": 0.198,
+      "q75": 0.655,
+      "min": -0.0,
+      "max": 0.913
+     },
+     "within_0.5_to_1.5": 1,
+     "below_0": 0,
+     "above_1.5": 0,
+     "not_measured": 0,
+     "no_injected_change": 0,
+     "no_injected_change_moved_away": {
+      "n": 0
+     }
+    },
+    "FADE | level_db": {
+     "rows": 6,
+     "measurable": 6,
+     "recovered": {
+      "n": 6,
+      "median": 0.277,
+      "q25": 0.064,
+      "q75": 0.497,
+      "min": 0.0,
+      "max": 0.719
+     },
+     "within_0.5_to_1.5": 2,
+     "below_0": 0,
+     "above_1.5": 0,
+     "not_measured": 0,
+     "no_injected_change": 0,
+     "no_injected_change_moved_away": {
+      "n": 0
+     }
+    },
+    "LOW_EFFORT | level_db": {
+     "rows": 1,
+     "measurable": 1,
+     "recovered": {
+      "n": 1,
+      "median": 0.198,
+      "q25": 0.198,
+      "q75": 0.198,
+      "min": 0.198,
+      "max": 0.198
+     },
+     "within_0.5_to_1.5": 0,
+     "below_0": 0,
+     "above_1.5": 0,
+     "not_measured": 0,
+     "no_injected_change": 0,
+     "no_injected_change_moved_away": {
+      "n": 0
+     }
+    },
+    "MONOTONE | range_st": {
+     "rows": 5,
+     "measurable": 5,
+     "recovered": {
+      "n": 5,
+      "median": 0.0,
+      "q25": 0.0,
+      "q75": 0.0,
+      "min": -0.044,
+      "max": 0.06
+     },
+     "within_0.5_to_1.5": 0,
+     "below_0": 1,
+     "above_1.5": 0,
+     "not_measured": 0,
+     "no_injected_change": 0,
+     "no_injected_change_moved_away": {
+      "n": 0
+     }
+    },
+    "NATURAL_RUSH | ln_nucleus_rate": {
+     "rows": 1,
+     "measurable": 1,
+     "recovered": {
+      "n": 1,
+      "median": -0.975,
+      "q25": -0.975,
+      "q75": -0.975,
+      "min": -0.975,
+      "max": -0.975
+     },
+     "within_0.5_to_1.5": 0,
+     "below_0": 1,
+     "above_1.5": 0,
+     "not_measured": 0,
+     "no_injected_change": 0,
+     "no_injected_change_moved_away": {
+      "n": 0
+     }
+    },
+    "NATURAL_RUSH | ln_phonation_s": {
+     "rows": 1,
+     "measurable": 1,
+     "recovered": {
+      "n": 1,
+      "median": 0.936,
+      "q25": 0.936,
+      "q75": 0.936,
+      "min": 0.936,
+      "max": 0.936
+     },
+     "within_0.5_to_1.5": 1,
+     "below_0": 0,
+     "above_1.5": 0,
+     "not_measured": 0,
+     "no_injected_change": 0,
+     "no_injected_change_moved_away": {
+      "n": 0
+     }
+    },
+    "PAUSE_DROPPED | silence_s": {
+     "rows": 8,
+     "measurable": 8,
+     "recovered": {
+      "n": 8,
+      "median": 0.973,
+      "q25": 0.961,
+      "q75": 0.992,
+      "min": 0.957,
+      "max": 1.0
+     },
+     "within_0.5_to_1.5": 8,
+     "below_0": 0,
+     "above_1.5": 0,
+     "not_measured": 0,
+     "no_injected_change": 0,
+     "no_injected_change_moved_away": {
+      "n": 0
+     }
+    },
+    "PAUSE_INTRUSIVE | silence_s": {
+     "rows": 3,
+     "measurable": 3,
+     "recovered": {
+      "n": 3,
+      "median": 0.878,
+      "q25": 0.857,
+      "q75": 0.912,
+      "min": 0.837,
+      "max": 0.947
+     },
+     "within_0.5_to_1.5": 3,
+     "below_0": 0,
+     "above_1.5": 0,
+     "not_measured": 0,
+     "no_injected_change": 0,
+     "no_injected_change_moved_away": {
+      "n": 0
+     }
+    },
+    "RUSH | ln_nucleus_rate": {
+     "rows": 6,
+     "measurable": 5,
+     "recovered": {
+      "n": 5,
+      "median": 0.724,
+      "q25": 0.081,
+      "q75": 0.791,
+      "min": -0.232,
+      "max": 1.189
+     },
+     "within_0.5_to_1.5": 3,
+     "below_0": 1,
+     "above_1.5": 0,
+     "not_measured": 0,
+     "no_injected_change": 1,
+     "no_injected_change_moved_away": {
+      "n": 1,
+      "median": 0.221,
+      "q25": 0.221,
+      "q75": 0.221,
+      "min": 0.221,
+      "max": 0.221
+     }
+    },
+    "RUSH | ln_phonation_s": {
+     "rows": 6,
+     "measurable": 6,
+     "recovered": {
+      "n": 6,
+      "median": 0.738,
+      "q25": 0.601,
+      "q75": 0.782,
+      "min": 0.447,
+      "max": 1.189
+     },
+     "within_0.5_to_1.5": 5,
+     "below_0": 0,
+     "above_1.5": 0,
+     "not_measured": 0,
+     "no_injected_change": 0,
+     "no_injected_change_moved_away": {
+      "n": 0
+     }
+    }
+   },
+   "per_injected_edit_with_a_fix_on_its_words": {
+    "DEEMPHASIS | level_db": {
+     "rows": 1,
+     "measurable": 1,
+     "recovered": {
+      "n": 1,
+      "median": 0.601,
+      "q25": 0.601,
+      "q75": 0.601,
+      "min": 0.601,
+      "max": 0.601
+     },
+     "within_0.5_to_1.5": 1,
+     "below_0": 0,
+     "above_1.5": 0,
+     "not_measured": 0,
+     "no_injected_change": 0,
+     "no_injected_change_moved_away": {
+      "n": 0
+     }
+    },
+    "DEEMPHASIS | ln_nucleus_rate": {
+     "rows": 1,
+     "measurable": 0,
+     "recovered": {
+      "n": 0
+     },
+     "within_0.5_to_1.5": 0,
+     "below_0": 0,
+     "above_1.5": 0,
+     "not_measured": 0,
+     "no_injected_change": 1,
+     "no_injected_change_moved_away": {
+      "n": 1,
+      "median": -0.014,
+      "q25": -0.014,
+      "q75": -0.014,
+      "min": -0.014,
+      "max": -0.014
+     }
+    },
+    "DEEMPHASIS | ln_phonation_s": {
+     "rows": 1,
+     "measurable": 1,
+     "recovered": {
+      "n": 1,
+      "median": 0.97,
+      "q25": 0.97,
+      "q75": 0.97,
+      "min": 0.97,
+      "max": 0.97
+     },
+     "within_0.5_to_1.5": 1,
+     "below_0": 0,
+     "above_1.5": 0,
+     "not_measured": 0,
+     "no_injected_change": 0,
+     "no_injected_change_moved_away": {
+      "n": 0
+     }
+    },
+    "DEEMPHASIS | median_st": {
+     "rows": 1,
+     "measurable": 1,
+     "recovered": {
+      "n": 1,
+      "median": 2.093,
+      "q25": 2.093,
+      "q75": 2.093,
+      "min": 2.093,
+      "max": 2.093
+     },
+     "within_0.5_to_1.5": 0,
+     "below_0": 0,
+     "above_1.5": 1,
+     "not_measured": 0,
+     "no_injected_change": 0,
+     "no_injected_change_moved_away": {
+      "n": 0
+     }
+    },
+    "DEEMPHASIS | peak_st": {
+     "rows": 1,
+     "measurable": 1,
+     "recovered": {
+      "n": 1,
+      "median": 5.275,
+      "q25": 5.275,
+      "q75": 5.275,
+      "min": 5.275,
+      "max": 5.275
+     },
+     "within_0.5_to_1.5": 0,
+     "below_0": 0,
+     "above_1.5": 1,
+     "not_measured": 0,
+     "no_injected_change": 0,
+     "no_injected_change_moved_away": {
+      "n": 0
+     }
+    },
+    "DRAG | ln_nucleus_rate": {
+     "rows": 2,
+     "measurable": 1,
+     "recovered": {
+      "n": 1,
+      "median": 0.262,
+      "q25": 0.262,
+      "q75": 0.262,
+      "min": 0.262,
+      "max": 0.262
+     },
+     "within_0.5_to_1.5": 0,
+     "below_0": 0,
+     "above_1.5": 0,
+     "not_measured": 0,
+     "no_injected_change": 1,
+     "no_injected_change_moved_away": {
+      "n": 1,
+      "median": 0.004,
+      "q25": 0.004,
+      "q75": 0.004,
+      "min": 0.004,
+      "max": 0.004
+     }
+    },
+    "DRAG | ln_phonation_s": {
+     "rows": 2,
+     "measurable": 2,
+     "recovered": {
+      "n": 2,
+      "median": 0.655,
+      "q25": 0.525,
+      "q75": 0.784,
+      "min": 0.396,
+      "max": 0.913
+     },
+     "within_0.5_to_1.5": 1,
+     "below_0": 0,
+     "above_1.5": 0,
+     "not_measured": 0,
+     "no_injected_change": 0,
+     "no_injected_change_moved_away": {
+      "n": 0
+     }
+    },
+    "FADE | level_db": {
+     "rows": 4,
+     "measurable": 4,
+     "recovered": {
+      "n": 4,
+      "median": 0.43,
+      "q25": 0.287,
+      "q75": 0.602,
+      "min": 0.256,
+      "max": 0.719
+     },
+     "within_0.5_to_1.5": 2,
+     "below_0": 0,
+     "above_1.5": 0,
+     "not_measured": 0,
+     "no_injected_change": 0,
+     "no_injected_change_moved_away": {
+      "n": 0
+     }
+    },
+    "LOW_EFFORT | level_db": {
+     "rows": 1,
+     "measurable": 1,
+     "recovered": {
+      "n": 1,
+      "median": 0.198,
+      "q25": 0.198,
+      "q75": 0.198,
+      "min": 0.198,
+      "max": 0.198
+     },
+     "within_0.5_to_1.5": 0,
+     "below_0": 0,
+     "above_1.5": 0,
+     "not_measured": 0,
+     "no_injected_change": 0,
+     "no_injected_change_moved_away": {
+      "n": 0
+     }
+    },
+    "MONOTONE | range_st": {
+     "rows": 1,
+     "measurable": 1,
+     "recovered": {
+      "n": 1,
+      "median": -0.044,
+      "q25": -0.044,
+      "q75": -0.044,
+      "min": -0.044,
+      "max": -0.044
+     },
+     "within_0.5_to_1.5": 0,
+     "below_0": 1,
+     "above_1.5": 0,
+     "not_measured": 0,
+     "no_injected_change": 0,
+     "no_injected_change_moved_away": {
+      "n": 0
+     }
+    },
+    "NATURAL_RUSH | ln_nucleus_rate": {
+     "rows": 1,
+     "measurable": 1,
+     "recovered": {
+      "n": 1,
+      "median": -0.975,
+      "q25": -0.975,
+      "q75": -0.975,
+      "min": -0.975,
+      "max": -0.975
+     },
+     "within_0.5_to_1.5": 0,
+     "below_0": 1,
+     "above_1.5": 0,
+     "not_measured": 0,
+     "no_injected_change": 0,
+     "no_injected_change_moved_away": {
+      "n": 0
+     }
+    },
+    "NATURAL_RUSH | ln_phonation_s": {
+     "rows": 1,
+     "measurable": 1,
+     "recovered": {
+      "n": 1,
+      "median": 0.936,
+      "q25": 0.936,
+      "q75": 0.936,
+      "min": 0.936,
+      "max": 0.936
+     },
+     "within_0.5_to_1.5": 1,
+     "below_0": 0,
+     "above_1.5": 0,
+     "not_measured": 0,
+     "no_injected_change": 0,
+     "no_injected_change_moved_away": {
+      "n": 0
+     }
+    },
+    "PAUSE_DROPPED | silence_s": {
+     "rows": 8,
+     "measurable": 8,
+     "recovered": {
+      "n": 8,
+      "median": 0.973,
+      "q25": 0.961,
+      "q75": 0.992,
+      "min": 0.957,
+      "max": 1.0
+     },
+     "within_0.5_to_1.5": 8,
+     "below_0": 0,
+     "above_1.5": 0,
+     "not_measured": 0,
+     "no_injected_change": 0,
+     "no_injected_change_moved_away": {
+      "n": 0
+     }
+    },
+    "PAUSE_INTRUSIVE | silence_s": {
+     "rows": 3,
+     "measurable": 3,
+     "recovered": {
+      "n": 3,
+      "median": 0.878,
+      "q25": 0.857,
+      "q75": 0.912,
+      "min": 0.837,
+      "max": 0.947
+     },
+     "within_0.5_to_1.5": 3,
+     "below_0": 0,
+     "above_1.5": 0,
+     "not_measured": 0,
+     "no_injected_change": 0,
+     "no_injected_change_moved_away": {
+      "n": 0
+     }
+    },
+    "RUSH | ln_nucleus_rate": {
+     "rows": 6,
+     "measurable": 5,
+     "recovered": {
+      "n": 5,
+      "median": 0.724,
+      "q25": 0.081,
+      "q75": 0.791,
+      "min": -0.232,
+      "max": 1.189
+     },
+     "within_0.5_to_1.5": 3,
+     "below_0": 1,
+     "above_1.5": 0,
+     "not_measured": 0,
+     "no_injected_change": 1,
+     "no_injected_change_moved_away": {
+      "n": 1,
+      "median": 0.221,
+      "q25": 0.221,
+      "q75": 0.221,
+      "min": 0.221,
+      "max": 0.221
+     }
+    },
+    "RUSH | ln_phonation_s": {
+     "rows": 6,
+     "measurable": 6,
+     "recovered": {
+      "n": 6,
+      "median": 0.738,
+      "q25": 0.601,
+      "q75": 0.782,
+      "min": 0.447,
+      "max": 1.189
+     },
+     "within_0.5_to_1.5": 5,
+     "below_0": 0,
+     "above_1.5": 0,
+     "not_measured": 0,
+     "no_injected_change": 0,
+     "no_injected_change_moved_away": {
+      "n": 0
+     }
+    }
+   },
+   "injected_edits_without_measure": {
+    "MUMBLE": 3,
+    "WORD_REPETITION": 1,
+    "RISING_ENDING": 1
+   }
+  },
+  "contour": {
+   "clips": [
+    "G3",
+    "G5",
+    "L2A",
+    "L3A"
+   ],
+   "per_operation": {
+    "gain | level_db": {
+     "rows": 6,
+     "measurable": 5,
+     "recovered": {
+      "n": 5,
+      "median": 0.584,
+      "q25": 0.374,
+      "q75": 1.107,
+      "min": 0.36,
+      "max": 1.312
+     },
+     "within_0.5_to_1.5": 3,
+     "below_0": 0,
+     "above_1.5": 0,
+     "not_measured": 0,
+     "no_injected_change": 1,
+     "no_injected_change_moved_away": {
+      "n": 1,
+      "median": 1.911,
+      "q25": 1.911,
+      "q75": 1.911,
+      "min": 1.911,
+      "max": 1.911
+     }
+    },
+    "pause_insert | silence_s": {
+     "rows": 7,
+     "measurable": 7,
+     "recovered": {
+      "n": 7,
+      "median": 0.966,
+      "q25": 0.96,
+      "q75": 0.99,
+      "min": 0.959,
+      "max": 1.0
+     },
+     "within_0.5_to_1.5": 7,
+     "below_0": 0,
+     "above_1.5": 0,
+     "not_measured": 0,
+     "no_injected_change": 0,
+     "no_injected_change_moved_away": {
+      "n": 0
+     }
+    },
+    "pitch_contour | range_st": {
+     "rows": 3,
+     "measurable": 3,
+     "recovered": {
+      "n": 3,
+      "median": 1.016,
+      "q25": 0.833,
+      "q75": 1.102,
+      "min": 0.649,
+      "max": 1.187
+     },
+     "within_0.5_to_1.5": 3,
+     "below_0": 0,
+     "above_1.5": 0,
+     "not_measured": 0,
+     "no_injected_change": 0,
+     "no_injected_change_moved_away": {
+      "n": 0
+     }
+    },
+    "stretch | ln_nucleus_rate": {
+     "rows": 5,
+     "measurable": 5,
+     "recovered": {
+      "n": 5,
+      "median": 0.717,
+      "q25": 0.298,
+      "q75": 0.89,
+      "min": -0.074,
+      "max": 2.073
+     },
+     "within_0.5_to_1.5": 2,
+     "below_0": 1,
+     "above_1.5": 1,
+     "not_measured": 0,
+     "no_injected_change": 0,
+     "no_injected_change_moved_away": {
+      "n": 0
+     }
+    },
+    "stretch | ln_phonation_s": {
+     "rows": 5,
+     "measurable": 5,
+     "recovered": {
+      "n": 5,
+      "median": 0.539,
+      "q25": 0.48,
+      "q75": 0.869,
+      "min": 0.298,
+      "max": 0.89
+     },
+     "within_0.5_to_1.5": 3,
+     "below_0": 0,
+     "above_1.5": 0,
+     "not_measured": 0,
+     "no_injected_change": 0,
+     "no_injected_change_moved_away": {
+      "n": 0
+     }
+    }
+   },
+   "per_operation_on_a_matching_injected_edit": {
+    "gain | level_db": {
+     "rows": 4,
+     "measurable": 4,
+     "recovered": {
+      "n": 4,
+      "median": 0.479,
+      "q25": 0.37,
+      "q75": 0.766,
+      "min": 0.36,
+      "max": 1.312
+     },
+     "within_0.5_to_1.5": 2,
+     "below_0": 0,
+     "above_1.5": 0,
+     "not_measured": 0,
+     "no_injected_change": 0,
+     "no_injected_change_moved_away": {
+      "n": 0
+     }
+    },
+    "pause_insert | silence_s": {
+     "rows": 7,
+     "measurable": 7,
+     "recovered": {
+      "n": 7,
+      "median": 0.966,
+      "q25": 0.96,
+      "q75": 0.99,
+      "min": 0.959,
+      "max": 1.0
+     },
+     "within_0.5_to_1.5": 7,
+     "below_0": 0,
+     "above_1.5": 0,
+     "not_measured": 0,
+     "no_injected_change": 0,
+     "no_injected_change_moved_away": {
+      "n": 0
+     }
+    },
+    "pitch_contour | range_st": {
+     "rows": 3,
+     "measurable": 3,
+     "recovered": {
+      "n": 3,
+      "median": 1.016,
+      "q25": 0.833,
+      "q75": 1.102,
+      "min": 0.649,
+      "max": 1.187
+     },
+     "within_0.5_to_1.5": 3,
+     "below_0": 0,
+     "above_1.5": 0,
+     "not_measured": 0,
+     "no_injected_change": 0,
+     "no_injected_change_moved_away": {
+      "n": 0
+     }
+    },
+    "stretch | ln_nucleus_rate": {
+     "rows": 4,
+     "measurable": 4,
+     "recovered": {
+      "n": 4,
+      "median": 0.803,
+      "q25": 0.519,
+      "q75": 1.186,
+      "min": -0.074,
+      "max": 2.073
+     },
+     "within_0.5_to_1.5": 2,
+     "below_0": 1,
+     "above_1.5": 1,
+     "not_measured": 0,
+     "no_injected_change": 0,
+     "no_injected_change_moved_away": {
+      "n": 0
+     }
+    },
+    "stretch | ln_phonation_s": {
+     "rows": 4,
+     "measurable": 4,
+     "recovered": {
+      "n": 4,
+      "median": 0.704,
+      "q25": 0.524,
+      "q75": 0.874,
+      "min": 0.48,
+      "max": 0.89
+     },
+     "within_0.5_to_1.5": 3,
+     "below_0": 0,
+     "above_1.5": 0,
+     "not_measured": 0,
+     "no_injected_change": 0,
+     "no_injected_change_moved_away": {
+      "n": 0
+     }
+    }
+   },
+   "per_operation_on_no_matching_injected_edit": {
+    "gain | level_db": {
+     "rows": 2,
+     "distance_to_clean_change": {
+      "n": 2,
+      "median": -0.351,
+      "q25": -1.482,
+      "q75": 0.78,
+      "min": -2.613,
+      "max": 1.911
+     },
+     "moved_away_beyond_resolution": 1
+    },
+    "stretch | ln_nucleus_rate": {
+     "rows": 1,
+     "distance_to_clean_change": {
+      "n": 1,
+      "median": -0.221,
+      "q25": -0.221,
+      "q75": -0.221,
+      "min": -0.221,
+      "max": -0.221
+     },
+     "moved_away_beyond_resolution": 0
+    },
+    "stretch | ln_phonation_s": {
+     "rows": 1,
+     "distance_to_clean_change": {
+      "n": 1,
+      "median": -0.221,
+      "q25": -0.221,
+      "q75": -0.221,
+      "min": -0.221,
+      "max": -0.221
+     },
+     "moved_away_beyond_resolution": 0
+    }
+   },
+   "per_injected_edit_all": {
+    "FADE | level_db": {
+     "rows": 5,
+     "measurable": 5,
+     "recovered": {
+      "n": 5,
+      "median": 0.278,
+      "q25": 0.254,
+      "q75": 0.563,
+      "min": 0.0,
+      "max": 0.719
+     },
+     "within_0.5_to_1.5": 2,
+     "below_0": 0,
+     "above_1.5": 0,
+     "not_measured": 0,
+     "no_injected_change": 0,
+     "no_injected_change_moved_away": {
+      "n": 0
+     }
+    },
+    "MONOTONE | range_st": {
+     "rows": 4,
+     "measurable": 4,
+     "recovered": {
+      "n": 4,
+      "median": 0.802,
+      "q25": 0.487,
+      "q75": 0.971,
+      "min": 0.0,
+      "max": 1.016
+     },
+     "within_0.5_to_1.5": 3,
+     "below_0": 0,
+     "above_1.5": 0,
+     "not_measured": 0,
+     "no_injected_change": 0,
+     "no_injected_change_moved_away": {
+      "n": 0
+     }
+    },
+    "PAUSE_DROPPED | silence_s": {
+     "rows": 7,
+     "measurable": 7,
+     "recovered": {
+      "n": 7,
+      "median": 0.966,
+      "q25": 0.96,
+      "q75": 0.99,
+      "min": 0.959,
+      "max": 1.0
+     },
+     "within_0.5_to_1.5": 7,
+     "below_0": 0,
+     "above_1.5": 0,
+     "not_measured": 0,
+     "no_injected_change": 0,
+     "no_injected_change_moved_away": {
+      "n": 0
+     }
+    },
+    "RUSH | ln_nucleus_rate": {
+     "rows": 4,
+     "measurable": 3,
+     "recovered": {
+      "n": 3,
+      "median": 0.717,
+      "q25": 0.399,
+      "q75": 0.754,
+      "min": 0.081,
+      "max": 0.791
+     },
+     "within_0.5_to_1.5": 2,
+     "below_0": 0,
+     "above_1.5": 0,
+     "not_measured": 0,
+     "no_injected_change": 1,
+     "no_injected_change_moved_away": {
+      "n": 1,
+      "median": 0.221,
+      "q25": 0.221,
+      "q75": 0.221,
+      "min": 0.221,
+      "max": 0.221
+     }
+    },
+    "RUSH | ln_phonation_s": {
+     "rows": 4,
+     "measurable": 4,
+     "recovered": {
+      "n": 4,
+      "median": 0.63,
+      "q25": 0.516,
+      "q75": 0.738,
+      "min": 0.447,
+      "max": 0.791
+     },
+     "within_0.5_to_1.5": 3,
+     "below_0": 0,
+     "above_1.5": 0,
+     "not_measured": 0,
+     "no_injected_change": 0,
+     "no_injected_change_moved_away": {
+      "n": 0
+     }
+    }
+   },
+   "per_injected_edit_with_a_fix_on_its_words": {
+    "FADE | level_db": {
+     "rows": 4,
+     "measurable": 4,
+     "recovered": {
+      "n": 4,
+      "median": 0.42,
+      "q25": 0.272,
+      "q75": 0.602,
+      "min": 0.254,
+      "max": 0.719
+     },
+     "within_0.5_to_1.5": 2,
+     "below_0": 0,
+     "above_1.5": 0,
+     "not_measured": 0,
+     "no_injected_change": 0,
+     "no_injected_change_moved_away": {
+      "n": 0
+     }
+    },
+    "MONOTONE | range_st": {
+     "rows": 3,
+     "measurable": 3,
+     "recovered": {
+      "n": 3,
+      "median": 0.956,
+      "q25": 0.802,
+      "q75": 0.986,
+      "min": 0.649,
+      "max": 1.016
+     },
+     "within_0.5_to_1.5": 3,
+     "below_0": 0,
+     "above_1.5": 0,
+     "not_measured": 0,
+     "no_injected_change": 0,
+     "no_injected_change_moved_away": {
+      "n": 0
+     }
+    },
+    "PAUSE_DROPPED | silence_s": {
+     "rows": 7,
+     "measurable": 7,
+     "recovered": {
+      "n": 7,
+      "median": 0.966,
+      "q25": 0.96,
+      "q75": 0.99,
+      "min": 0.959,
+      "max": 1.0
+     },
+     "within_0.5_to_1.5": 7,
+     "below_0": 0,
+     "above_1.5": 0,
+     "not_measured": 0,
+     "no_injected_change": 0,
+     "no_injected_change_moved_away": {
+      "n": 0
+     }
+    },
+    "RUSH | ln_nucleus_rate": {
+     "rows": 4,
+     "measurable": 3,
+     "recovered": {
+      "n": 3,
+      "median": 0.717,
+      "q25": 0.399,
+      "q75": 0.754,
+      "min": 0.081,
+      "max": 0.791
+     },
+     "within_0.5_to_1.5": 2,
+     "below_0": 0,
+     "above_1.5": 0,
+     "not_measured": 0,
+     "no_injected_change": 1,
+     "no_injected_change_moved_away": {
+      "n": 1,
+      "median": 0.221,
+      "q25": 0.221,
+      "q75": 0.221,
+      "min": 0.221,
+      "max": 0.221
+     }
+    },
+    "RUSH | ln_phonation_s": {
+     "rows": 4,
+     "measurable": 4,
+     "recovered": {
+      "n": 4,
+      "median": 0.63,
+      "q25": 0.516,
+      "q75": 0.738,
+      "min": 0.447,
+      "max": 0.791
+     },
+     "within_0.5_to_1.5": 3,
+     "below_0": 0,
+     "above_1.5": 0,
+     "not_measured": 0,
+     "no_injected_change": 0,
+     "no_injected_change_moved_away": {
+      "n": 0
+     }
+    }
+   },
+   "injected_edits_without_measure": {}
+  },
+  "contour_note": "contour rows repeat the own rows for every operation that is not a pitch operation"
+ },
+ "residual": {
+  "own_round1_product": {
+   "runs": 14,
+   "findings": 62,
+   "removed": 37,
+   "removed_with_a_measure": 30,
+   "removed_pause_below_detection_floor": 7,
+   "removed_no_measure_other": 0,
+   "residual_share": {
+    "n": 30,
+    "median": 0.209,
+    "q25": 0.0,
+    "q75": 0.352,
+    "min": -0.126,
+    "max": 0.701
+   },
+   "removed_with_residual_share_ge_0.5": 6,
+   "removed_with_residual_share_ge_0.25": 12,
+   "removed_past_target": 6,
+   "removed_by_fix_status": {
+    "applied": 23,
+    "capped": 10,
+    "covered": 4
+   },
+   "residual_share_by_fix_status": {
+    "applied": {
+     "n": 16,
+     "median": 0.0,
+     "q25": -0.013,
+     "q75": 0.071,
+     "min": -0.126,
+     "max": 0.53
+    },
+    "capped": {
+     "n": 10,
+     "median": 0.284,
+     "q25": 0.223,
+     "q75": 0.482,
+     "min": 0.163,
+     "max": 0.701
+    },
+    "covered": {
+     "n": 4,
+     "median": 0.412,
+     "q25": 0.288,
+     "q75": 0.551,
+     "min": 0.258,
+     "max": 0.627
+    }
+   },
+   "rows": [
+    {
+     "clip": "L1A",
+     "finding": "d2-001",
+     "dimension": "D2",
+     "type": "PAUSE_DROPPED",
+     "counted": true,
+     "delta": -0.51,
+     "measure_after": 0.0,
+     "residual_share": -0.0,
+     "class": "removed",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "pause_insert"
+    },
+    {
+     "clip": "L1A",
+     "finding": "d9-002",
+     "dimension": "D9",
+     "type": "RUSH",
+     "counted": true,
+     "delta": -0.23,
+     "measure_after": 0.029,
+     "residual_share": -0.126,
+     "class": "removed",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "stretch"
+    },
+    {
+     "clip": "L1B",
+     "finding": "d2-001",
+     "dimension": "D2",
+     "type": "PAUSE_INTRUSIVE",
+     "counted": true,
+     "delta": 0.35,
+     "measure_after": null,
+     "residual_share": null,
+     "class": "removed: pause below the detection floor (no D2 measure)",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "pause_shorten"
+    },
+    {
+     "clip": "L2A",
+     "finding": "d5-002",
+     "dimension": "D5",
+     "type": "FADE",
+     "counted": true,
+     "delta": -7.78,
+     "measure_after": -1.8092,
+     "residual_share": 0.233,
+     "class": "removed",
+     "fix_status": "capped",
+     "fix_share": 0.771,
+     "operation": "gain"
+    },
+    {
+     "clip": "L2A",
+     "finding": "d1-003",
+     "dimension": "D1",
+     "type": "RUSH",
+     "counted": true,
+     "delta": -0.38,
+     "measure_after": -0.0619,
+     "residual_share": 0.163,
+     "class": "removed",
+     "fix_status": "capped",
+     "fix_share": 0.885,
+     "operation": "stretch"
+    },
+    {
+     "clip": "L2A",
+     "finding": "d9-004",
+     "dimension": "D9",
+     "type": "RUSH",
+     "counted": false,
+     "delta": -0.25,
+     "measure_after": -0.0645,
+     "residual_share": 0.258,
+     "class": "removed",
+     "fix_status": "covered",
+     "fix_share": null,
+     "operation": null
+    },
+    {
+     "clip": "L2A",
+     "finding": "d2-005",
+     "dimension": "D2",
+     "type": "PAUSE_DROPPED",
+     "counted": true,
+     "delta": -0.45,
+     "measure_after": 0.0,
+     "residual_share": -0.0,
+     "class": "removed",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "pause_insert"
+    },
+    {
+     "clip": "L2B",
+     "finding": "d1-001",
+     "dimension": "D1",
+     "type": "DRAG",
+     "counted": true,
+     "delta": 0.36,
+     "measure_after": 0.0924,
+     "residual_share": 0.257,
+     "class": "removed",
+     "fix_status": "capped",
+     "fix_share": 0.991,
+     "operation": "stretch"
+    },
+    {
+     "clip": "L2B",
+     "finding": "d2-002",
+     "dimension": "D2",
+     "type": "PAUSE_INTRUSIVE",
+     "counted": true,
+     "delta": 0.59,
+     "measure_after": null,
+     "residual_share": null,
+     "class": "removed: pause below the detection floor (no D2 measure)",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "pause_shorten"
+    },
+    {
+     "clip": "L3A",
+     "finding": "d2-002",
+     "dimension": "D2",
+     "type": "PAUSE_DROPPED",
+     "counted": true,
+     "delta": -0.71,
+     "measure_after": 0.0,
+     "residual_share": -0.0,
+     "class": "removed",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "pause_insert"
+    },
+    {
+     "clip": "L3A",
+     "finding": "d4-006",
+     "dimension": "D4",
+     "type": "FADE",
+     "counted": false,
+     "delta": -1.42,
+     "measure_after": -0.7466,
+     "residual_share": 0.526,
+     "class": "removed",
+     "fix_status": "covered",
+     "fix_share": null,
+     "operation": null
+    },
+    {
+     "clip": "L3B",
+     "finding": "d2-001",
+     "dimension": "D2",
+     "type": "PAUSE_INTRUSIVE",
+     "counted": true,
+     "delta": 1.19,
+     "measure_after": null,
+     "residual_share": null,
+     "class": "removed: pause below the detection floor (no D2 measure)",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "pause_shorten"
+    },
+    {
+     "clip": "L3B",
+     "finding": "d4-002",
+     "dimension": "D4",
+     "type": "DEEMPHASIS",
+     "counted": true,
+     "delta": -1.32,
+     "measure_after": -0.2656,
+     "residual_share": 0.201,
+     "class": "removed",
+     "fix_status": "capped",
+     "fix_share": 0.711,
+     "operation": "emphasis"
+    },
+    {
+     "clip": "G1",
+     "finding": "d9-001",
+     "dimension": "D9",
+     "type": "RUSH",
+     "counted": true,
+     "delta": -0.18,
+     "measure_after": -0.0715,
+     "residual_share": 0.397,
+     "class": "removed",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "stretch"
+    },
+    {
+     "clip": "G3",
+     "finding": "d9-002",
+     "dimension": "D9",
+     "type": "RUSH",
+     "counted": false,
+     "delta": -0.32,
+     "measure_after": -0.0953,
+     "residual_share": 0.298,
+     "class": "removed",
+     "fix_status": "covered",
+     "fix_share": null,
+     "operation": null
+    },
+    {
+     "clip": "G3",
+     "finding": "d1-003",
+     "dimension": "D1",
+     "type": "RUSH",
+     "counted": true,
+     "delta": -0.37,
+     "measure_after": -0.1155,
+     "residual_share": 0.312,
+     "class": "removed",
+     "fix_status": "capped",
+     "fix_share": 0.909,
+     "operation": "stretch"
+    },
+    {
+     "clip": "G5",
+     "finding": "d5-003",
+     "dimension": "D5",
+     "type": "FADE",
+     "counted": true,
+     "delta": -6.18,
+     "measure_after": -1.3511,
+     "residual_share": 0.219,
+     "class": "removed",
+     "fix_status": "capped",
+     "fix_share": 0.635,
+     "operation": "gain"
+    },
+    {
+     "clip": "G5",
+     "finding": "d2-005",
+     "dimension": "D2",
+     "type": "PAUSE_DROPPED",
+     "counted": true,
+     "delta": -0.82,
+     "measure_after": 0.0,
+     "residual_share": -0.0,
+     "class": "removed",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "pause_insert"
+    },
+    {
+     "clip": "G5",
+     "finding": "d4-006",
+     "dimension": "D4",
+     "type": "FADE",
+     "counted": false,
+     "delta": -1.23,
+     "measure_after": -0.7714,
+     "residual_share": 0.627,
+     "class": "removed",
+     "fix_status": "covered",
+     "fix_share": null,
+     "operation": null
+    },
+    {
+     "clip": "G5",
+     "finding": "d2-008",
+     "dimension": "D2",
+     "type": "DRAG",
+     "counted": false,
+     "delta": -0.97,
+     "measure_after": -0.02,
+     "residual_share": 0.021,
+     "class": "removed",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "pause_insert"
+    },
+    {
+     "clip": "G5",
+     "finding": "d1-009",
+     "dimension": "D1",
+     "type": "DRAG",
+     "counted": true,
+     "delta": 0.21,
+     "measure_after": 0.0457,
+     "residual_share": 0.217,
+     "class": "removed",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "stretch"
+    },
+    {
+     "clip": "G5",
+     "finding": "d5-010",
+     "dimension": "D5",
+     "type": "FADE",
+     "counted": true,
+     "delta": -5.24,
+     "measure_after": -2.779,
+     "residual_share": 0.53,
+     "class": "removed",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "gain"
+    },
+    {
+     "clip": "G5",
+     "finding": "d2-012",
+     "dimension": "D2",
+     "type": "PAUSE_DROPPED",
+     "counted": true,
+     "delta": -0.73,
+     "measure_after": 0.01,
+     "residual_share": -0.014,
+     "class": "removed",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "pause_insert"
+    },
+    {
+     "clip": "G5",
+     "finding": "d2-014",
+     "dimension": "D2",
+     "type": "PAUSE_DROPPED",
+     "counted": true,
+     "delta": -0.85,
+     "measure_after": 0.01,
+     "residual_share": -0.012,
+     "class": "removed",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "pause_insert"
+    },
+    {
+     "clip": "G5",
+     "finding": "d2-017",
+     "dimension": "D2",
+     "type": "PAUSE_DROPPED",
+     "counted": true,
+     "delta": -0.54,
+     "measure_after": 0.02,
+     "residual_share": -0.037,
+     "class": "removed",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "pause_insert"
+    },
+    {
+     "clip": "greenman_edited",
+     "finding": "d5-001",
+     "dimension": "D5",
+     "type": "FADE",
+     "counted": true,
+     "delta": -11.0,
+     "measure_after": -6.3989,
+     "residual_share": 0.582,
+     "class": "removed",
+     "fix_status": "capped",
+     "fix_share": 0.462,
+     "operation": "gain"
+    },
+    {
+     "clip": "greenman_edited",
+     "finding": "d2-002",
+     "dimension": "D2",
+     "type": "PAUSE_INTRUSIVE",
+     "counted": true,
+     "delta": 1.19,
+     "measure_after": null,
+     "residual_share": null,
+     "class": "removed: pause below the detection floor (no D2 measure)",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "pause_shorten"
+    },
+    {
+     "clip": "greenman_botched",
+     "finding": "d5-003",
+     "dimension": "D5",
+     "type": "FADE",
+     "counted": true,
+     "delta": -11.34,
+     "measure_after": -7.953,
+     "residual_share": 0.701,
+     "class": "removed",
+     "fix_status": "capped",
+     "fix_share": 0.529,
+     "operation": "gain"
+    },
+    {
+     "clip": "natural_rush",
+     "finding": "d2-001",
+     "dimension": "D2",
+     "type": "PAUSE_INTRUSIVE",
+     "counted": true,
+     "delta": 0.35,
+     "measure_after": null,
+     "residual_share": null,
+     "class": "removed: pause below the detection floor (no D2 measure)",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "pause_shorten"
+    },
+    {
+     "clip": "natural_rush",
+     "finding": "d2-005",
+     "dimension": "D2",
+     "type": "PAUSE_INTRUSIVE",
+     "counted": true,
+     "delta": 0.53,
+     "measure_after": null,
+     "residual_share": null,
+     "class": "removed: pause below the detection floor (no D2 measure)",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "pause_shorten"
+    },
+    {
+     "clip": "natural_rush",
+     "finding": "d2-007",
+     "dimension": "D2",
+     "type": "PAUSE_DROPPED",
+     "counted": true,
+     "delta": -0.51,
+     "measure_after": -0.03,
+     "residual_share": 0.059,
+     "class": "removed",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "pause_insert"
+    },
+    {
+     "clip": "natural_rush",
+     "finding": "d2-008",
+     "dimension": "D2",
+     "type": "PAUSE_INTRUSIVE",
+     "counted": true,
+     "delta": 0.68,
+     "measure_after": null,
+     "residual_share": null,
+     "class": "removed: pause below the detection floor (no D2 measure)",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "pause_shorten"
+    },
+    {
+     "clip": "natural_rush",
+     "finding": "d9-009",
+     "dimension": "D9",
+     "type": "NATURAL_RUSH",
+     "counted": true,
+     "delta": -0.19,
+     "measure_after": -0.0206,
+     "residual_share": 0.109,
+     "class": "removed",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "stretch"
+    },
+    {
+     "clip": "natural_rush",
+     "finding": "d2-010",
+     "dimension": "D2",
+     "type": "NATURAL_RUSH",
+     "counted": false,
+     "delta": -0.56,
+     "measure_after": 0.01,
+     "residual_share": -0.018,
+     "class": "removed",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "pause_insert"
+    },
+    {
+     "clip": "natural_rush",
+     "finding": "d2-011",
+     "dimension": "D2",
+     "type": "NATURAL_RUSH",
+     "counted": false,
+     "delta": -0.75,
+     "measure_after": 0.01,
+     "residual_share": -0.013,
+     "class": "removed",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "pause_insert"
+    },
+    {
+     "clip": "r2_consensus",
+     "finding": "d3-001",
+     "dimension": "D3",
+     "type": "RANGE_NARROW",
+     "counted": true,
+     "delta": -0.54,
+     "measure_after": -0.1971,
+     "residual_share": 0.365,
+     "class": "removed",
+     "fix_status": "capped",
+     "fix_share": 0.607,
+     "operation": "pitch_scale"
+    },
+    {
+     "clip": "r2_consensus",
+     "finding": "d5-002",
+     "dimension": "D5",
+     "type": "FADE",
+     "counted": true,
+     "delta": -11.64,
+     "measure_after": -6.0688,
+     "residual_share": 0.521,
+     "class": "removed",
+     "fix_status": "capped",
+     "fix_share": 0.515,
+     "operation": "gain"
+    }
+   ]
+  },
+  "all_40_runs": {
+   "runs": 40,
+   "findings": 196,
+   "removed": 122,
+   "removed_with_a_measure": 108,
+   "removed_pause_below_detection_floor": 14,
+   "removed_no_measure_other": 0,
+   "residual_share": {
+    "n": 108,
+    "median": 0.163,
+    "q25": -0.0,
+    "q75": 0.365,
+    "min": -0.126,
+    "max": 0.701
+   },
+   "removed_with_residual_share_ge_0.5": 17,
+   "removed_with_residual_share_ge_0.25": 42,
+   "removed_past_target": 22,
+   "removed_by_fix_status": {
+    "applied": 64,
+    "capped": 42,
+    "covered": 16
+   },
+   "residual_share_by_fix_status": {
+    "applied": {
+     "n": 50,
+     "median": 0.0,
+     "q25": -0.014,
+     "q75": 0.05,
+     "min": -0.126,
+     "max": 0.56
+    },
+    "capped": {
+     "n": 42,
+     "median": 0.233,
+     "q25": 0.163,
+     "q75": 0.426,
+     "min": -0.058,
+     "max": 0.701
+    },
+    "covered": {
+     "n": 16,
+     "median": 0.395,
+     "q25": 0.288,
+     "q75": 0.553,
+     "min": 0.258,
+     "max": 0.681
+    }
+   },
+   "rows": [
+    {
+     "clip": "L1A",
+     "finding": "d2-001",
+     "dimension": "D2",
+     "type": "PAUSE_DROPPED",
+     "counted": true,
+     "delta": -0.51,
+     "measure_after": 0.0,
+     "residual_share": -0.0,
+     "class": "removed",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "pause_insert"
+    },
+    {
+     "clip": "L1A",
+     "finding": "d9-002",
+     "dimension": "D9",
+     "type": "RUSH",
+     "counted": true,
+     "delta": -0.23,
+     "measure_after": 0.029,
+     "residual_share": -0.126,
+     "class": "removed",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "stretch"
+    },
+    {
+     "clip": "L1A",
+     "finding": "d2-001",
+     "dimension": "D2",
+     "type": "PAUSE_DROPPED",
+     "counted": true,
+     "delta": -0.51,
+     "measure_after": 0.0,
+     "residual_share": -0.0,
+     "class": "removed",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "pause_insert"
+    },
+    {
+     "clip": "L1A",
+     "finding": "d9-002",
+     "dimension": "D9",
+     "type": "RUSH",
+     "counted": true,
+     "delta": -0.23,
+     "measure_after": 0.029,
+     "residual_share": -0.126,
+     "class": "removed",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "stretch"
+    },
+    {
+     "clip": "L1B",
+     "finding": "d2-001",
+     "dimension": "D2",
+     "type": "PAUSE_INTRUSIVE",
+     "counted": true,
+     "delta": 0.35,
+     "measure_after": null,
+     "residual_share": null,
+     "class": "removed: pause below the detection floor (no D2 measure)",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "pause_shorten"
+    },
+    {
+     "clip": "L1B",
+     "finding": "d2-001",
+     "dimension": "D2",
+     "type": "PAUSE_INTRUSIVE",
+     "counted": true,
+     "delta": 0.35,
+     "measure_after": null,
+     "residual_share": null,
+     "class": "removed: pause below the detection floor (no D2 measure)",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "pause_shorten"
+    },
+    {
+     "clip": "L2A",
+     "finding": "d5-002",
+     "dimension": "D5",
+     "type": "FADE",
+     "counted": true,
+     "delta": -7.78,
+     "measure_after": -1.8092,
+     "residual_share": 0.233,
+     "class": "removed",
+     "fix_status": "capped",
+     "fix_share": 0.771,
+     "operation": "gain"
+    },
+    {
+     "clip": "L2A",
+     "finding": "d1-003",
+     "dimension": "D1",
+     "type": "RUSH",
+     "counted": true,
+     "delta": -0.38,
+     "measure_after": -0.0619,
+     "residual_share": 0.163,
+     "class": "removed",
+     "fix_status": "capped",
+     "fix_share": 0.885,
+     "operation": "stretch"
+    },
+    {
+     "clip": "L2A",
+     "finding": "d9-004",
+     "dimension": "D9",
+     "type": "RUSH",
+     "counted": false,
+     "delta": -0.25,
+     "measure_after": -0.0645,
+     "residual_share": 0.258,
+     "class": "removed",
+     "fix_status": "covered",
+     "fix_share": null,
+     "operation": null
+    },
+    {
+     "clip": "L2A",
+     "finding": "d2-005",
+     "dimension": "D2",
+     "type": "PAUSE_DROPPED",
+     "counted": true,
+     "delta": -0.45,
+     "measure_after": 0.0,
+     "residual_share": -0.0,
+     "class": "removed",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "pause_insert"
+    },
+    {
+     "clip": "L2A",
+     "finding": "d5-002",
+     "dimension": "D5",
+     "type": "FADE",
+     "counted": true,
+     "delta": -7.78,
+     "measure_after": -1.8092,
+     "residual_share": 0.233,
+     "class": "removed",
+     "fix_status": "capped",
+     "fix_share": 0.771,
+     "operation": "gain"
+    },
+    {
+     "clip": "L2A",
+     "finding": "d1-003",
+     "dimension": "D1",
+     "type": "RUSH",
+     "counted": true,
+     "delta": -0.38,
+     "measure_after": -0.0619,
+     "residual_share": 0.163,
+     "class": "removed",
+     "fix_status": "capped",
+     "fix_share": 0.885,
+     "operation": "stretch"
+    },
+    {
+     "clip": "L2A",
+     "finding": "d9-004",
+     "dimension": "D9",
+     "type": "RUSH",
+     "counted": false,
+     "delta": -0.25,
+     "measure_after": -0.0645,
+     "residual_share": 0.258,
+     "class": "removed",
+     "fix_status": "covered",
+     "fix_share": null,
+     "operation": null
+    },
+    {
+     "clip": "L2A",
+     "finding": "d2-005",
+     "dimension": "D2",
+     "type": "PAUSE_DROPPED",
+     "counted": true,
+     "delta": -0.45,
+     "measure_after": 0.0,
+     "residual_share": -0.0,
+     "class": "removed",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "pause_insert"
+    },
+    {
+     "clip": "L2A",
+     "finding": "d5-002",
+     "dimension": "D5",
+     "type": "FADE",
+     "counted": true,
+     "delta": -7.78,
+     "measure_after": -1.8092,
+     "residual_share": 0.233,
+     "class": "removed",
+     "fix_status": "capped",
+     "fix_share": 0.771,
+     "operation": "gain"
+    },
+    {
+     "clip": "L2A",
+     "finding": "d1-003",
+     "dimension": "D1",
+     "type": "RUSH",
+     "counted": true,
+     "delta": -0.38,
+     "measure_after": -0.0619,
+     "residual_share": 0.163,
+     "class": "removed",
+     "fix_status": "capped",
+     "fix_share": 0.885,
+     "operation": "stretch"
+    },
+    {
+     "clip": "L2A",
+     "finding": "d9-004",
+     "dimension": "D9",
+     "type": "RUSH",
+     "counted": false,
+     "delta": -0.25,
+     "measure_after": -0.0645,
+     "residual_share": 0.258,
+     "class": "removed",
+     "fix_status": "covered",
+     "fix_share": null,
+     "operation": null
+    },
+    {
+     "clip": "L2A",
+     "finding": "d2-005",
+     "dimension": "D2",
+     "type": "PAUSE_DROPPED",
+     "counted": true,
+     "delta": -0.45,
+     "measure_after": 0.0,
+     "residual_share": -0.0,
+     "class": "removed",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "pause_insert"
+    },
+    {
+     "clip": "L2A",
+     "finding": "d5-002",
+     "dimension": "D5",
+     "type": "FADE",
+     "counted": true,
+     "delta": -7.78,
+     "measure_after": -1.8092,
+     "residual_share": 0.233,
+     "class": "removed",
+     "fix_status": "capped",
+     "fix_share": 0.771,
+     "operation": "gain"
+    },
+    {
+     "clip": "L2A",
+     "finding": "d1-003",
+     "dimension": "D1",
+     "type": "RUSH",
+     "counted": true,
+     "delta": -0.38,
+     "measure_after": -0.0619,
+     "residual_share": 0.163,
+     "class": "removed",
+     "fix_status": "capped",
+     "fix_share": 0.885,
+     "operation": "stretch"
+    },
+    {
+     "clip": "L2A",
+     "finding": "d9-004",
+     "dimension": "D9",
+     "type": "RUSH",
+     "counted": false,
+     "delta": -0.25,
+     "measure_after": -0.0645,
+     "residual_share": 0.258,
+     "class": "removed",
+     "fix_status": "covered",
+     "fix_share": null,
+     "operation": null
+    },
+    {
+     "clip": "L2A",
+     "finding": "d2-005",
+     "dimension": "D2",
+     "type": "PAUSE_DROPPED",
+     "counted": true,
+     "delta": -0.45,
+     "measure_after": 0.0,
+     "residual_share": -0.0,
+     "class": "removed",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "pause_insert"
+    },
+    {
+     "clip": "L2B",
+     "finding": "d1-001",
+     "dimension": "D1",
+     "type": "DRAG",
+     "counted": true,
+     "delta": 0.36,
+     "measure_after": 0.0924,
+     "residual_share": 0.257,
+     "class": "removed",
+     "fix_status": "capped",
+     "fix_share": 0.991,
+     "operation": "stretch"
+    },
+    {
+     "clip": "L2B",
+     "finding": "d2-002",
+     "dimension": "D2",
+     "type": "PAUSE_INTRUSIVE",
+     "counted": true,
+     "delta": 0.59,
+     "measure_after": null,
+     "residual_share": null,
+     "class": "removed: pause below the detection floor (no D2 measure)",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "pause_shorten"
+    },
+    {
+     "clip": "L2B",
+     "finding": "d1-001",
+     "dimension": "D1",
+     "type": "DRAG",
+     "counted": true,
+     "delta": 0.36,
+     "measure_after": 0.0924,
+     "residual_share": 0.257,
+     "class": "removed",
+     "fix_status": "capped",
+     "fix_share": 0.991,
+     "operation": "stretch"
+    },
+    {
+     "clip": "L2B",
+     "finding": "d2-002",
+     "dimension": "D2",
+     "type": "PAUSE_INTRUSIVE",
+     "counted": true,
+     "delta": 0.59,
+     "measure_after": null,
+     "residual_share": null,
+     "class": "removed: pause below the detection floor (no D2 measure)",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "pause_shorten"
+    },
+    {
+     "clip": "L3A",
+     "finding": "d2-002",
+     "dimension": "D2",
+     "type": "PAUSE_DROPPED",
+     "counted": true,
+     "delta": -0.71,
+     "measure_after": 0.0,
+     "residual_share": -0.0,
+     "class": "removed",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "pause_insert"
+    },
+    {
+     "clip": "L3A",
+     "finding": "d4-006",
+     "dimension": "D4",
+     "type": "FADE",
+     "counted": false,
+     "delta": -1.42,
+     "measure_after": -0.7466,
+     "residual_share": 0.526,
+     "class": "removed",
+     "fix_status": "covered",
+     "fix_share": null,
+     "operation": null
+    },
+    {
+     "clip": "L3A",
+     "finding": "d2-002",
+     "dimension": "D2",
+     "type": "PAUSE_DROPPED",
+     "counted": true,
+     "delta": -0.71,
+     "measure_after": 0.0,
+     "residual_share": -0.0,
+     "class": "removed",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "pause_insert"
+    },
+    {
+     "clip": "L3A",
+     "finding": "d4-006",
+     "dimension": "D4",
+     "type": "FADE",
+     "counted": false,
+     "delta": -1.42,
+     "measure_after": -0.8546,
+     "residual_share": 0.602,
+     "class": "removed",
+     "fix_status": "covered",
+     "fix_share": null,
+     "operation": null
+    },
+    {
+     "clip": "L3A",
+     "finding": "d3-001",
+     "dimension": "D3",
+     "type": "MONOTONE",
+     "counted": true,
+     "delta": -1.84,
+     "measure_after": -0.0399,
+     "residual_share": 0.022,
+     "class": "removed",
+     "fix_status": "capped",
+     "fix_share": 0.818,
+     "operation": "pitch_contour"
+    },
+    {
+     "clip": "L3A",
+     "finding": "d2-002",
+     "dimension": "D2",
+     "type": "PAUSE_DROPPED",
+     "counted": true,
+     "delta": -0.71,
+     "measure_after": 0.0,
+     "residual_share": -0.0,
+     "class": "removed",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "pause_insert"
+    },
+    {
+     "clip": "L3A",
+     "finding": "d4-006",
+     "dimension": "D4",
+     "type": "FADE",
+     "counted": false,
+     "delta": -1.42,
+     "measure_after": -0.7624,
+     "residual_share": 0.537,
+     "class": "removed",
+     "fix_status": "covered",
+     "fix_share": null,
+     "operation": null
+    },
+    {
+     "clip": "L3A",
+     "finding": "d3-001",
+     "dimension": "D3",
+     "type": "MONOTONE",
+     "counted": true,
+     "delta": -1.84,
+     "measure_after": -0.0261,
+     "residual_share": 0.014,
+     "class": "removed",
+     "fix_status": "capped",
+     "fix_share": 0.818,
+     "operation": "pitch_contour"
+    },
+    {
+     "clip": "L3A",
+     "finding": "d2-002",
+     "dimension": "D2",
+     "type": "PAUSE_DROPPED",
+     "counted": true,
+     "delta": -0.71,
+     "measure_after": 0.0,
+     "residual_share": -0.0,
+     "class": "removed",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "pause_insert"
+    },
+    {
+     "clip": "L3A",
+     "finding": "d4-006",
+     "dimension": "D4",
+     "type": "FADE",
+     "counted": false,
+     "delta": -1.42,
+     "measure_after": -0.8684,
+     "residual_share": 0.612,
+     "class": "removed",
+     "fix_status": "covered",
+     "fix_share": null,
+     "operation": null
+    },
+    {
+     "clip": "L3B",
+     "finding": "d2-001",
+     "dimension": "D2",
+     "type": "PAUSE_INTRUSIVE",
+     "counted": true,
+     "delta": 1.19,
+     "measure_after": null,
+     "residual_share": null,
+     "class": "removed: pause below the detection floor (no D2 measure)",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "pause_shorten"
+    },
+    {
+     "clip": "L3B",
+     "finding": "d4-002",
+     "dimension": "D4",
+     "type": "DEEMPHASIS",
+     "counted": true,
+     "delta": -1.32,
+     "measure_after": -0.2656,
+     "residual_share": 0.201,
+     "class": "removed",
+     "fix_status": "capped",
+     "fix_share": 0.711,
+     "operation": "emphasis"
+    },
+    {
+     "clip": "L3B",
+     "finding": "d2-001",
+     "dimension": "D2",
+     "type": "PAUSE_INTRUSIVE",
+     "counted": true,
+     "delta": 1.19,
+     "measure_after": null,
+     "residual_share": null,
+     "class": "removed: pause below the detection floor (no D2 measure)",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "pause_shorten"
+    },
+    {
+     "clip": "L3B",
+     "finding": "d4-002",
+     "dimension": "D4",
+     "type": "DEEMPHASIS",
+     "counted": true,
+     "delta": -1.32,
+     "measure_after": -0.2656,
+     "residual_share": 0.201,
+     "class": "removed",
+     "fix_status": "capped",
+     "fix_share": 0.711,
+     "operation": "emphasis"
+    },
+    {
+     "clip": "G1",
+     "finding": "d9-001",
+     "dimension": "D9",
+     "type": "RUSH",
+     "counted": true,
+     "delta": -0.18,
+     "measure_after": -0.0715,
+     "residual_share": 0.397,
+     "class": "removed",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "stretch"
+    },
+    {
+     "clip": "G1",
+     "finding": "d9-001",
+     "dimension": "D9",
+     "type": "RUSH",
+     "counted": true,
+     "delta": -0.18,
+     "measure_after": -0.0715,
+     "residual_share": 0.397,
+     "class": "removed",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "stretch"
+    },
+    {
+     "clip": "G3",
+     "finding": "d9-002",
+     "dimension": "D9",
+     "type": "RUSH",
+     "counted": false,
+     "delta": -0.32,
+     "measure_after": -0.0953,
+     "residual_share": 0.298,
+     "class": "removed",
+     "fix_status": "covered",
+     "fix_share": null,
+     "operation": null
+    },
+    {
+     "clip": "G3",
+     "finding": "d1-003",
+     "dimension": "D1",
+     "type": "RUSH",
+     "counted": true,
+     "delta": -0.37,
+     "measure_after": -0.1155,
+     "residual_share": 0.312,
+     "class": "removed",
+     "fix_status": "capped",
+     "fix_share": 0.909,
+     "operation": "stretch"
+    },
+    {
+     "clip": "G3",
+     "finding": "d9-002",
+     "dimension": "D9",
+     "type": "RUSH",
+     "counted": false,
+     "delta": -0.32,
+     "measure_after": -0.0953,
+     "residual_share": 0.298,
+     "class": "removed",
+     "fix_status": "covered",
+     "fix_share": null,
+     "operation": null
+    },
+    {
+     "clip": "G3",
+     "finding": "d1-003",
+     "dimension": "D1",
+     "type": "RUSH",
+     "counted": true,
+     "delta": -0.37,
+     "measure_after": -0.1155,
+     "residual_share": 0.312,
+     "class": "removed",
+     "fix_status": "capped",
+     "fix_share": 0.909,
+     "operation": "stretch"
+    },
+    {
+     "clip": "G3",
+     "finding": "d3-001",
+     "dimension": "D3",
+     "type": "MONOTONE",
+     "counted": true,
+     "delta": -0.91,
+     "measure_after": 0.0526,
+     "residual_share": -0.058,
+     "class": "removed",
+     "fix_status": "capped",
+     "fix_share": 0.912,
+     "operation": "pitch_contour"
+    },
+    {
+     "clip": "G3",
+     "finding": "d9-002",
+     "dimension": "D9",
+     "type": "RUSH",
+     "counted": false,
+     "delta": -0.32,
+     "measure_after": -0.0953,
+     "residual_share": 0.298,
+     "class": "removed",
+     "fix_status": "covered",
+     "fix_share": null,
+     "operation": null
+    },
+    {
+     "clip": "G3",
+     "finding": "d1-003",
+     "dimension": "D1",
+     "type": "RUSH",
+     "counted": true,
+     "delta": -0.37,
+     "measure_after": -0.1155,
+     "residual_share": 0.312,
+     "class": "removed",
+     "fix_status": "capped",
+     "fix_share": 0.909,
+     "operation": "stretch"
+    },
+    {
+     "clip": "G3",
+     "finding": "d3-001",
+     "dimension": "D3",
+     "type": "MONOTONE",
+     "counted": true,
+     "delta": -0.91,
+     "measure_after": 0.0526,
+     "residual_share": -0.058,
+     "class": "removed",
+     "fix_status": "capped",
+     "fix_share": 0.912,
+     "operation": "pitch_contour"
+    },
+    {
+     "clip": "G3",
+     "finding": "d9-002",
+     "dimension": "D9",
+     "type": "RUSH",
+     "counted": false,
+     "delta": -0.32,
+     "measure_after": -0.0953,
+     "residual_share": 0.298,
+     "class": "removed",
+     "fix_status": "covered",
+     "fix_share": null,
+     "operation": null
+    },
+    {
+     "clip": "G3",
+     "finding": "d1-003",
+     "dimension": "D1",
+     "type": "RUSH",
+     "counted": true,
+     "delta": -0.37,
+     "measure_after": -0.1155,
+     "residual_share": 0.312,
+     "class": "removed",
+     "fix_status": "capped",
+     "fix_share": 0.909,
+     "operation": "stretch"
+    },
+    {
+     "clip": "G5",
+     "finding": "d5-003",
+     "dimension": "D5",
+     "type": "FADE",
+     "counted": true,
+     "delta": -6.18,
+     "measure_after": -1.3511,
+     "residual_share": 0.219,
+     "class": "removed",
+     "fix_status": "capped",
+     "fix_share": 0.635,
+     "operation": "gain"
+    },
+    {
+     "clip": "G5",
+     "finding": "d2-005",
+     "dimension": "D2",
+     "type": "PAUSE_DROPPED",
+     "counted": true,
+     "delta": -0.82,
+     "measure_after": 0.0,
+     "residual_share": -0.0,
+     "class": "removed",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "pause_insert"
+    },
+    {
+     "clip": "G5",
+     "finding": "d4-006",
+     "dimension": "D4",
+     "type": "FADE",
+     "counted": false,
+     "delta": -1.23,
+     "measure_after": -0.7714,
+     "residual_share": 0.627,
+     "class": "removed",
+     "fix_status": "covered",
+     "fix_share": null,
+     "operation": null
+    },
+    {
+     "clip": "G5",
+     "finding": "d2-008",
+     "dimension": "D2",
+     "type": "DRAG",
+     "counted": false,
+     "delta": -0.97,
+     "measure_after": -0.02,
+     "residual_share": 0.021,
+     "class": "removed",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "pause_insert"
+    },
+    {
+     "clip": "G5",
+     "finding": "d1-009",
+     "dimension": "D1",
+     "type": "DRAG",
+     "counted": true,
+     "delta": 0.21,
+     "measure_after": 0.0457,
+     "residual_share": 0.217,
+     "class": "removed",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "stretch"
+    },
+    {
+     "clip": "G5",
+     "finding": "d5-010",
+     "dimension": "D5",
+     "type": "FADE",
+     "counted": true,
+     "delta": -5.24,
+     "measure_after": -2.779,
+     "residual_share": 0.53,
+     "class": "removed",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "gain"
+    },
+    {
+     "clip": "G5",
+     "finding": "d2-012",
+     "dimension": "D2",
+     "type": "PAUSE_DROPPED",
+     "counted": true,
+     "delta": -0.73,
+     "measure_after": 0.01,
+     "residual_share": -0.014,
+     "class": "removed",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "pause_insert"
+    },
+    {
+     "clip": "G5",
+     "finding": "d2-014",
+     "dimension": "D2",
+     "type": "PAUSE_DROPPED",
+     "counted": true,
+     "delta": -0.85,
+     "measure_after": 0.01,
+     "residual_share": -0.012,
+     "class": "removed",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "pause_insert"
+    },
+    {
+     "clip": "G5",
+     "finding": "d2-017",
+     "dimension": "D2",
+     "type": "PAUSE_DROPPED",
+     "counted": true,
+     "delta": -0.54,
+     "measure_after": 0.02,
+     "residual_share": -0.037,
+     "class": "removed",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "pause_insert"
+    },
+    {
+     "clip": "G5",
+     "finding": "d5-003",
+     "dimension": "D5",
+     "type": "FADE",
+     "counted": true,
+     "delta": -6.18,
+     "measure_after": -0.8448,
+     "residual_share": 0.137,
+     "class": "removed",
+     "fix_status": "capped",
+     "fix_share": 0.635,
+     "operation": "gain"
+    },
+    {
+     "clip": "G5",
+     "finding": "d2-005",
+     "dimension": "D2",
+     "type": "PAUSE_DROPPED",
+     "counted": true,
+     "delta": -0.82,
+     "measure_after": 0.0,
+     "residual_share": -0.0,
+     "class": "removed",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "pause_insert"
+    },
+    {
+     "clip": "G5",
+     "finding": "d4-006",
+     "dimension": "D4",
+     "type": "FADE",
+     "counted": false,
+     "delta": -1.23,
+     "measure_after": -0.837,
+     "residual_share": 0.681,
+     "class": "removed",
+     "fix_status": "covered",
+     "fix_share": null,
+     "operation": null
+    },
+    {
+     "clip": "G5",
+     "finding": "d2-008",
+     "dimension": "D2",
+     "type": "DRAG",
+     "counted": false,
+     "delta": -0.97,
+     "measure_after": -0.02,
+     "residual_share": 0.021,
+     "class": "removed",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "pause_insert"
+    },
+    {
+     "clip": "G5",
+     "finding": "d1-009",
+     "dimension": "D1",
+     "type": "DRAG",
+     "counted": true,
+     "delta": 0.21,
+     "measure_after": -0.0187,
+     "residual_share": -0.089,
+     "class": "removed",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "stretch"
+    },
+    {
+     "clip": "G5",
+     "finding": "d5-010",
+     "dimension": "D5",
+     "type": "FADE",
+     "counted": true,
+     "delta": -5.24,
+     "measure_after": -2.3917,
+     "residual_share": 0.456,
+     "class": "removed",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "gain"
+    },
+    {
+     "clip": "G5",
+     "finding": "d2-012",
+     "dimension": "D2",
+     "type": "PAUSE_DROPPED",
+     "counted": true,
+     "delta": -0.73,
+     "measure_after": 0.02,
+     "residual_share": -0.027,
+     "class": "removed",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "pause_insert"
+    },
+    {
+     "clip": "G5",
+     "finding": "d2-014",
+     "dimension": "D2",
+     "type": "PAUSE_DROPPED",
+     "counted": true,
+     "delta": -0.85,
+     "measure_after": 0.01,
+     "residual_share": -0.012,
+     "class": "removed",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "pause_insert"
+    },
+    {
+     "clip": "G5",
+     "finding": "d2-017",
+     "dimension": "D2",
+     "type": "PAUSE_DROPPED",
+     "counted": true,
+     "delta": -0.54,
+     "measure_after": 0.02,
+     "residual_share": -0.037,
+     "class": "removed",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "pause_insert"
+    },
+    {
+     "clip": "G5",
+     "finding": "d3-002",
+     "dimension": "D3",
+     "type": "RANGE_NARROW",
+     "counted": true,
+     "delta": -1.66,
+     "measure_after": -0.1673,
+     "residual_share": 0.101,
+     "class": "removed",
+     "fix_status": "capped",
+     "fix_share": 0.802,
+     "operation": "pitch_contour"
+    },
+    {
+     "clip": "G5",
+     "finding": "d5-003",
+     "dimension": "D5",
+     "type": "FADE",
+     "counted": true,
+     "delta": -6.18,
+     "measure_after": -1.4051,
+     "residual_share": 0.227,
+     "class": "removed",
+     "fix_status": "capped",
+     "fix_share": 0.635,
+     "operation": "gain"
+    },
+    {
+     "clip": "G5",
+     "finding": "d2-005",
+     "dimension": "D2",
+     "type": "PAUSE_DROPPED",
+     "counted": true,
+     "delta": -0.82,
+     "measure_after": 0.0,
+     "residual_share": -0.0,
+     "class": "removed",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "pause_insert"
+    },
+    {
+     "clip": "G5",
+     "finding": "d4-006",
+     "dimension": "D4",
+     "type": "FADE",
+     "counted": false,
+     "delta": -1.23,
+     "measure_after": -0.6315,
+     "residual_share": 0.513,
+     "class": "removed",
+     "fix_status": "covered",
+     "fix_share": null,
+     "operation": null
+    },
+    {
+     "clip": "G5",
+     "finding": "d2-008",
+     "dimension": "D2",
+     "type": "DRAG",
+     "counted": false,
+     "delta": -0.97,
+     "measure_after": -0.01,
+     "residual_share": 0.01,
+     "class": "removed",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "pause_insert"
+    },
+    {
+     "clip": "G5",
+     "finding": "d1-009",
+     "dimension": "D1",
+     "type": "DRAG",
+     "counted": true,
+     "delta": 0.21,
+     "measure_after": 0.0414,
+     "residual_share": 0.197,
+     "class": "removed",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "stretch"
+    },
+    {
+     "clip": "G5",
+     "finding": "d5-010",
+     "dimension": "D5",
+     "type": "FADE",
+     "counted": true,
+     "delta": -5.24,
+     "measure_after": -2.9346,
+     "residual_share": 0.56,
+     "class": "removed",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "gain"
+    },
+    {
+     "clip": "G5",
+     "finding": "d2-012",
+     "dimension": "D2",
+     "type": "PAUSE_DROPPED",
+     "counted": true,
+     "delta": -0.73,
+     "measure_after": 0.01,
+     "residual_share": -0.014,
+     "class": "removed",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "pause_insert"
+    },
+    {
+     "clip": "G5",
+     "finding": "d2-014",
+     "dimension": "D2",
+     "type": "PAUSE_DROPPED",
+     "counted": true,
+     "delta": -0.85,
+     "measure_after": 0.01,
+     "residual_share": -0.012,
+     "class": "removed",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "pause_insert"
+    },
+    {
+     "clip": "G5",
+     "finding": "d2-017",
+     "dimension": "D2",
+     "type": "PAUSE_DROPPED",
+     "counted": true,
+     "delta": -0.54,
+     "measure_after": 0.01,
+     "residual_share": -0.019,
+     "class": "removed",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "pause_insert"
+    },
+    {
+     "clip": "G5",
+     "finding": "d3-002",
+     "dimension": "D3",
+     "type": "RANGE_NARROW",
+     "counted": true,
+     "delta": -1.66,
+     "measure_after": -0.1912,
+     "residual_share": 0.115,
+     "class": "removed",
+     "fix_status": "capped",
+     "fix_share": 0.802,
+     "operation": "pitch_contour"
+    },
+    {
+     "clip": "G5",
+     "finding": "d5-003",
+     "dimension": "D5",
+     "type": "FADE",
+     "counted": true,
+     "delta": -6.18,
+     "measure_after": -0.8781,
+     "residual_share": 0.142,
+     "class": "removed",
+     "fix_status": "capped",
+     "fix_share": 0.635,
+     "operation": "gain"
+    },
+    {
+     "clip": "G5",
+     "finding": "d2-005",
+     "dimension": "D2",
+     "type": "PAUSE_DROPPED",
+     "counted": true,
+     "delta": -0.82,
+     "measure_after": 0.03,
+     "residual_share": -0.037,
+     "class": "removed",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "pause_insert"
+    },
+    {
+     "clip": "G5",
+     "finding": "d4-006",
+     "dimension": "D4",
+     "type": "FADE",
+     "counted": false,
+     "delta": -1.23,
+     "measure_after": -0.6069,
+     "residual_share": 0.493,
+     "class": "removed",
+     "fix_status": "covered",
+     "fix_share": null,
+     "operation": null
+    },
+    {
+     "clip": "G5",
+     "finding": "d2-008",
+     "dimension": "D2",
+     "type": "DRAG",
+     "counted": false,
+     "delta": -0.97,
+     "measure_after": -0.01,
+     "residual_share": 0.01,
+     "class": "removed",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "pause_insert"
+    },
+    {
+     "clip": "G5",
+     "finding": "d1-009",
+     "dimension": "D1",
+     "type": "DRAG",
+     "counted": true,
+     "delta": 0.21,
+     "measure_after": 0.0488,
+     "residual_share": 0.232,
+     "class": "removed",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "stretch"
+    },
+    {
+     "clip": "G5",
+     "finding": "d5-010",
+     "dimension": "D5",
+     "type": "FADE",
+     "counted": true,
+     "delta": -5.24,
+     "measure_after": -2.5492,
+     "residual_share": 0.486,
+     "class": "removed",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "gain"
+    },
+    {
+     "clip": "G5",
+     "finding": "d2-012",
+     "dimension": "D2",
+     "type": "PAUSE_DROPPED",
+     "counted": true,
+     "delta": -0.73,
+     "measure_after": 0.02,
+     "residual_share": -0.027,
+     "class": "removed",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "pause_insert"
+    },
+    {
+     "clip": "G5",
+     "finding": "d2-014",
+     "dimension": "D2",
+     "type": "PAUSE_DROPPED",
+     "counted": true,
+     "delta": -0.85,
+     "measure_after": 0.01,
+     "residual_share": -0.012,
+     "class": "removed",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "pause_insert"
+    },
+    {
+     "clip": "G5",
+     "finding": "d2-017",
+     "dimension": "D2",
+     "type": "PAUSE_DROPPED",
+     "counted": true,
+     "delta": -0.54,
+     "measure_after": 0.01,
+     "residual_share": -0.019,
+     "class": "removed",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "pause_insert"
+    },
+    {
+     "clip": "greenman_edited",
+     "finding": "d5-001",
+     "dimension": "D5",
+     "type": "FADE",
+     "counted": true,
+     "delta": -11.0,
+     "measure_after": -6.3989,
+     "residual_share": 0.582,
+     "class": "removed",
+     "fix_status": "capped",
+     "fix_share": 0.462,
+     "operation": "gain"
+    },
+    {
+     "clip": "greenman_edited",
+     "finding": "d2-002",
+     "dimension": "D2",
+     "type": "PAUSE_INTRUSIVE",
+     "counted": true,
+     "delta": 1.19,
+     "measure_after": null,
+     "residual_share": null,
+     "class": "removed: pause below the detection floor (no D2 measure)",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "pause_shorten"
+    },
+    {
+     "clip": "greenman_edited",
+     "finding": "d5-001",
+     "dimension": "D5",
+     "type": "FADE",
+     "counted": true,
+     "delta": -11.0,
+     "measure_after": -6.3989,
+     "residual_share": 0.582,
+     "class": "removed",
+     "fix_status": "capped",
+     "fix_share": 0.462,
+     "operation": "gain"
+    },
+    {
+     "clip": "greenman_edited",
+     "finding": "d2-002",
+     "dimension": "D2",
+     "type": "PAUSE_INTRUSIVE",
+     "counted": true,
+     "delta": 1.19,
+     "measure_after": null,
+     "residual_share": null,
+     "class": "removed: pause below the detection floor (no D2 measure)",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "pause_shorten"
+    },
+    {
+     "clip": "greenman_botched",
+     "finding": "d5-003",
+     "dimension": "D5",
+     "type": "FADE",
+     "counted": true,
+     "delta": -11.34,
+     "measure_after": -7.953,
+     "residual_share": 0.701,
+     "class": "removed",
+     "fix_status": "capped",
+     "fix_share": 0.529,
+     "operation": "gain"
+    },
+    {
+     "clip": "greenman_botched",
+     "finding": "d5-003",
+     "dimension": "D5",
+     "type": "FADE",
+     "counted": true,
+     "delta": -11.34,
+     "measure_after": -7.953,
+     "residual_share": 0.701,
+     "class": "removed",
+     "fix_status": "capped",
+     "fix_share": 0.529,
+     "operation": "gain"
+    },
+    {
+     "clip": "greenman_botched",
+     "finding": "d3-001",
+     "dimension": "D3",
+     "type": "RANGE_NARROW",
+     "counted": true,
+     "delta": -1.73,
+     "measure_after": -0.1642,
+     "residual_share": 0.095,
+     "class": "removed",
+     "fix_status": "capped",
+     "fix_share": 0.768,
+     "operation": "pitch_contour"
+    },
+    {
+     "clip": "greenman_botched",
+     "finding": "d5-003",
+     "dimension": "D5",
+     "type": "FADE",
+     "counted": true,
+     "delta": -11.34,
+     "measure_after": -7.3031,
+     "residual_share": 0.644,
+     "class": "removed",
+     "fix_status": "capped",
+     "fix_share": 0.529,
+     "operation": "gain"
+    },
+    {
+     "clip": "greenman_botched",
+     "finding": "d3-001",
+     "dimension": "D3",
+     "type": "RANGE_NARROW",
+     "counted": true,
+     "delta": -1.73,
+     "measure_after": -0.1642,
+     "residual_share": 0.095,
+     "class": "removed",
+     "fix_status": "capped",
+     "fix_share": 0.768,
+     "operation": "pitch_contour"
+    },
+    {
+     "clip": "greenman_botched",
+     "finding": "d5-003",
+     "dimension": "D5",
+     "type": "FADE",
+     "counted": true,
+     "delta": -11.34,
+     "measure_after": -7.3031,
+     "residual_share": 0.644,
+     "class": "removed",
+     "fix_status": "capped",
+     "fix_share": 0.529,
+     "operation": "gain"
+    },
+    {
+     "clip": "natural_rush",
+     "finding": "d2-001",
+     "dimension": "D2",
+     "type": "PAUSE_INTRUSIVE",
+     "counted": true,
+     "delta": 0.35,
+     "measure_after": null,
+     "residual_share": null,
+     "class": "removed: pause below the detection floor (no D2 measure)",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "pause_shorten"
+    },
+    {
+     "clip": "natural_rush",
+     "finding": "d2-005",
+     "dimension": "D2",
+     "type": "PAUSE_INTRUSIVE",
+     "counted": true,
+     "delta": 0.53,
+     "measure_after": null,
+     "residual_share": null,
+     "class": "removed: pause below the detection floor (no D2 measure)",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "pause_shorten"
+    },
+    {
+     "clip": "natural_rush",
+     "finding": "d2-007",
+     "dimension": "D2",
+     "type": "PAUSE_DROPPED",
+     "counted": true,
+     "delta": -0.51,
+     "measure_after": -0.03,
+     "residual_share": 0.059,
+     "class": "removed",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "pause_insert"
+    },
+    {
+     "clip": "natural_rush",
+     "finding": "d2-008",
+     "dimension": "D2",
+     "type": "PAUSE_INTRUSIVE",
+     "counted": true,
+     "delta": 0.68,
+     "measure_after": null,
+     "residual_share": null,
+     "class": "removed: pause below the detection floor (no D2 measure)",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "pause_shorten"
+    },
+    {
+     "clip": "natural_rush",
+     "finding": "d9-009",
+     "dimension": "D9",
+     "type": "NATURAL_RUSH",
+     "counted": true,
+     "delta": -0.19,
+     "measure_after": -0.0206,
+     "residual_share": 0.109,
+     "class": "removed",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "stretch"
+    },
+    {
+     "clip": "natural_rush",
+     "finding": "d2-010",
+     "dimension": "D2",
+     "type": "NATURAL_RUSH",
+     "counted": false,
+     "delta": -0.56,
+     "measure_after": 0.01,
+     "residual_share": -0.018,
+     "class": "removed",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "pause_insert"
+    },
+    {
+     "clip": "natural_rush",
+     "finding": "d2-011",
+     "dimension": "D2",
+     "type": "NATURAL_RUSH",
+     "counted": false,
+     "delta": -0.75,
+     "measure_after": 0.01,
+     "residual_share": -0.013,
+     "class": "removed",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "pause_insert"
+    },
+    {
+     "clip": "natural_rush",
+     "finding": "d2-001",
+     "dimension": "D2",
+     "type": "PAUSE_INTRUSIVE",
+     "counted": true,
+     "delta": 0.35,
+     "measure_after": null,
+     "residual_share": null,
+     "class": "removed: pause below the detection floor (no D2 measure)",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "pause_shorten"
+    },
+    {
+     "clip": "natural_rush",
+     "finding": "d2-005",
+     "dimension": "D2",
+     "type": "PAUSE_INTRUSIVE",
+     "counted": true,
+     "delta": 0.53,
+     "measure_after": null,
+     "residual_share": null,
+     "class": "removed: pause below the detection floor (no D2 measure)",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "pause_shorten"
+    },
+    {
+     "clip": "natural_rush",
+     "finding": "d2-007",
+     "dimension": "D2",
+     "type": "PAUSE_DROPPED",
+     "counted": true,
+     "delta": -0.51,
+     "measure_after": -0.03,
+     "residual_share": 0.059,
+     "class": "removed",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "pause_insert"
+    },
+    {
+     "clip": "natural_rush",
+     "finding": "d2-008",
+     "dimension": "D2",
+     "type": "PAUSE_INTRUSIVE",
+     "counted": true,
+     "delta": 0.68,
+     "measure_after": null,
+     "residual_share": null,
+     "class": "removed: pause below the detection floor (no D2 measure)",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "pause_shorten"
+    },
+    {
+     "clip": "natural_rush",
+     "finding": "d9-009",
+     "dimension": "D9",
+     "type": "NATURAL_RUSH",
+     "counted": true,
+     "delta": -0.19,
+     "measure_after": -0.0206,
+     "residual_share": 0.109,
+     "class": "removed",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "stretch"
+    },
+    {
+     "clip": "natural_rush",
+     "finding": "d2-010",
+     "dimension": "D2",
+     "type": "NATURAL_RUSH",
+     "counted": false,
+     "delta": -0.56,
+     "measure_after": 0.01,
+     "residual_share": -0.018,
+     "class": "removed",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "pause_insert"
+    },
+    {
+     "clip": "natural_rush",
+     "finding": "d2-011",
+     "dimension": "D2",
+     "type": "NATURAL_RUSH",
+     "counted": false,
+     "delta": -0.75,
+     "measure_after": 0.01,
+     "residual_share": -0.013,
+     "class": "removed",
+     "fix_status": "applied",
+     "fix_share": 1.0,
+     "operation": "pause_insert"
+    },
+    {
+     "clip": "r2_consensus",
+     "finding": "d3-001",
+     "dimension": "D3",
+     "type": "RANGE_NARROW",
+     "counted": true,
+     "delta": -0.54,
+     "measure_after": -0.1971,
+     "residual_share": 0.365,
+     "class": "removed",
+     "fix_status": "capped",
+     "fix_share": 0.607,
+     "operation": "pitch_scale"
+    },
+    {
+     "clip": "r2_consensus",
+     "finding": "d5-002",
+     "dimension": "D5",
+     "type": "FADE",
+     "counted": true,
+     "delta": -11.64,
+     "measure_after": -6.0688,
+     "residual_share": 0.521,
+     "class": "removed",
+     "fix_status": "capped",
+     "fix_share": 0.515,
+     "operation": "gain"
+    },
+    {
+     "clip": "r2_consensus",
+     "finding": "d3-001",
+     "dimension": "D3",
+     "type": "RANGE_NARROW",
+     "counted": true,
+     "delta": -0.54,
+     "measure_after": -0.1971,
+     "residual_share": 0.365,
+     "class": "removed",
+     "fix_status": "capped",
+     "fix_share": 0.607,
+     "operation": "pitch_scale"
+    },
+    {
+     "clip": "r2_consensus",
+     "finding": "d5-002",
+     "dimension": "D5",
+     "type": "FADE",
+     "counted": true,
+     "delta": -11.64,
+     "measure_after": -6.0688,
+     "residual_share": 0.521,
+     "class": "removed",
+     "fix_status": "capped",
+     "fix_share": 0.515,
+     "operation": "gain"
+    },
+    {
+     "clip": "r2_consensus",
+     "finding": "d3-001",
+     "dimension": "D3",
+     "type": "RANGE_NARROW",
+     "counted": true,
+     "delta": -0.54,
+     "measure_after": -0.2301,
+     "residual_share": 0.426,
+     "class": "removed",
+     "fix_status": "capped",
+     "fix_share": 0.498,
+     "operation": "pitch_contour"
+    },
+    {
+     "clip": "r2_consensus",
+     "finding": "d5-002",
+     "dimension": "D5",
+     "type": "FADE",
+     "counted": true,
+     "delta": -11.64,
+     "measure_after": -5.7249,
+     "residual_share": 0.492,
+     "class": "removed",
+     "fix_status": "capped",
+     "fix_share": 0.515,
+     "operation": "gain"
+    },
+    {
+     "clip": "r2_consensus",
+     "finding": "d3-001",
+     "dimension": "D3",
+     "type": "RANGE_NARROW",
+     "counted": true,
+     "delta": -0.54,
+     "measure_after": -0.2301,
+     "residual_share": 0.426,
+     "class": "removed",
+     "fix_status": "capped",
+     "fix_share": 0.498,
+     "operation": "pitch_contour"
+    },
+    {
+     "clip": "r2_consensus",
+     "finding": "d5-002",
+     "dimension": "D5",
+     "type": "FADE",
+     "counted": true,
+     "delta": -11.64,
+     "measure_after": -5.7249,
+     "residual_share": 0.492,
+     "class": "removed",
+     "fix_status": "capped",
+     "fix_share": 0.515,
+     "operation": "gain"
+    }
+   ]
+  },
+  "removed_sets_and_new_counts_reproduce_validation_runs": true
+ },
+ "new_findings": {
+  "runs": 40,
+  "runs_with_a_new_finding": 5,
+  "new_findings": 5,
+  "new_counted": 1,
+  "runs_with_new": [
+   {
+    "clip": "G5",
+    "pitch_method": "own",
+    "rounds": 1,
+    "new": 1,
+    "new_counted": 0,
+    "new_findings": [
+     [
+      "d4-010",
+      "D4",
+      "FADE",
+      [
+       78,
+       78
+      ],
+      0.0,
+      false
+     ]
+    ]
+   },
+   {
+    "clip": "G5",
+    "pitch_method": "own",
+    "rounds": 2,
+    "new": 1,
+    "new_counted": 0,
+    "new_findings": [
+     [
+      "d4-012",
+      "D4",
+      "FADE",
+      [
+       78,
+       78
+      ],
+      0.0,
+      false
+     ]
+    ]
+   },
+   {
+    "clip": "G5",
+    "pitch_method": "contour",
+    "rounds": 1,
+    "new": 1,
+    "new_counted": 0,
+    "new_findings": [
+     [
+      "d4-010",
+      "D4",
+      "FADE",
+      [
+       78,
+       78
+      ],
+      0.0,
+      false
+     ]
+    ]
+   },
+   {
+    "clip": "G5",
+    "pitch_method": "contour",
+    "rounds": 2,
+    "new": 1,
+    "new_counted": 0,
+    "new_findings": [
+     [
+      "d4-009",
+      "D4",
+      "FADE",
+      [
+       78,
+       78
+      ],
+      0.0,
+      false
+     ]
+    ]
+   },
+   {
+    "clip": "natural_rush",
+    "pitch_method": "own",
+    "rounds": 1,
+    "new": 1,
+    "new_counted": 1,
+    "new_findings": [
+     [
+      "d1-005",
+      "D1",
+      "DRAG",
+      [
+       32,
+       33
+      ],
+      0.64,
+      true
+     ]
+    ]
+   }
+  ],
+  "product_own_round1": {
+   "runs": 14,
+   "runs_with_a_new_finding": 2,
+   "new_findings": 2
+  },
+  "correction": "the earlier text '0 new findings except natural_rush round 1' is wrong: see runs_with_new"
+ },
+ "self_breaks": {
+  "detector_selfref_sha256": "3768cdc0f8a9d2ad8f955d33128b4bc359c015afdf98a60ffec65eb4b74dd8c3",
+  "readers": 985,
+  "readers_by_source": {
+   "accent": 394,
+   "ears": 424,
+   "gettysburg": 10,
+   "poetry": 157
+  },
+  "readers_with_a_d2_finding": 36,
+  "d2_longer_pause_findings": 32,
+  "fix_leaves_pause_below_pause_threshold": 32,
+  "share_of_other_readers_pausing_at_flagged_boundary": {
+   "n": 32,
+   "median": 0.084,
+   "q25": 0.04,
+   "q75": 0.169,
+   "min": 0.0,
+   "max": 0.9
+  },
+  "flagged_boundary_others_pausing_at_least": {
+   "0.1": 12,
+   "0.25": 8,
+   "0.5": 2
+  },
+  "flagged_boundary_any_other_reader_pausing": 31,
+  "flagged_boundary_is_a_majority_phrase_break": 2,
+  "flagged_boundary_majority_break_and_fix_removes_pause": 2,
+  "by_class": {
+   "none": 32
+  },
+  "by_source": {
+   "accent": {
+    "findings": 25,
+    "majority_break": 0
+   },
+   "gettysburg": {
+    "findings": 3,
+    "majority_break": 0
+   },
+   "poetry": {
+    "findings": 4,
+    "majority_break": 2
+   }
+  },
+  "base_rate_unpunctuated_boundaries": {
+   "boundaries": 2653,
+   "share_pausing": {
+    "n": 2653,
+    "median": 0.0,
+    "q25": 0.0,
+    "q75": 0.0,
+    "min": 0.0,
+    "max": 1.0
+   },
+   "mean_share_pausing": 0.0436,
+   "readers_pausing_at_least": {
+    "0.1": 421,
+    "0.25": 165,
+    "0.5": 63
+   },
+   "any_reader_pausing": 587
+  },
+  "d2_shorter_pause_findings": 23,
+  "share_of_other_readers_pausing_at_shortened_boundary": {
+   "n": 23,
+   "median": 0.807,
+   "q25": 0.417,
+   "q75": 1.0,
+   "min": 0.111,
+   "max": 1.0
+  },
+  "shorter_where_minority_of_others_pause": 6
+ }
+}

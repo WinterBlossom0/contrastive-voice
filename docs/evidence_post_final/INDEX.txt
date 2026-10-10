@@ -1,0 +1,50 @@
+Evidence of the two features added after the final evaluation
+=============================================================
+
+Both features were added after the single final evaluation of 2026-10-07 IST. The frozen detector
+(models/detector.json, sha256 d5935d3f8eeaf928a143b9b04db0c4250604a6c17f5336af87ef124c090758b6, configuration
+782d7df7) and every pre-registered number in docs/evidence_final_782d7df7/ are unchanged. Nothing here replaces a
+pre-registered number. Report section: docs/technical.md, "Added after the final evaluation".
+
+Files
+-----
+
+Fix your speech (src/cvoice/repair.py)
+- repair_validation_summary.txt   Readable summary of every validation section, with definitions and every miss
+                                  (copy of the generated summary, 2026-10-10 10:46 IST).
+- repair_validation_summary.json  The same summary with every row (controls, clean regions, detector-free
+                                  instruments, inverse recovery, residual shares, new findings, no-reference pause
+                                  fixes on fit-phase readers).
+- repair_validation_rows.json     Per-run rows of the 40 gallery repair runs (14 flagged clips x pitch method x
+                                  rounds 1 and 2), dose checks and level checks.
+  Computed with src/cvoice/repair.py sha256 0cf2371cebf986776a54b62420eff2b4e8452791a5218fc536a586a1a1a4a52e.
+  The repository file differs from it only in names and comments (the null chain renamed from "placebo").
+  No test-split data was read.
+- listening_test_design.txt       Pre-registered design of a blind listening test (MUSHRA-style, 12 spots). No
+                                  listener data exists yet: there is no perceptual evidence.
+
+No-reference rough check (src/cvoice/selfref.py, models/detector_selfref.json)
+- no_reference_variants_train_val.json  Every design variant on train and validation only, including the
+                                        rejected text model norms_d1.
+- no_reference_test_results.json        The single test-split run (2026-10-10 09:45 IST). One field was changed
+                                        in this copy: detector.path, from an absolute local path to
+                                        "models/detector_selfref.json". sha256 of the unchanged original:
+                                        7619b87dfdcbf01cf39b05f544e408a8de444215febfdac3dfe8bb6887a44e05.
+- duration_norms_fit_report.json        Fit report of the word-duration norms from LibriTTS (Zen et al. 2019,
+                                        CC BY 4.0; OpenSLR SLR60 dev-clean and test-clean). The norms were tried and
+                                        not adopted (models/duration_norms.json is on no shipped path).
+
+Report detail
+- report_detail.txt               Full form of the passages that the PDF of docs/technical.md shortens in
+                                  section 10 (method, every check row, the full limits). Values unchanged.
+
+Hashes recorded with the single no-reference test run
+-----------------------------------------------------
+- models/detector_selfref.json   sha256 6dd3adc53d7f3a48d7a94fb889a01d0dd9958b9c05769d7765f125c1d6910418
+- selfref_sha256 (in that file)  3768cdc0f8a9d2ad8f955d33128b4bc359c015afdf98a60ffec65eb4b74dd8c3
+- src/cvoice/selfref.py          sha256 025fd98a4cdefd527aa5bb1775dd5d98193b113273cfc11b50d8ca742da38359
+- git commit at the run          1d160d8a02347d25b9408e2c833caf78c4758f1d (with the three files above uncommitted)
+The repository files models/detector_selfref.json and src/cvoice/selfref.py have these hashes, so the shipped
+mode is the tested one.
+
+SHA256SUMS holds the sha256 of every file in this folder except itself.

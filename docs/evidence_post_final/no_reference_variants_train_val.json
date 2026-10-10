@@ -1,0 +1,5302 @@
+[
+ {
+  "extra_null_sources": [],
+  "gates_train": {
+   "n_clips": 50,
+   "violations": [
+    "gwbush_911_2001__G5: G5 scores 92.84 > 50.0",
+    "gwbush_911_2001__identity: identity scores 97.03",
+    "harris_uncsw_2021__G5: G5 scores 96.30 > 50.0",
+    "hclinton_tomorrow_2010__G5: G5 scores 97.84 > 50.0",
+    "obama_weekly_2009__G5: G5 scores 96.41 > 50.0",
+    "reagan_farewell_1989__G5: G5 scores 96.08 > 50.0",
+    "reagan_farewell_1989: ladder not non-increasing (G1 99.57, G3 99.91, G5 96.08)"
+   ]
+  },
+  "gates_val": {
+   "n_clips": 20,
+   "violations": [
+    "eisenhower_farewell_1961__G5: G5 scores 95.78 > 50.0",
+    "eisenhower_farewell_1961__identity: identity scores 98.96",
+    "lbush_radio_2001__G5: G5 scores 96.85 > 50.0",
+    "eisenhower_farewell_1961: ladder not non-increasing (G1 99.29, G3 99.56, G5 95.78)"
+   ]
+  },
+  "h": {
+   "D1+": 3.35,
+   "D1-": 2.85,
+   "D2+": 2.4,
+   "D2-": 2.85,
+   "D3-": 3.0,
+   "D5-": 2.8,
+   "D6-": 2.05,
+   "D9-": 6.4
+  },
+  "name": "frozen_leak",
+  "options": {
+   "boundary_strength": false,
+   "tight_pauses": false
+  },
+  "pmax_factor": 1.0006,
+  "position": {
+   "D3": [
+    0.0,
+    0.049957,
+    0.033721,
+    -0.146607
+   ]
+  },
+  "results": {
+   "core8|L1|train": {
+    "once_f1": 0.167,
+    "once_tp_fp_dup_fn": [
+     4,
+     4,
+     0,
+     36
+    ],
+    "pre_f1": 0.167,
+    "pre_tp_fp_fn": [
+     4,
+     4,
+     36
+    ]
+   },
+   "core8|L1|val": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     5,
+     0,
+     16
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     5,
+     16
+    ]
+   },
+   "core8|L2+L3|train": {
+    "once_f1": 0.656,
+    "once_tp_fp_dup_fn": [
+     43,
+     8,
+     0,
+     37
+    ],
+    "pre_f1": 0.656,
+    "pre_tp_fp_fn": [
+     43,
+     8,
+     37
+    ]
+   },
+   "core8|L2+L3|val": {
+    "once_f1": 0.561,
+    "once_tp_fp_dup_fn": [
+     16,
+     9,
+     0,
+     16
+    ],
+    "pre_f1": 0.561,
+    "pre_tp_fp_fn": [
+     16,
+     9,
+     16
+    ]
+   },
+   "lab_passed|L1|train": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     2,
+     0,
+     5
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     2,
+     5
+    ]
+   },
+   "lab_passed|L1|val": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     1,
+     0,
+     2
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     1,
+     2
+    ]
+   },
+   "lab_passed|L2+L3|train": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     1,
+     0,
+     10
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     1,
+     10
+    ]
+   },
+   "lab_passed|L2+L3|val": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     0,
+     0,
+     4
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     0,
+     4
+    ]
+   },
+   "noise|train": 1,
+   "noise|val": 2,
+   "nulls|train": {
+    "by_key": {
+     "D2-": 6
+    },
+    "minutes": 13.359,
+    "per_minute": 0.449,
+    "regions": 6
+   },
+   "nulls|val": {
+    "by_key": {
+     "D1-": 6,
+     "D3-": 12
+    },
+    "minutes": 5.932,
+    "per_minute": 3.034,
+    "regions": 18
+   },
+   "synthetic_only|L1|train": {
+    "once_f1": 0.065,
+    "once_tp_fp_dup_fn": [
+     2,
+     13,
+     0,
+     45
+    ],
+    "pre_f1": 0.065,
+    "pre_tp_fp_fn": [
+     2,
+     13,
+     45
+    ]
+   },
+   "synthetic_only|L1|val": {
+    "once_f1": 0.071,
+    "once_tp_fp_dup_fn": [
+     1,
+     13,
+     0,
+     13
+    ],
+    "pre_f1": 0.071,
+    "pre_tp_fp_fn": [
+     1,
+     13,
+     13
+    ]
+   },
+   "synthetic_only|L2+L3|train": {
+    "once_f1": 0.07,
+    "once_tp_fp_dup_fn": [
+     5,
+     42,
+     0,
+     90
+    ],
+    "pre_f1": 0.07,
+    "pre_tp_fp_fn": [
+     5,
+     42,
+     90
+    ]
+   },
+   "synthetic_only|L2+L3|val": {
+    "once_f1": 0.077,
+    "once_tp_fp_dup_fn": [
+     2,
+     22,
+     0,
+     26
+    ],
+    "pre_f1": 0.077,
+    "pre_tp_fp_fn": [
+     2,
+     22,
+     26
+    ]
+   }
+  },
+  "scales": {
+   "D1": 0.157686,
+   "D2+": 0.44,
+   "D2-": 0.18,
+   "D3": 0.336472,
+   "D5": 2.497436,
+   "D6": 0.223144,
+   "D9": 0.121122
+  },
+  "seconds": 32.1,
+  "selection": {
+   "budget_regions": 6.679325,
+   "common_start": 4.8,
+   "null_minutes": 13.359,
+   "null_regions": 6,
+   "rule": "per-key h: R1 objective (strict train F1, controls counted as false) under the train-null budget; start at the best common h; coordinate ascent; ties keep the smaller h sum",
+   "sweeps": 3,
+   "train": {
+    "F1": 0.5695364238410596,
+    "FN": 47,
+    "FP": 18,
+    "TP": 43,
+    "control_regions": 9
+   }
+  },
+  "text_model": "phones",
+  "val_noise_in_train_controls": true
+ },
+ {
+  "extra_null_sources": [],
+  "gates_train": {
+   "n_clips": 50,
+   "violations": [
+    "gwbush_911_2001__G5: G5 scores 92.84 > 50.0",
+    "gwbush_911_2001__identity: identity scores 97.03",
+    "harris_uncsw_2021__G5: G5 scores 96.30 > 50.0",
+    "hclinton_tomorrow_2010__G5: G5 scores 97.84 > 50.0",
+    "obama_weekly_2009__G5: G5 scores 96.41 > 50.0",
+    "reagan_farewell_1989__G5: G5 scores 96.08 > 50.0",
+    "reagan_farewell_1989: ladder not non-increasing (G1 99.57, G3 99.91, G5 96.08)"
+   ]
+  },
+  "gates_val": {
+   "n_clips": 20,
+   "violations": [
+    "eisenhower_farewell_1961__G5: G5 scores 95.78 > 50.0",
+    "eisenhower_farewell_1961__identity: identity scores 98.96",
+    "lbush_radio_2001__G5: G5 scores 96.85 > 50.0",
+    "eisenhower_farewell_1961: ladder not non-increasing (G1 99.29, G3 99.56, G5 95.78)"
+   ]
+  },
+  "h": {
+   "D1+": 3.35,
+   "D1-": 2.85,
+   "D2+": 1.25,
+   "D2-": 2.85,
+   "D3-": 3.0,
+   "D5-": 2.8,
+   "D6-": 2.05,
+   "D9-": 6.4
+  },
+  "name": "a_tight",
+  "options": {
+   "boundary_strength": false,
+   "tight_pauses": true
+  },
+  "pmax_factor": 1.0006,
+  "position": {
+   "D3": [
+    0.0,
+    0.049957,
+    0.033721,
+    -0.146607
+   ]
+  },
+  "results": {
+   "core8|L1|train": {
+    "once_f1": 0.167,
+    "once_tp_fp_dup_fn": [
+     4,
+     4,
+     0,
+     36
+    ],
+    "pre_f1": 0.167,
+    "pre_tp_fp_fn": [
+     4,
+     4,
+     36
+    ]
+   },
+   "core8|L1|val": {
+    "once_f1": 0.091,
+    "once_tp_fp_dup_fn": [
+     1,
+     5,
+     0,
+     15
+    ],
+    "pre_f1": 0.091,
+    "pre_tp_fp_fn": [
+     1,
+     5,
+     15
+    ]
+   },
+   "core8|L2+L3|train": {
+    "once_f1": 0.625,
+    "once_tp_fp_dup_fn": [
+     40,
+     8,
+     0,
+     40
+    ],
+    "pre_f1": 0.625,
+    "pre_tp_fp_fn": [
+     40,
+     8,
+     40
+    ]
+   },
+   "core8|L2+L3|val": {
+    "once_f1": 0.536,
+    "once_tp_fp_dup_fn": [
+     15,
+     9,
+     0,
+     17
+    ],
+    "pre_f1": 0.536,
+    "pre_tp_fp_fn": [
+     15,
+     9,
+     17
+    ]
+   },
+   "lab_passed|L1|train": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     2,
+     0,
+     5
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     2,
+     5
+    ]
+   },
+   "lab_passed|L1|val": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     1,
+     0,
+     2
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     1,
+     2
+    ]
+   },
+   "lab_passed|L2+L3|train": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     1,
+     0,
+     10
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     1,
+     10
+    ]
+   },
+   "lab_passed|L2+L3|val": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     0,
+     0,
+     4
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     0,
+     4
+    ]
+   },
+   "noise|train": 1,
+   "noise|val": 2,
+   "nulls|train": {
+    "by_key": {
+     "D2-": 6
+    },
+    "minutes": 13.359,
+    "per_minute": 0.449,
+    "regions": 6
+   },
+   "nulls|val": {
+    "by_key": {
+     "D1-": 6,
+     "D3-": 12
+    },
+    "minutes": 5.932,
+    "per_minute": 3.034,
+    "regions": 18
+   },
+   "synthetic_only|L1|train": {
+    "once_f1": 0.065,
+    "once_tp_fp_dup_fn": [
+     2,
+     13,
+     0,
+     45
+    ],
+    "pre_f1": 0.065,
+    "pre_tp_fp_fn": [
+     2,
+     13,
+     45
+    ]
+   },
+   "synthetic_only|L1|val": {
+    "once_f1": 0.069,
+    "once_tp_fp_dup_fn": [
+     1,
+     14,
+     0,
+     13
+    ],
+    "pre_f1": 0.069,
+    "pre_tp_fp_fn": [
+     1,
+     14,
+     13
+    ]
+   },
+   "synthetic_only|L2+L3|train": {
+    "once_f1": 0.144,
+    "once_tp_fp_dup_fn": [
+     10,
+     34,
+     0,
+     85
+    ],
+    "pre_f1": 0.144,
+    "pre_tp_fp_fn": [
+     10,
+     34,
+     85
+    ]
+   },
+   "synthetic_only|L2+L3|val": {
+    "once_f1": 0.207,
+    "once_tp_fp_dup_fn": [
+     6,
+     24,
+     0,
+     22
+    ],
+    "pre_f1": 0.207,
+    "pre_tp_fp_fn": [
+     6,
+     24,
+     22
+    ]
+   }
+  },
+  "scales": {
+   "D1": 0.157686,
+   "D2+": 0.28,
+   "D2-": 0.18,
+   "D3": 0.336472,
+   "D5": 2.497436,
+   "D6": 0.223144,
+   "D9": 0.121122
+  },
+  "seconds": 39.0,
+  "selection": {
+   "budget_regions": 6.679325,
+   "common_start": 4.8,
+   "null_minutes": 13.359,
+   "null_regions": 6,
+   "rule": "per-key h: R1 objective (strict train F1, controls counted as false) under the train-null budget; start at the best common h; coordinate ascent; ties keep the smaller h sum",
+   "sweeps": 3,
+   "train": {
+    "F1": 0.547945205479452,
+    "FN": 50,
+    "FP": 16,
+    "TP": 40,
+    "control_regions": 7
+   }
+  },
+  "text_model": "phones",
+  "val_noise_in_train_controls": false
+ },
+ {
+  "extra_null_sources": [],
+  "gates_train": {
+   "n_clips": 50,
+   "violations": [
+    "gwbush_911_2001__G5: G5 scores 92.84 > 50.0",
+    "gwbush_911_2001__identity: identity scores 96.47",
+    "harris_uncsw_2021__G5: G5 scores 96.30 > 50.0",
+    "hclinton_tomorrow_2010__G5: G5 scores 97.84 > 50.0",
+    "obama_weekly_2009__G5: G5 scores 96.41 > 50.0",
+    "reagan_farewell_1989__G5: G5 scores 96.08 > 50.0",
+    "reagan_farewell_1989: ladder not non-increasing (G1 99.57, G3 99.91, G5 96.08)"
+   ]
+  },
+  "gates_val": {
+   "n_clips": 20,
+   "violations": [
+    "eisenhower_farewell_1961__G5: G5 scores 95.78 > 50.0",
+    "eisenhower_farewell_1961__identity: identity scores 98.96",
+    "lbush_radio_2001__G5: G5 scores 96.85 > 50.0",
+    "eisenhower_farewell_1961: ladder not non-increasing (G1 99.29, G3 99.56, G5 95.78)"
+   ]
+  },
+  "h": {
+   "D1+": 3.35,
+   "D1-": 2.85,
+   "D2+": 2.4,
+   "D2-": 3.2,
+   "D3-": 3.0,
+   "D5-": 2.8,
+   "D6-": 2.05,
+   "D9-": 6.4
+  },
+  "name": "b_strength",
+  "options": {
+   "boundary_strength": true,
+   "tight_pauses": false
+  },
+  "pmax_factor": 1.0006,
+  "position": {
+   "D3": [
+    0.0,
+    0.049957,
+    0.033721,
+    -0.146607
+   ]
+  },
+  "results": {
+   "core8|L1|train": {
+    "once_f1": 0.167,
+    "once_tp_fp_dup_fn": [
+     4,
+     4,
+     0,
+     36
+    ],
+    "pre_f1": 0.167,
+    "pre_tp_fp_fn": [
+     4,
+     4,
+     36
+    ]
+   },
+   "core8|L1|val": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     5,
+     0,
+     16
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     5,
+     16
+    ]
+   },
+   "core8|L2+L3|train": {
+    "once_f1": 0.646,
+    "once_tp_fp_dup_fn": [
+     42,
+     8,
+     0,
+     38
+    ],
+    "pre_f1": 0.646,
+    "pre_tp_fp_fn": [
+     42,
+     8,
+     38
+    ]
+   },
+   "core8|L2+L3|val": {
+    "once_f1": 0.536,
+    "once_tp_fp_dup_fn": [
+     15,
+     9,
+     0,
+     17
+    ],
+    "pre_f1": 0.536,
+    "pre_tp_fp_fn": [
+     15,
+     9,
+     17
+    ]
+   },
+   "lab_passed|L1|train": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     1,
+     0,
+     5
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     1,
+     5
+    ]
+   },
+   "lab_passed|L1|val": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     1,
+     0,
+     2
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     1,
+     2
+    ]
+   },
+   "lab_passed|L2+L3|train": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     1,
+     0,
+     10
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     1,
+     10
+    ]
+   },
+   "lab_passed|L2+L3|val": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     0,
+     0,
+     4
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     0,
+     4
+    ]
+   },
+   "noise|train": 1,
+   "noise|val": 2,
+   "nulls|train": {
+    "by_key": {
+     "D2-": 6
+    },
+    "minutes": 13.359,
+    "per_minute": 0.449,
+    "regions": 6
+   },
+   "nulls|val": {
+    "by_key": {
+     "D1-": 6,
+     "D3-": 12
+    },
+    "minutes": 5.932,
+    "per_minute": 3.034,
+    "regions": 18
+   },
+   "synthetic_only|L1|train": {
+    "once_f1": 0.066,
+    "once_tp_fp_dup_fn": [
+     2,
+     12,
+     0,
+     45
+    ],
+    "pre_f1": 0.066,
+    "pre_tp_fp_fn": [
+     2,
+     12,
+     45
+    ]
+   },
+   "synthetic_only|L1|val": {
+    "once_f1": 0.071,
+    "once_tp_fp_dup_fn": [
+     1,
+     13,
+     0,
+     13
+    ],
+    "pre_f1": 0.071,
+    "pre_tp_fp_fn": [
+     1,
+     13,
+     13
+    ]
+   },
+   "synthetic_only|L2+L3|train": {
+    "once_f1": 0.07,
+    "once_tp_fp_dup_fn": [
+     5,
+     42,
+     0,
+     90
+    ],
+    "pre_f1": 0.07,
+    "pre_tp_fp_fn": [
+     5,
+     42,
+     90
+    ]
+   },
+   "synthetic_only|L2+L3|val": {
+    "once_f1": 0.077,
+    "once_tp_fp_dup_fn": [
+     2,
+     22,
+     0,
+     26
+    ],
+    "pre_f1": 0.077,
+    "pre_tp_fp_fn": [
+     2,
+     22,
+     26
+    ]
+   }
+  },
+  "scales": {
+   "D1": 0.157686,
+   "D2+": 0.44,
+   "D2-": 0.22,
+   "D3": 0.336472,
+   "D5": 2.497436,
+   "D6": 0.223144,
+   "D9": 0.121122
+  },
+  "seconds": 40.0,
+  "selection": {
+   "budget_regions": 6.679325,
+   "common_start": 4.35,
+   "null_minutes": 13.359,
+   "null_regions": 6,
+   "rule": "per-key h: R1 objective (strict train F1, controls counted as false) under the train-null budget; start at the best common h; coordinate ascent; ties keep the smaller h sum",
+   "sweeps": 3,
+   "train": {
+    "F1": 0.5675675675675675,
+    "FN": 48,
+    "FP": 16,
+    "TP": 42,
+    "control_regions": 7
+   }
+  },
+  "text_model": "phones",
+  "val_noise_in_train_controls": false
+ },
+ {
+  "extra_null_sources": [],
+  "gates_train": {
+   "n_clips": 50,
+   "violations": [
+    "gwbush_911_2001__G5: G5 scores 92.84 > 50.0",
+    "gwbush_911_2001__identity: identity scores 96.47",
+    "harris_uncsw_2021__G5: G5 scores 96.30 > 50.0",
+    "hclinton_tomorrow_2010__G5: G5 scores 97.84 > 50.0",
+    "obama_weekly_2009__G5: G5 scores 96.41 > 50.0",
+    "reagan_farewell_1989__G5: G5 scores 96.08 > 50.0",
+    "reagan_farewell_1989: ladder not non-increasing (G1 99.57, G3 99.91, G5 96.08)"
+   ]
+  },
+  "gates_val": {
+   "n_clips": 20,
+   "violations": [
+    "eisenhower_farewell_1961__G5: G5 scores 95.78 > 50.0",
+    "eisenhower_farewell_1961__identity: identity scores 98.96",
+    "lbush_radio_2001__G5: G5 scores 96.85 > 50.0",
+    "eisenhower_farewell_1961: ladder not non-increasing (G1 99.29, G3 99.56, G5 95.78)"
+   ]
+  },
+  "h": {
+   "D1+": 3.35,
+   "D1-": 2.85,
+   "D2+": 1.25,
+   "D2-": 3.2,
+   "D3-": 3.0,
+   "D5-": 2.8,
+   "D6-": 2.05,
+   "D9-": 6.4
+  },
+  "name": "ab",
+  "options": {
+   "boundary_strength": true,
+   "tight_pauses": true
+  },
+  "pmax_factor": 1.0006,
+  "position": {
+   "D3": [
+    0.0,
+    0.049957,
+    0.033721,
+    -0.146607
+   ]
+  },
+  "results": {
+   "core8|L1|train": {
+    "once_f1": 0.167,
+    "once_tp_fp_dup_fn": [
+     4,
+     4,
+     0,
+     36
+    ],
+    "pre_f1": 0.167,
+    "pre_tp_fp_fn": [
+     4,
+     4,
+     36
+    ]
+   },
+   "core8|L1|val": {
+    "once_f1": 0.091,
+    "once_tp_fp_dup_fn": [
+     1,
+     5,
+     0,
+     15
+    ],
+    "pre_f1": 0.091,
+    "pre_tp_fp_fn": [
+     1,
+     5,
+     15
+    ]
+   },
+   "core8|L2+L3|train": {
+    "once_f1": 0.614,
+    "once_tp_fp_dup_fn": [
+     39,
+     8,
+     0,
+     41
+    ],
+    "pre_f1": 0.614,
+    "pre_tp_fp_fn": [
+     39,
+     8,
+     41
+    ]
+   },
+   "core8|L2+L3|val": {
+    "once_f1": 0.509,
+    "once_tp_fp_dup_fn": [
+     14,
+     9,
+     0,
+     18
+    ],
+    "pre_f1": 0.509,
+    "pre_tp_fp_fn": [
+     14,
+     9,
+     18
+    ]
+   },
+   "lab_passed|L1|train": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     1,
+     0,
+     5
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     1,
+     5
+    ]
+   },
+   "lab_passed|L1|val": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     1,
+     0,
+     2
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     1,
+     2
+    ]
+   },
+   "lab_passed|L2+L3|train": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     1,
+     0,
+     10
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     1,
+     10
+    ]
+   },
+   "lab_passed|L2+L3|val": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     0,
+     0,
+     4
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     0,
+     4
+    ]
+   },
+   "noise|train": 1,
+   "noise|val": 2,
+   "nulls|train": {
+    "by_key": {
+     "D2-": 6
+    },
+    "minutes": 13.359,
+    "per_minute": 0.449,
+    "regions": 6
+   },
+   "nulls|val": {
+    "by_key": {
+     "D1-": 6,
+     "D3-": 12
+    },
+    "minutes": 5.932,
+    "per_minute": 3.034,
+    "regions": 18
+   },
+   "synthetic_only|L1|train": {
+    "once_f1": 0.066,
+    "once_tp_fp_dup_fn": [
+     2,
+     12,
+     0,
+     45
+    ],
+    "pre_f1": 0.066,
+    "pre_tp_fp_fn": [
+     2,
+     12,
+     45
+    ]
+   },
+   "synthetic_only|L1|val": {
+    "once_f1": 0.069,
+    "once_tp_fp_dup_fn": [
+     1,
+     14,
+     0,
+     13
+    ],
+    "pre_f1": 0.069,
+    "pre_tp_fp_fn": [
+     1,
+     14,
+     13
+    ]
+   },
+   "synthetic_only|L2+L3|train": {
+    "once_f1": 0.144,
+    "once_tp_fp_dup_fn": [
+     10,
+     34,
+     0,
+     85
+    ],
+    "pre_f1": 0.144,
+    "pre_tp_fp_fn": [
+     10,
+     34,
+     85
+    ]
+   },
+   "synthetic_only|L2+L3|val": {
+    "once_f1": 0.207,
+    "once_tp_fp_dup_fn": [
+     6,
+     24,
+     0,
+     22
+    ],
+    "pre_f1": 0.207,
+    "pre_tp_fp_fn": [
+     6,
+     24,
+     22
+    ]
+   }
+  },
+  "scales": {
+   "D1": 0.157686,
+   "D2+": 0.28,
+   "D2-": 0.22,
+   "D3": 0.336472,
+   "D5": 2.497436,
+   "D6": 0.223144,
+   "D9": 0.121122
+  },
+  "seconds": 44.8,
+  "selection": {
+   "budget_regions": 6.679325,
+   "common_start": 4.35,
+   "null_minutes": 13.359,
+   "null_regions": 6,
+   "rule": "per-key h: R1 objective (strict train F1, controls counted as false) under the train-null budget; start at the best common h; coordinate ascent; ties keep the smaller h sum",
+   "sweeps": 3,
+   "train": {
+    "F1": 0.5379310344827586,
+    "FN": 51,
+    "FP": 16,
+    "TP": 39,
+    "control_regions": 7
+   }
+  },
+  "text_model": "phones",
+  "val_noise_in_train_controls": false
+ },
+ {
+  "extra_null_sources": [],
+  "gates_train": {
+   "n_clips": 50,
+   "violations": [
+    "gwbush_911_2001__G5: G5 scores 92.84 > 50.0",
+    "gwbush_911_2001__identity: identity scores 97.03",
+    "harris_uncsw_2021__G5: G5 scores 96.30 > 50.0",
+    "hclinton_tomorrow_2010__G5: G5 scores 97.84 > 50.0",
+    "obama_weekly_2009__G5: G5 scores 96.41 > 50.0",
+    "reagan_farewell_1989__G5: G5 scores 96.08 > 50.0",
+    "reagan_farewell_1989: ladder not non-increasing (G1 99.57, G3 99.91, G5 96.08)"
+   ]
+  },
+  "gates_val": {
+   "n_clips": 20,
+   "violations": [
+    "eisenhower_farewell_1961__G5: G5 scores 95.78 > 50.0",
+    "eisenhower_farewell_1961__identity: identity scores 98.96",
+    "lbush_radio_2001__G5: G5 scores 96.85 > 50.0",
+    "eisenhower_farewell_1961: ladder not non-increasing (G1 99.29, G3 99.56, G5 95.78)"
+   ]
+  },
+  "h": {
+   "D1+": 3.35,
+   "D1-": 2.85,
+   "D2+": 2.4,
+   "D2-": 2.85,
+   "D3-": 3.0,
+   "D5-": 2.8,
+   "D6-": 2.05,
+   "D9-": 6.4
+  },
+  "name": "c_emphasis",
+  "options": {
+   "boundary_strength": false,
+   "tight_pauses": false
+  },
+  "pmax_factor": 1.0006,
+  "position": {
+   "D3": [
+    0.0,
+    0.049957,
+    0.033721,
+    -0.146607
+   ]
+  },
+  "results": {
+   "core8|L1|train": {
+    "once_f1": 0.167,
+    "once_tp_fp_dup_fn": [
+     4,
+     4,
+     0,
+     36
+    ],
+    "pre_f1": 0.167,
+    "pre_tp_fp_fn": [
+     4,
+     4,
+     36
+    ]
+   },
+   "core8|L1|val": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     5,
+     0,
+     16
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     5,
+     16
+    ]
+   },
+   "core8|L2+L3|train": {
+    "once_f1": 0.656,
+    "once_tp_fp_dup_fn": [
+     43,
+     8,
+     0,
+     37
+    ],
+    "pre_f1": 0.656,
+    "pre_tp_fp_fn": [
+     43,
+     8,
+     37
+    ]
+   },
+   "core8|L2+L3|val": {
+    "once_f1": 0.561,
+    "once_tp_fp_dup_fn": [
+     16,
+     9,
+     0,
+     16
+    ],
+    "pre_f1": 0.561,
+    "pre_tp_fp_fn": [
+     16,
+     9,
+     16
+    ]
+   },
+   "emphasis": {
+    "flat_below": -0.366,
+    "train": {
+     "edited_contrast_median": 0.592,
+     "edited_fired": 1,
+     "edited_sentences": 30,
+     "null_contrast_median": 0.625,
+     "null_sentences": 126,
+     "null_sentences_fired": 0
+    },
+    "train_null_contrast_quantiles": [
+     -0.366,
+     -0.024,
+     0.137,
+     0.625
+    ],
+    "uniform_above": 0.292,
+    "val": {
+     "edited_contrast_median": 0.459,
+     "edited_fired": 2,
+     "edited_sentences": 12,
+     "null_contrast_median": 0.474,
+     "null_sentences": 42,
+     "null_sentences_fired": 13
+    }
+   },
+   "lab_passed|L1|train": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     2,
+     0,
+     5
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     2,
+     5
+    ]
+   },
+   "lab_passed|L1|val": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     1,
+     0,
+     2
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     1,
+     2
+    ]
+   },
+   "lab_passed|L2+L3|train": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     1,
+     0,
+     10
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     1,
+     10
+    ]
+   },
+   "lab_passed|L2+L3|val": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     0,
+     0,
+     4
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     0,
+     4
+    ]
+   },
+   "noise|train": 1,
+   "noise|val": 2,
+   "nulls|train": {
+    "by_key": {
+     "D2-": 6
+    },
+    "minutes": 13.359,
+    "per_minute": 0.449,
+    "regions": 6
+   },
+   "nulls|val": {
+    "by_key": {
+     "D1-": 6,
+     "D3-": 12
+    },
+    "minutes": 5.932,
+    "per_minute": 3.034,
+    "regions": 18
+   },
+   "synthetic_only|L1|train": {
+    "once_f1": 0.065,
+    "once_tp_fp_dup_fn": [
+     2,
+     13,
+     0,
+     45
+    ],
+    "pre_f1": 0.065,
+    "pre_tp_fp_fn": [
+     2,
+     13,
+     45
+    ]
+   },
+   "synthetic_only|L1|val": {
+    "once_f1": 0.071,
+    "once_tp_fp_dup_fn": [
+     1,
+     13,
+     0,
+     13
+    ],
+    "pre_f1": 0.071,
+    "pre_tp_fp_fn": [
+     1,
+     13,
+     13
+    ]
+   },
+   "synthetic_only|L2+L3|train": {
+    "once_f1": 0.07,
+    "once_tp_fp_dup_fn": [
+     5,
+     42,
+     0,
+     90
+    ],
+    "pre_f1": 0.07,
+    "pre_tp_fp_fn": [
+     5,
+     42,
+     90
+    ]
+   },
+   "synthetic_only|L2+L3|val": {
+    "once_f1": 0.077,
+    "once_tp_fp_dup_fn": [
+     2,
+     22,
+     0,
+     26
+    ],
+    "pre_f1": 0.077,
+    "pre_tp_fp_fn": [
+     2,
+     22,
+     26
+    ]
+   }
+  },
+  "scales": {
+   "D1": 0.157686,
+   "D2+": 0.44,
+   "D2-": 0.18,
+   "D3": 0.336472,
+   "D5": 2.497436,
+   "D6": 0.223144,
+   "D9": 0.121122
+  },
+  "seconds": 42.0,
+  "selection": {
+   "budget_regions": 6.679325,
+   "common_start": 4.8,
+   "null_minutes": 13.359,
+   "null_regions": 6,
+   "rule": "per-key h: R1 objective (strict train F1, controls counted as false) under the train-null budget; start at the best common h; coordinate ascent; ties keep the smaller h sum",
+   "sweeps": 3,
+   "train": {
+    "F1": 0.5771812080536913,
+    "FN": 47,
+    "FP": 16,
+    "TP": 43,
+    "control_regions": 7
+   }
+  },
+  "text_model": "phones",
+  "val_noise_in_train_controls": false
+ },
+ {
+  "extra_null_sources": [],
+  "gates_train": {
+   "n_clips": 50,
+   "violations": [
+    "gwbush_911_2001__G5: G5 scores 92.84 > 50.0",
+    "gwbush_911_2001__identity: identity scores 97.03",
+    "harris_uncsw_2021__G5: G5 scores 96.30 > 50.0",
+    "hclinton_tomorrow_2010__G5: G5 scores 97.84 > 50.0",
+    "obama_weekly_2009__G5: G5 scores 96.41 > 50.0",
+    "reagan_farewell_1989__G5: G5 scores 96.08 > 50.0",
+    "reagan_farewell_1989: ladder not non-increasing (G1 99.57, G3 99.89, G5 96.08)"
+   ]
+  },
+  "gates_val": {
+   "n_clips": 20,
+   "violations": [
+    "eisenhower_farewell_1961__G5: G5 scores 95.78 > 50.0",
+    "eisenhower_farewell_1961__identity: identity scores 99.19",
+    "lbush_radio_2001__G5: G5 scores 96.85 > 50.0",
+    "eisenhower_farewell_1961: ladder not non-increasing (G1 99.44, G3 99.68, G5 95.78)"
+   ]
+  },
+  "h": {
+   "D1+": 3.35,
+   "D1-": 2.85,
+   "D2+": 2.4,
+   "D2-": 2.85,
+   "D3-": 3.0,
+   "D5-": 2.8,
+   "D6-": 2.05,
+   "D9-": 6.4
+  },
+  "name": "e_final_bins",
+  "options": {
+   "boundary_strength": false,
+   "final_bins": true,
+   "tempo_position": false,
+   "tight_pauses": false
+  },
+  "pmax_factor": 1.0006,
+  "position": {
+   "D3": [
+    0.0,
+    0.049957,
+    0.03215,
+    -0.098812,
+    -0.170094,
+    -0.204392
+   ]
+  },
+  "results": {
+   "core8|L1|train": {
+    "once_f1": 0.167,
+    "once_tp_fp_dup_fn": [
+     4,
+     4,
+     0,
+     36
+    ],
+    "pre_f1": 0.167,
+    "pre_tp_fp_fn": [
+     4,
+     4,
+     36
+    ]
+   },
+   "core8|L1|val": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     5,
+     0,
+     16
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     5,
+     16
+    ]
+   },
+   "core8|L2+L3|train": {
+    "once_f1": 0.656,
+    "once_tp_fp_dup_fn": [
+     43,
+     8,
+     0,
+     37
+    ],
+    "pre_f1": 0.656,
+    "pre_tp_fp_fn": [
+     43,
+     8,
+     37
+    ]
+   },
+   "core8|L2+L3|val": {
+    "once_f1": 0.561,
+    "once_tp_fp_dup_fn": [
+     16,
+     9,
+     0,
+     16
+    ],
+    "pre_f1": 0.561,
+    "pre_tp_fp_fn": [
+     16,
+     9,
+     16
+    ]
+   },
+   "lab_passed|L1|train": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     2,
+     0,
+     5
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     2,
+     5
+    ]
+   },
+   "lab_passed|L1|val": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     1,
+     0,
+     2
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     1,
+     2
+    ]
+   },
+   "lab_passed|L2+L3|train": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     1,
+     0,
+     10
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     1,
+     10
+    ]
+   },
+   "lab_passed|L2+L3|val": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     0,
+     0,
+     4
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     0,
+     4
+    ]
+   },
+   "noise|train": 1,
+   "noise|val": 2,
+   "nulls|train": {
+    "by_key": {
+     "D2-": 6
+    },
+    "minutes": 13.359,
+    "per_minute": 0.449,
+    "regions": 6
+   },
+   "nulls|val": {
+    "by_key": {
+     "D1-": 6,
+     "D3-": 12
+    },
+    "minutes": 5.932,
+    "per_minute": 3.034,
+    "regions": 18
+   },
+   "synthetic_only|L1|train": {
+    "once_f1": 0.065,
+    "once_tp_fp_dup_fn": [
+     2,
+     13,
+     0,
+     45
+    ],
+    "pre_f1": 0.065,
+    "pre_tp_fp_fn": [
+     2,
+     13,
+     45
+    ]
+   },
+   "synthetic_only|L1|val": {
+    "once_f1": 0.074,
+    "once_tp_fp_dup_fn": [
+     1,
+     12,
+     0,
+     13
+    ],
+    "pre_f1": 0.074,
+    "pre_tp_fp_fn": [
+     1,
+     12,
+     13
+    ]
+   },
+   "synthetic_only|L2+L3|train": {
+    "once_f1": 0.07,
+    "once_tp_fp_dup_fn": [
+     5,
+     43,
+     0,
+     90
+    ],
+    "pre_f1": 0.07,
+    "pre_tp_fp_fn": [
+     5,
+     43,
+     90
+    ]
+   },
+   "synthetic_only|L2+L3|val": {
+    "once_f1": 0.08,
+    "once_tp_fp_dup_fn": [
+     2,
+     20,
+     0,
+     26
+    ],
+    "pre_f1": 0.08,
+    "pre_tp_fp_fn": [
+     2,
+     20,
+     26
+    ]
+   }
+  },
+  "scales": {
+   "D1": 0.157686,
+   "D2+": 0.44,
+   "D2-": 0.18,
+   "D3": 0.336472,
+   "D5": 2.497436,
+   "D6": 0.223144,
+   "D9": 0.121122
+  },
+  "seconds": 45.3,
+  "selection": {
+   "budget_regions": 6.679325,
+   "common_start": 4.8,
+   "null_minutes": 13.359,
+   "null_regions": 6,
+   "rule": "per-key h: R1 objective (strict train F1, controls counted as false) under the train-null budget; start at the best common h; coordinate ascent; ties keep the smaller h sum",
+   "sweeps": 3,
+   "train": {
+    "F1": 0.5771812080536913,
+    "FN": 47,
+    "FP": 16,
+    "TP": 43,
+    "control_regions": 7
+   }
+  },
+  "text_model": "phones",
+  "val_noise_in_train_controls": false
+ },
+ {
+  "extra_null_sources": [],
+  "gates_train": {
+   "n_clips": 50,
+   "violations": [
+    "gwbush_911_2001__G5: G5 scores 92.84 > 50.0",
+    "gwbush_911_2001__identity: identity scores 97.03",
+    "harris_uncsw_2021__G5: G5 scores 96.30 > 50.0",
+    "hclinton_tomorrow_2010__G5: G5 scores 97.84 > 50.0",
+    "obama_weekly_2009__G5: G5 scores 96.41 > 50.0",
+    "reagan_farewell_1989__G5: G5 scores 96.08 > 50.0",
+    "reagan_farewell_1989: ladder not non-increasing (G1 99.45, G3 99.91, G5 96.08)"
+   ]
+  },
+  "gates_val": {
+   "n_clips": 20,
+   "violations": [
+    "eisenhower_farewell_1961__G5: G5 scores 95.84 > 50.0",
+    "eisenhower_farewell_1961__identity: identity scores 99.05",
+    "lbush_radio_2001__G5: G5 scores 96.85 > 50.0",
+    "eisenhower_farewell_1961: ladder not non-increasing (G1 99.39, G3 99.63, G5 95.84)"
+   ]
+  },
+  "h": {
+   "D1+": 3.6,
+   "D1-": 3.3,
+   "D2+": 2.4,
+   "D2-": 2.85,
+   "D3-": 3.0,
+   "D5-": 2.8,
+   "D6-": 2.05,
+   "D9-": 6.65
+  },
+  "name": "e_tempo_position",
+  "options": {
+   "boundary_strength": false,
+   "final_bins": false,
+   "tempo_position": true,
+   "tight_pauses": false
+  },
+  "pmax_factor": 1.0006,
+  "position": {
+   "D1": [
+    -0.029653,
+    -0.001682,
+    0.0,
+    0.037653
+   ],
+   "D3": [
+    0.0,
+    0.049957,
+    0.033721,
+    -0.146607
+   ],
+   "D9": [
+    -0.054231,
+    -0.015388,
+    0.004016,
+    0.081998
+   ]
+  },
+  "results": {
+   "core8|L1|train": {
+    "once_f1": 0.17,
+    "once_tp_fp_dup_fn": [
+     4,
+     3,
+     0,
+     36
+    ],
+    "pre_f1": 0.17,
+    "pre_tp_fp_fn": [
+     4,
+     3,
+     36
+    ]
+   },
+   "core8|L1|val": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     5,
+     0,
+     16
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     5,
+     16
+    ]
+   },
+   "core8|L2+L3|train": {
+    "once_f1": 0.636,
+    "once_tp_fp_dup_fn": [
+     41,
+     8,
+     0,
+     39
+    ],
+    "pre_f1": 0.636,
+    "pre_tp_fp_fn": [
+     41,
+     8,
+     39
+    ]
+   },
+   "core8|L2+L3|val": {
+    "once_f1": 0.536,
+    "once_tp_fp_dup_fn": [
+     15,
+     9,
+     0,
+     17
+    ],
+    "pre_f1": 0.536,
+    "pre_tp_fp_fn": [
+     15,
+     9,
+     17
+    ]
+   },
+   "lab_passed|L1|train": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     2,
+     0,
+     5
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     2,
+     5
+    ]
+   },
+   "lab_passed|L1|val": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     1,
+     0,
+     2
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     1,
+     2
+    ]
+   },
+   "lab_passed|L2+L3|train": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     0,
+     0,
+     10
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     0,
+     10
+    ]
+   },
+   "lab_passed|L2+L3|val": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     0,
+     0,
+     4
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     0,
+     4
+    ]
+   },
+   "noise|train": 1,
+   "noise|val": 2,
+   "nulls|train": {
+    "by_key": {
+     "D2-": 6
+    },
+    "minutes": 13.359,
+    "per_minute": 0.449,
+    "regions": 6
+   },
+   "nulls|val": {
+    "by_key": {
+     "D1-": 6,
+     "D3-": 12
+    },
+    "minutes": 5.932,
+    "per_minute": 3.034,
+    "regions": 18
+   },
+   "synthetic_only|L1|train": {
+    "once_f1": 0.066,
+    "once_tp_fp_dup_fn": [
+     2,
+     12,
+     0,
+     45
+    ],
+    "pre_f1": 0.066,
+    "pre_tp_fp_fn": [
+     2,
+     12,
+     45
+    ]
+   },
+   "synthetic_only|L1|val": {
+    "once_f1": 0.077,
+    "once_tp_fp_dup_fn": [
+     1,
+     11,
+     0,
+     13
+    ],
+    "pre_f1": 0.077,
+    "pre_tp_fp_fn": [
+     1,
+     11,
+     13
+    ]
+   },
+   "synthetic_only|L2+L3|train": {
+    "once_f1": 0.073,
+    "once_tp_fp_dup_fn": [
+     5,
+     37,
+     0,
+     90
+    ],
+    "pre_f1": 0.073,
+    "pre_tp_fp_fn": [
+     5,
+     37,
+     90
+    ]
+   },
+   "synthetic_only|L2+L3|val": {
+    "once_f1": 0.078,
+    "once_tp_fp_dup_fn": [
+     2,
+     21,
+     0,
+     26
+    ],
+    "pre_f1": 0.078,
+    "pre_tp_fp_fn": [
+     2,
+     21,
+     26
+    ]
+   }
+  },
+  "scales": {
+   "D1": 0.153124,
+   "D2+": 0.44,
+   "D2-": 0.18,
+   "D3": 0.336472,
+   "D5": 2.497436,
+   "D6": 0.223144,
+   "D9": 0.110035
+  },
+  "seconds": 44.0,
+  "selection": {
+   "budget_regions": 6.679325,
+   "common_start": 5.05,
+   "null_minutes": 13.359,
+   "null_regions": 6,
+   "rule": "per-key h: R1 objective (strict train F1, controls counted as false) under the train-null budget; start at the best common h; coordinate ascent; ties keep the smaller h sum",
+   "sweeps": 3,
+   "train": {
+    "F1": 0.5616438356164384,
+    "FN": 49,
+    "FP": 15,
+    "TP": 41,
+    "control_regions": 7
+   }
+  },
+  "text_model": "phones",
+  "val_noise_in_train_controls": false
+ },
+ {
+  "extra_null_sources": [],
+  "gates_train": {
+   "n_clips": 50,
+   "violations": [
+    "gwbush_911_2001__G5: G5 scores 92.84 > 50.0",
+    "gwbush_911_2001__identity: identity scores 97.03",
+    "harris_uncsw_2021__G5: G5 scores 96.30 > 50.0",
+    "hclinton_tomorrow_2010__G5: G5 scores 97.84 > 50.0",
+    "obama_weekly_2009__G5: G5 scores 96.41 > 50.0",
+    "reagan_farewell_1989__G5: G5 scores 96.08 > 50.0",
+    "reagan_farewell_1989: ladder not non-increasing (G1 99.54, G3 99.89, G5 96.08)"
+   ]
+  },
+  "gates_val": {
+   "n_clips": 20,
+   "violations": [
+    "eisenhower_farewell_1961__G5: G5 scores 95.79 > 50.0",
+    "eisenhower_farewell_1961__identity: identity scores 99.04",
+    "lbush_radio_2001__G5: G5 scores 96.85 > 50.0",
+    "eisenhower_farewell_1961: ladder not non-increasing (G1 99.34, G3 99.51, G5 95.79)"
+   ]
+  },
+  "h": {
+   "D1+": 3.45,
+   "D1-": 3.05,
+   "D2+": 2.4,
+   "D2-": 2.85,
+   "D3-": 3.0,
+   "D5-": 2.8,
+   "D6-": 2.05,
+   "D9-": 6.65
+  },
+  "name": "e_final_tempo",
+  "options": {
+   "boundary_strength": false,
+   "final_bins": true,
+   "tempo_position": true,
+   "tight_pauses": false
+  },
+  "pmax_factor": 1.0006,
+  "position": {
+   "D1": [
+    -0.029653,
+    -0.001682,
+    0.0,
+    0.041292,
+    0.064539,
+    -0.0
+   ],
+   "D3": [
+    0.0,
+    0.049957,
+    0.03215,
+    -0.098812,
+    -0.170094,
+    -0.204392
+   ],
+   "D9": [
+    -0.054231,
+    -0.015388,
+    0.004016,
+    0.060171,
+    0.066818,
+    0.114925
+   ]
+  },
+  "results": {
+   "core8|L1|train": {
+    "once_f1": 0.213,
+    "once_tp_fp_dup_fn": [
+     5,
+     2,
+     0,
+     35
+    ],
+    "pre_f1": 0.213,
+    "pre_tp_fp_fn": [
+     5,
+     2,
+     35
+    ]
+   },
+   "core8|L1|val": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     6,
+     0,
+     16
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     6,
+     16
+    ]
+   },
+   "core8|L2+L3|train": {
+    "once_f1": 0.651,
+    "once_tp_fp_dup_fn": [
+     42,
+     7,
+     0,
+     38
+    ],
+    "pre_f1": 0.651,
+    "pre_tp_fp_fn": [
+     42,
+     7,
+     38
+    ]
+   },
+   "core8|L2+L3|val": {
+    "once_f1": 0.552,
+    "once_tp_fp_dup_fn": [
+     16,
+     10,
+     0,
+     16
+    ],
+    "pre_f1": 0.552,
+    "pre_tp_fp_fn": [
+     16,
+     10,
+     16
+    ]
+   },
+   "lab_passed|L1|train": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     2,
+     0,
+     5
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     2,
+     5
+    ]
+   },
+   "lab_passed|L1|val": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     1,
+     0,
+     2
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     1,
+     2
+    ]
+   },
+   "lab_passed|L2+L3|train": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     1,
+     0,
+     10
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     1,
+     10
+    ]
+   },
+   "lab_passed|L2+L3|val": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     0,
+     0,
+     4
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     0,
+     4
+    ]
+   },
+   "noise|train": 1,
+   "noise|val": 3,
+   "nulls|train": {
+    "by_key": {
+     "D2-": 6
+    },
+    "minutes": 13.359,
+    "per_minute": 0.449,
+    "regions": 6
+   },
+   "nulls|val": {
+    "by_key": {
+     "D1-": 6,
+     "D3-": 12
+    },
+    "minutes": 5.932,
+    "per_minute": 3.034,
+    "regions": 18
+   },
+   "synthetic_only|L1|train": {
+    "once_f1": 0.065,
+    "once_tp_fp_dup_fn": [
+     2,
+     13,
+     0,
+     45
+    ],
+    "pre_f1": 0.065,
+    "pre_tp_fp_fn": [
+     2,
+     13,
+     45
+    ]
+   },
+   "synthetic_only|L1|val": {
+    "once_f1": 0.08,
+    "once_tp_fp_dup_fn": [
+     1,
+     10,
+     0,
+     13
+    ],
+    "pre_f1": 0.08,
+    "pre_tp_fp_fn": [
+     1,
+     10,
+     13
+    ]
+   },
+   "synthetic_only|L2+L3|train": {
+    "once_f1": 0.074,
+    "once_tp_fp_dup_fn": [
+     5,
+     36,
+     0,
+     90
+    ],
+    "pre_f1": 0.074,
+    "pre_tp_fp_fn": [
+     5,
+     36,
+     90
+    ]
+   },
+   "synthetic_only|L2+L3|val": {
+    "once_f1": 0.08,
+    "once_tp_fp_dup_fn": [
+     2,
+     20,
+     0,
+     26
+    ],
+    "pre_f1": 0.08,
+    "pre_tp_fp_fn": [
+     2,
+     20,
+     26
+    ]
+   }
+  },
+  "scales": {
+   "D1": 0.154151,
+   "D2+": 0.44,
+   "D2-": 0.18,
+   "D3": 0.336472,
+   "D5": 2.497436,
+   "D6": 0.223144,
+   "D9": 0.110218
+  },
+  "seconds": 47.4,
+  "selection": {
+   "budget_regions": 6.679325,
+   "common_start": 4.95,
+   "null_minutes": 13.359,
+   "null_regions": 6,
+   "rule": "per-key h: R1 objective (strict train F1, controls counted as false) under the train-null budget; start at the best common h; coordinate ascent; ties keep the smaller h sum",
+   "sweeps": 3,
+   "train": {
+    "F1": 0.5714285714285714,
+    "FN": 48,
+    "FP": 15,
+    "TP": 42,
+    "control_regions": 7
+   }
+  },
+  "text_model": "phones",
+  "val_noise_in_train_controls": false
+ },
+ {
+  "extra_null_sources": [
+   "gettysburg",
+   "poetry"
+  ],
+  "gates_train": {
+   "n_clips": 50,
+   "violations": [
+    "gwbush_911_2001__G5: G5 scores 97.85 > 50.0",
+    "harris_uncsw_2021__G5: G5 scores 100.00 > 50.0",
+    "hclinton_tomorrow_2010__G5: G5 scores 100.00 > 50.0",
+    "obama_weekly_2009__G5: G5 scores 100.00 > 50.0",
+    "reagan_farewell_1989__G5: G5 scores 98.37 > 50.0"
+   ]
+  },
+  "gates_val": {
+   "n_clips": 20,
+   "violations": [
+    "eisenhower_farewell_1961__G5: G5 scores 97.94 > 50.0",
+    "lbush_radio_2001__G5: G5 scores 98.88 > 50.0"
+   ]
+  },
+  "h": {
+   "D1+": 9.55,
+   "D1-": 3.95,
+   "D2+": 2.65,
+   "D2-": 4.8,
+   "D3-": 5.25,
+   "D5-": 4.3,
+   "D6-": 2.75,
+   "D9-": 7.25
+  },
+  "name": "d_gettysburg_poetry",
+  "options": {
+   "boundary_strength": false,
+   "final_bins": false,
+   "tempo_position": false,
+   "tight_pauses": false
+  },
+  "pmax_factor": 1.0006,
+  "position": {
+   "D3": [
+    0.0,
+    0.049957,
+    0.033721,
+    -0.146607
+   ]
+  },
+  "results": {
+   "core8|L1|train": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     0,
+     0,
+     40
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     0,
+     40
+    ]
+   },
+   "core8|L1|val": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     0,
+     0,
+     16
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     0,
+     16
+    ]
+   },
+   "core8|L2+L3|train": {
+    "once_f1": 0.412,
+    "once_tp_fp_dup_fn": [
+     21,
+     1,
+     0,
+     59
+    ],
+    "pre_f1": 0.412,
+    "pre_tp_fp_fn": [
+     21,
+     1,
+     59
+    ]
+   },
+   "core8|L2+L3|val": {
+    "once_f1": 0.359,
+    "once_tp_fp_dup_fn": [
+     7,
+     0,
+     0,
+     25
+    ],
+    "pre_f1": 0.359,
+    "pre_tp_fp_fn": [
+     7,
+     0,
+     25
+    ]
+   },
+   "lab_passed|L1|train": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     0,
+     0,
+     5
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     0,
+     5
+    ]
+   },
+   "lab_passed|L1|val": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     0,
+     0,
+     2
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     0,
+     2
+    ]
+   },
+   "lab_passed|L2+L3|train": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     0,
+     0,
+     10
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     0,
+     10
+    ]
+   },
+   "lab_passed|L2+L3|val": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     0,
+     0,
+     4
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     0,
+     4
+    ]
+   },
+   "noise|train": 0,
+   "noise|val": 0,
+   "nulls|extra_readers_train": {
+    "minutes": 176.664,
+    "per_minute": 0.096,
+    "regions": 17
+   },
+   "nulls|train": {
+    "by_key": {},
+    "minutes": 13.359,
+    "per_minute": 0.0,
+    "regions": 0
+   },
+   "nulls|val": {
+    "by_key": {},
+    "minutes": 5.932,
+    "per_minute": 0.0,
+    "regions": 0
+   },
+   "synthetic_only|L1|train": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     0,
+     0,
+     47
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     0,
+     47
+    ]
+   },
+   "synthetic_only|L1|val": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     0,
+     0,
+     14
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     0,
+     14
+    ]
+   },
+   "synthetic_only|L2+L3|train": {
+    "once_f1": 0.019,
+    "once_tp_fp_dup_fn": [
+     1,
+     8,
+     0,
+     94
+    ],
+    "pre_f1": 0.019,
+    "pre_tp_fp_fn": [
+     1,
+     8,
+     94
+    ]
+   },
+   "synthetic_only|L2+L3|val": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     2,
+     0,
+     28
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     2,
+     28
+    ]
+   }
+  },
+  "scales": {
+   "D1": 0.158224,
+   "D2+": 0.42,
+   "D2-": 0.34,
+   "D3": 0.336472,
+   "D5": 2.750846,
+   "D6": 0.223144,
+   "D9": 0.140373
+  },
+  "seconds": 179.8,
+  "selection": {
+   "budget_regions": 95.01149166666667,
+   "common_start": 4.0,
+   "null_minutes": 190.023,
+   "null_regions": 17,
+   "rule": "per-key h: R1 objective (strict train F1, controls counted as false) under the train-null budget; start at the best common h; coordinate ascent; ties keep the smaller h sum",
+   "sweeps": 3,
+   "train": {
+    "F1": 0.32558139534883723,
+    "FN": 69,
+    "FP": 18,
+    "TP": 21,
+    "control_regions": 17
+   }
+  },
+  "text_model": "phones",
+  "val_noise_in_train_controls": false
+ },
+ {
+  "extra_null_roles": [
+   "scales"
+  ],
+  "extra_null_sources": [
+   "gettysburg",
+   "poetry"
+  ],
+  "gates_train": {
+   "n_clips": 50,
+   "violations": [
+    "gwbush_911_2001__G5: G5 scores 92.85 > 50.0",
+    "gwbush_911_2001__identity: identity scores 97.07",
+    "harris_uncsw_2021__G5: G5 scores 96.32 > 50.0",
+    "hclinton_tomorrow_2010__G5: G5 scores 97.86 > 50.0",
+    "obama_weekly_2009__G5: G5 scores 96.44 > 50.0",
+    "reagan_farewell_1989__G5: G5 scores 96.09 > 50.0",
+    "reagan_farewell_1989: ladder not non-increasing (G1 99.60, G3 99.92, G5 96.09)"
+   ]
+  },
+  "gates_val": {
+   "n_clips": 20,
+   "violations": [
+    "eisenhower_farewell_1961__G5: G5 scores 95.83 > 50.0",
+    "eisenhower_farewell_1961__identity: identity scores 99.08",
+    "lbush_radio_2001__G5: G5 scores 96.87 > 50.0",
+    "eisenhower_farewell_1961: ladder not non-increasing (G1 99.48, G3 99.64, G5 95.83)"
+   ]
+  },
+  "h": {
+   "D1+": 3.35,
+   "D1-": 3.05,
+   "D2+": 2.55,
+   "D2-": 1.55,
+   "D3-": 3.0,
+   "D5-": 2.55,
+   "D6-": 2.05,
+   "D9-": 5.5
+  },
+  "name": "d_gp_scales",
+  "options": {
+   "boundary_strength": false,
+   "final_bins": false,
+   "tempo_position": false,
+   "tight_pauses": false
+  },
+  "pmax_factor": 1.0006,
+  "position": {
+   "D3": [
+    0.0,
+    0.049957,
+    0.033721,
+    -0.146607
+   ]
+  },
+  "results": {
+   "core8|L1|train": {
+    "once_f1": 0.167,
+    "once_tp_fp_dup_fn": [
+     4,
+     4,
+     0,
+     36
+    ],
+    "pre_f1": 0.167,
+    "pre_tp_fp_fn": [
+     4,
+     4,
+     36
+    ]
+   },
+   "core8|L1|val": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     5,
+     0,
+     16
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     5,
+     16
+    ]
+   },
+   "core8|L2+L3|train": {
+    "once_f1": 0.651,
+    "once_tp_fp_dup_fn": [
+     42,
+     7,
+     0,
+     38
+    ],
+    "pre_f1": 0.651,
+    "pre_tp_fp_fn": [
+     42,
+     7,
+     38
+    ]
+   },
+   "core8|L2+L3|val": {
+    "once_f1": 0.545,
+    "once_tp_fp_dup_fn": [
+     15,
+     8,
+     0,
+     17
+    ],
+    "pre_f1": 0.545,
+    "pre_tp_fp_fn": [
+     15,
+     8,
+     17
+    ]
+   },
+   "lab_passed|L1|train": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     2,
+     0,
+     5
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     2,
+     5
+    ]
+   },
+   "lab_passed|L1|val": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     1,
+     0,
+     2
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     1,
+     2
+    ]
+   },
+   "lab_passed|L2+L3|train": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     1,
+     0,
+     10
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     1,
+     10
+    ]
+   },
+   "lab_passed|L2+L3|val": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     0,
+     0,
+     4
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     0,
+     4
+    ]
+   },
+   "noise|train": 1,
+   "noise|val": 2,
+   "nulls|extra_readers_train": {
+    "minutes": 176.664,
+    "per_minute": 2.383,
+    "regions": 421
+   },
+   "nulls|train": {
+    "by_key": {
+     "D2-": 6
+    },
+    "minutes": 13.359,
+    "per_minute": 0.449,
+    "regions": 6
+   },
+   "nulls|val": {
+    "by_key": {
+     "D3-": 12
+    },
+    "minutes": 5.932,
+    "per_minute": 2.023,
+    "regions": 12
+   },
+   "synthetic_only|L1|train": {
+    "once_f1": 0.065,
+    "once_tp_fp_dup_fn": [
+     2,
+     13,
+     0,
+     45
+    ],
+    "pre_f1": 0.065,
+    "pre_tp_fp_fn": [
+     2,
+     13,
+     45
+    ]
+   },
+   "synthetic_only|L1|val": {
+    "once_f1": 0.071,
+    "once_tp_fp_dup_fn": [
+     1,
+     13,
+     0,
+     13
+    ],
+    "pre_f1": 0.071,
+    "pre_tp_fp_fn": [
+     1,
+     13,
+     13
+    ]
+   },
+   "synthetic_only|L2+L3|train": {
+    "once_f1": 0.072,
+    "once_tp_fp_dup_fn": [
+     5,
+     38,
+     0,
+     90
+    ],
+    "pre_f1": 0.072,
+    "pre_tp_fp_fn": [
+     5,
+     38,
+     90
+    ]
+   },
+   "synthetic_only|L2+L3|val": {
+    "once_f1": 0.077,
+    "once_tp_fp_dup_fn": [
+     2,
+     22,
+     0,
+     26
+    ],
+    "pre_f1": 0.077,
+    "pre_tp_fp_fn": [
+     2,
+     22,
+     26
+    ]
+   }
+  },
+  "scales": {
+   "D1": 0.158224,
+   "D2+": 0.42,
+   "D2-": 0.34,
+   "D3": 0.336472,
+   "D5": 2.750846,
+   "D6": 0.223144,
+   "D9": 0.140373
+  },
+  "seconds": 34.7,
+  "selection": {
+   "budget_regions": 6.679325,
+   "common_start": 3.35,
+   "null_minutes": 13.359,
+   "null_regions": 6,
+   "rule": "per-key h: R1 objective (strict train F1, controls counted as false) under the train-null budget; start at the best common h; coordinate ascent; ties keep the smaller h sum",
+   "sweeps": 3,
+   "train": {
+    "F1": 0.5714285714285714,
+    "FN": 48,
+    "FP": 15,
+    "TP": 42,
+    "control_regions": 7
+   }
+  },
+  "text_model": "phones",
+  "val_noise_in_train_controls": false
+ },
+ {
+  "extra_null_roles": [],
+  "extra_null_sources": [],
+  "gates_train": {
+   "n_clips": 50,
+   "violations": [
+    "gwbush_911_2001__G5: G5 scores 92.84 > 50.0",
+    "gwbush_911_2001__identity: identity scores 97.03",
+    "harris_uncsw_2021__G5: G5 scores 96.30 > 50.0",
+    "hclinton_tomorrow_2010__G5: G5 scores 97.84 > 50.0",
+    "obama_weekly_2009__G5: G5 scores 96.41 > 50.0",
+    "reagan_farewell_1989__G5: G5 scores 96.08 > 50.0",
+    "reagan_farewell_1989: ladder not non-increasing (G1 99.57, G3 99.91, G5 96.08)"
+   ]
+  },
+  "gates_val": {
+   "n_clips": 20,
+   "violations": [
+    "eisenhower_farewell_1961__G5: G5 scores 95.78 > 50.0",
+    "eisenhower_farewell_1961__identity: identity scores 98.96",
+    "lbush_radio_2001__G5: G5 scores 96.85 > 50.0",
+    "eisenhower_farewell_1961: ladder not non-increasing (G1 99.29, G3 99.56, G5 95.78)"
+   ]
+  },
+  "h": {
+   "D1+": 3.35,
+   "D1-": 2.85,
+   "D2+": 2.4,
+   "D2-": 2.85,
+   "D3-": 3.0,
+   "D5-": 2.8,
+   "D6-": 2.05,
+   "D9-": 6.4
+  },
+  "name": "base",
+  "options": {
+   "boundary_strength": false,
+   "final_bins": false,
+   "tempo_position": false,
+   "tight_pauses": false
+  },
+  "pmax_factor": 1.0006,
+  "position": {
+   "D3": [
+    0.0,
+    0.049957,
+    0.033721,
+    -0.146607
+   ]
+  },
+  "results": {
+   "core8|L1|train": {
+    "once_f1": 0.167,
+    "once_tp_fp_dup_fn": [
+     4,
+     4,
+     0,
+     36
+    ],
+    "pre_f1": 0.167,
+    "pre_tp_fp_fn": [
+     4,
+     4,
+     36
+    ]
+   },
+   "core8|L1|val": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     5,
+     0,
+     16
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     5,
+     16
+    ]
+   },
+   "core8|L2+L3|train": {
+    "once_f1": 0.656,
+    "once_tp_fp_dup_fn": [
+     43,
+     8,
+     0,
+     37
+    ],
+    "pre_f1": 0.656,
+    "pre_tp_fp_fn": [
+     43,
+     8,
+     37
+    ]
+   },
+   "core8|L2+L3|val": {
+    "once_f1": 0.561,
+    "once_tp_fp_dup_fn": [
+     16,
+     9,
+     0,
+     16
+    ],
+    "pre_f1": 0.561,
+    "pre_tp_fp_fn": [
+     16,
+     9,
+     16
+    ]
+   },
+   "lab_passed|L1|train": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     2,
+     0,
+     5
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     2,
+     5
+    ]
+   },
+   "lab_passed|L1|val": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     1,
+     0,
+     2
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     1,
+     2
+    ]
+   },
+   "lab_passed|L2+L3|train": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     1,
+     0,
+     10
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     1,
+     10
+    ]
+   },
+   "lab_passed|L2+L3|val": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     0,
+     0,
+     4
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     0,
+     4
+    ]
+   },
+   "noise|train": 1,
+   "noise|val": 2,
+   "nulls|train": {
+    "by_key": {
+     "D2-": 6
+    },
+    "minutes": 13.359,
+    "per_minute": 0.449,
+    "regions": 6
+   },
+   "nulls|val": {
+    "by_key": {
+     "D1-": 6,
+     "D3-": 12
+    },
+    "minutes": 5.932,
+    "per_minute": 3.034,
+    "regions": 18
+   },
+   "readers_by_source": {
+    "accent": {
+     "minutes": 166.943,
+     "per_minute": 2.007,
+     "readers": 394,
+     "regions": 335,
+     "used_in_fit": false
+    },
+    "ears": {
+     "minutes": 111.946,
+     "per_minute": 1.322,
+     "readers": 424,
+     "regions": 148,
+     "used_in_fit": false
+    },
+    "gettysburg": {
+     "minutes": 21.017,
+     "per_minute": 1.427,
+     "readers": 10,
+     "regions": 30,
+     "used_in_fit": false
+    },
+    "poetry": {
+     "minutes": 155.647,
+     "per_minute": 2.66,
+     "readers": 157,
+     "regions": 414,
+     "used_in_fit": false
+    }
+   },
+   "synthetic_only|L1|train": {
+    "once_f1": 0.065,
+    "once_tp_fp_dup_fn": [
+     2,
+     13,
+     0,
+     45
+    ],
+    "pre_f1": 0.065,
+    "pre_tp_fp_fn": [
+     2,
+     13,
+     45
+    ]
+   },
+   "synthetic_only|L1|val": {
+    "once_f1": 0.071,
+    "once_tp_fp_dup_fn": [
+     1,
+     13,
+     0,
+     13
+    ],
+    "pre_f1": 0.071,
+    "pre_tp_fp_fn": [
+     1,
+     13,
+     13
+    ]
+   },
+   "synthetic_only|L2+L3|train": {
+    "once_f1": 0.07,
+    "once_tp_fp_dup_fn": [
+     5,
+     42,
+     0,
+     90
+    ],
+    "pre_f1": 0.07,
+    "pre_tp_fp_fn": [
+     5,
+     42,
+     90
+    ]
+   },
+   "synthetic_only|L2+L3|val": {
+    "once_f1": 0.077,
+    "once_tp_fp_dup_fn": [
+     2,
+     22,
+     0,
+     26
+    ],
+    "pre_f1": 0.077,
+    "pre_tp_fp_fn": [
+     2,
+     22,
+     26
+    ]
+   }
+  },
+  "scales": {
+   "D1": 0.157686,
+   "D2+": 0.44,
+   "D2-": 0.18,
+   "D3": 0.336472,
+   "D5": 2.497436,
+   "D6": 0.223144,
+   "D9": 0.121122
+  },
+  "seconds": 33.2,
+  "selection": {
+   "budget_regions": 6.679325,
+   "common_start": 4.8,
+   "null_minutes": 13.359,
+   "null_regions": 6,
+   "rule": "per-key h: R1 objective (strict train F1, controls counted as false) under the train-null budget; start at the best common h; coordinate ascent; ties keep the smaller h sum",
+   "sweeps": 3,
+   "train": {
+    "F1": 0.5771812080536913,
+    "FN": 47,
+    "FP": 16,
+    "TP": 43,
+    "control_regions": 7
+   }
+  },
+  "text_model": "phones",
+  "val_noise_in_train_controls": false
+ },
+ {
+  "extra_null_roles": [
+   "scales",
+   "budget"
+  ],
+  "extra_null_sources": [
+   "gettysburg",
+   "poetry"
+  ],
+  "gates_train": {
+   "n_clips": 50,
+   "violations": [
+    "gwbush_911_2001__G5: G5 scores 95.89 > 50.0",
+    "harris_uncsw_2021__G5: G5 scores 99.76 > 50.0",
+    "hclinton_tomorrow_2010__G5: G5 scores 100.00 > 50.0",
+    "obama_weekly_2009__G5: G5 scores 99.83 > 50.0",
+    "reagan_farewell_1989__G5: G5 scores 97.63 > 50.0",
+    "hclinton_tomorrow_2010: ladder not non-increasing (G1 100.00, G3 99.95, G5 100.00)",
+    "reagan_farewell_1989: ladder not non-increasing (G1 99.60, G3 100.00, G5 97.63)"
+   ]
+  },
+  "gates_val": {
+   "n_clips": 20,
+   "violations": [
+    "eisenhower_farewell_1961__G5: G5 scores 97.65 > 50.0",
+    "lbush_radio_2001__G5: G5 scores 98.24 > 50.0"
+   ]
+  },
+  "h": {
+   "D1+": 3.9,
+   "D1-": 3.05,
+   "D2+": 3.05,
+   "D2-": 3.1,
+   "D3-": 3.85,
+   "D5-": 3.8,
+   "D6-": 2.75,
+   "D9-": 5.5
+  },
+  "name": "d_gp_scales_budget",
+  "options": {
+   "boundary_strength": false,
+   "final_bins": false,
+   "tempo_position": false,
+   "tight_pauses": false
+  },
+  "pmax_factor": 1.0006,
+  "position": {
+   "D3": [
+    0.0,
+    0.049957,
+    0.033721,
+    -0.146607
+   ]
+  },
+  "results": {
+   "core8|L1|train": {
+    "once_f1": 0.048,
+    "once_tp_fp_dup_fn": [
+     1,
+     1,
+     0,
+     39
+    ],
+    "pre_f1": 0.048,
+    "pre_tp_fp_fn": [
+     1,
+     1,
+     39
+    ]
+   },
+   "core8|L1|val": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     1,
+     0,
+     16
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     1,
+     16
+    ]
+   },
+   "core8|L2+L3|train": {
+    "once_f1": 0.449,
+    "once_tp_fp_dup_fn": [
+     24,
+     3,
+     0,
+     56
+    ],
+    "pre_f1": 0.449,
+    "pre_tp_fp_fn": [
+     24,
+     3,
+     56
+    ]
+   },
+   "core8|L2+L3|val": {
+    "once_f1": 0.419,
+    "once_tp_fp_dup_fn": [
+     9,
+     2,
+     0,
+     23
+    ],
+    "pre_f1": 0.419,
+    "pre_tp_fp_fn": [
+     9,
+     2,
+     23
+    ]
+   },
+   "lab_passed|L1|train": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     0,
+     0,
+     5
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     0,
+     5
+    ]
+   },
+   "lab_passed|L1|val": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     0,
+     0,
+     2
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     0,
+     2
+    ]
+   },
+   "lab_passed|L2+L3|train": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     0,
+     0,
+     10
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     0,
+     10
+    ]
+   },
+   "lab_passed|L2+L3|val": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     0,
+     0,
+     4
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     0,
+     4
+    ]
+   },
+   "noise|train": 0,
+   "noise|val": 0,
+   "nulls|train": {
+    "by_key": {},
+    "minutes": 13.359,
+    "per_minute": 0.0,
+    "regions": 0
+   },
+   "nulls|val": {
+    "by_key": {},
+    "minutes": 5.932,
+    "per_minute": 0.0,
+    "regions": 0
+   },
+   "readers_by_source": {
+    "accent": {
+     "minutes": 166.943,
+     "per_minute": 0.635,
+     "readers": 394,
+     "regions": 106,
+     "used_in_fit": false
+    },
+    "ears": {
+     "minutes": 111.946,
+     "per_minute": 0.518,
+     "readers": 424,
+     "regions": 58,
+     "used_in_fit": false
+    },
+    "gettysburg": {
+     "minutes": 21.017,
+     "per_minute": 0.476,
+     "readers": 10,
+     "regions": 10,
+     "used_in_fit": true
+    },
+    "poetry": {
+     "minutes": 155.647,
+     "per_minute": 0.546,
+     "readers": 157,
+     "regions": 85,
+     "used_in_fit": true
+    }
+   },
+   "synthetic_only|L1|train": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     3,
+     0,
+     47
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     3,
+     47
+    ]
+   },
+   "synthetic_only|L1|val": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     2,
+     0,
+     14
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     2,
+     14
+    ]
+   },
+   "synthetic_only|L2+L3|train": {
+    "once_f1": 0.053,
+    "once_tp_fp_dup_fn": [
+     3,
+     15,
+     0,
+     92
+    ],
+    "pre_f1": 0.053,
+    "pre_tp_fp_fn": [
+     3,
+     15,
+     92
+    ]
+   },
+   "synthetic_only|L2+L3|val": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     9,
+     0,
+     28
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     9,
+     28
+    ]
+   }
+  },
+  "scales": {
+   "D1": 0.158224,
+   "D2+": 0.42,
+   "D2-": 0.34,
+   "D3": 0.336472,
+   "D5": 2.750846,
+   "D6": 0.223144,
+   "D9": 0.140373
+  },
+  "seconds": 93.7,
+  "selection": {
+   "budget_regions": 95.01149166666667,
+   "common_start": 3.9,
+   "null_minutes": 190.023,
+   "null_regions": 95,
+   "rule": "per-key h: R1 objective (strict train F1, controls counted as false) under the train-null budget; start at the best common h; coordinate ascent; ties keep the smaller h sum",
+   "sweeps": 3,
+   "train": {
+    "F1": 0.41025641025641024,
+    "FN": 66,
+    "FP": 3,
+    "TP": 24,
+    "control_regions": 0
+   }
+  },
+  "text_model": "phones",
+  "val_noise_in_train_controls": false
+ },
+ {
+  "extra_null_roles": [
+   "budget"
+  ],
+  "extra_null_sources": [
+   "gettysburg",
+   "poetry",
+   "ears",
+   "accent"
+  ],
+  "gates_train": {
+   "n_clips": 50,
+   "violations": [
+    "gwbush_911_2001__G5: G5 scores 95.96 > 50.0",
+    "harris_uncsw_2021__G5: G5 scores 99.80 > 50.0",
+    "hclinton_tomorrow_2010__G5: G5 scores 100.00 > 50.0",
+    "obama_weekly_2009__G5: G5 scores 99.84 > 50.0",
+    "reagan_farewell_1989__G5: G5 scores 97.66 > 50.0",
+    "reagan_farewell_1989: ladder not non-increasing (G1 99.60, G3 100.00, G5 97.66)"
+   ]
+  },
+  "gates_val": {
+   "n_clips": 20,
+   "violations": [
+    "eisenhower_farewell_1961__G5: G5 scores 97.66 > 50.0",
+    "lbush_radio_2001__G5: G5 scores 98.25 > 50.0"
+   ]
+  },
+  "h": {
+   "D1+": 4.35,
+   "D1-": 3.05,
+   "D2+": 2.75,
+   "D2-": 4.95,
+   "D3-": 5.25,
+   "D5-": 4.2,
+   "D6-": 2.75,
+   "D9-": 6.4
+  },
+  "name": "d_all_budget",
+  "options": {
+   "boundary_strength": false,
+   "final_bins": false,
+   "tempo_position": false,
+   "tight_pauses": false
+  },
+  "pmax_factor": 1.0006,
+  "position": {
+   "D3": [
+    0.0,
+    0.049957,
+    0.033721,
+    -0.146607
+   ]
+  },
+  "results": {
+   "core8|L1|train": {
+    "once_f1": 0.048,
+    "once_tp_fp_dup_fn": [
+     1,
+     1,
+     0,
+     39
+    ],
+    "pre_f1": 0.048,
+    "pre_tp_fp_fn": [
+     1,
+     1,
+     39
+    ]
+   },
+   "core8|L1|val": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     1,
+     0,
+     16
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     1,
+     16
+    ]
+   },
+   "core8|L2+L3|train": {
+    "once_f1": 0.442,
+    "once_tp_fp_dup_fn": [
+     23,
+     1,
+     0,
+     57
+    ],
+    "pre_f1": 0.442,
+    "pre_tp_fp_fn": [
+     23,
+     1,
+     57
+    ]
+   },
+   "core8|L2+L3|val": {
+    "once_f1": 0.39,
+    "once_tp_fp_dup_fn": [
+     8,
+     1,
+     0,
+     24
+    ],
+    "pre_f1": 0.39,
+    "pre_tp_fp_fn": [
+     8,
+     1,
+     24
+    ]
+   },
+   "lab_passed|L1|train": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     0,
+     0,
+     5
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     0,
+     5
+    ]
+   },
+   "lab_passed|L1|val": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     0,
+     0,
+     2
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     0,
+     2
+    ]
+   },
+   "lab_passed|L2+L3|train": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     0,
+     0,
+     10
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     0,
+     10
+    ]
+   },
+   "lab_passed|L2+L3|val": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     0,
+     0,
+     4
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     0,
+     4
+    ]
+   },
+   "noise|train": 1,
+   "noise|val": 0,
+   "nulls|train": {
+    "by_key": {},
+    "minutes": 13.359,
+    "per_minute": 0.0,
+    "regions": 0
+   },
+   "nulls|val": {
+    "by_key": {},
+    "minutes": 5.932,
+    "per_minute": 0.0,
+    "regions": 0
+   },
+   "readers_by_source": {
+    "accent": {
+     "minutes": 166.943,
+     "per_minute": 0.545,
+     "readers": 394,
+     "regions": 91,
+     "used_in_fit": true
+    },
+    "ears": {
+     "minutes": 111.946,
+     "per_minute": 0.393,
+     "readers": 424,
+     "regions": 44,
+     "used_in_fit": true
+    },
+    "gettysburg": {
+     "minutes": 21.017,
+     "per_minute": 0.619,
+     "readers": 10,
+     "regions": 13,
+     "used_in_fit": true
+    },
+    "poetry": {
+     "minutes": 155.647,
+     "per_minute": 0.553,
+     "readers": 157,
+     "regions": 86,
+     "used_in_fit": true
+    }
+   },
+   "synthetic_only|L1|train": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     2,
+     0,
+     47
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     2,
+     47
+    ]
+   },
+   "synthetic_only|L1|val": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     2,
+     0,
+     14
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     2,
+     14
+    ]
+   },
+   "synthetic_only|L2+L3|train": {
+    "once_f1": 0.052,
+    "once_tp_fp_dup_fn": [
+     3,
+     17,
+     0,
+     92
+    ],
+    "pre_f1": 0.052,
+    "pre_tp_fp_fn": [
+     3,
+     17,
+     92
+    ]
+   },
+   "synthetic_only|L2+L3|val": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     9,
+     0,
+     28
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     9,
+     28
+    ]
+   }
+  },
+  "scales": {
+   "D1": 0.157686,
+   "D2+": 0.44,
+   "D2-": 0.18,
+   "D3": 0.336472,
+   "D5": 2.497436,
+   "D6": 0.223144,
+   "D9": 0.121122
+  },
+  "seconds": 275.1,
+  "selection": {
+   "budget_regions": 234.45578125,
+   "common_start": 4.6,
+   "null_minutes": 468.912,
+   "null_regions": 234,
+   "rule": "per-key h: R1 objective (strict train F1, controls counted as false) under the train-null budget; start at the best common h; coordinate ascent; ties keep the smaller h sum",
+   "sweeps": 3,
+   "train": {
+    "F1": 0.4,
+    "FN": 67,
+    "FP": 2,
+    "TP": 23,
+    "control_regions": 1
+   }
+  },
+  "text_model": "phones",
+  "val_noise_in_train_controls": false
+ },
+ {
+  "extra_null_roles": [
+   "budget"
+  ],
+  "extra_null_sources": [
+   "gettysburg",
+   "poetry"
+  ],
+  "gates_train": {
+   "n_clips": 50,
+   "violations": [
+    "gwbush_911_2001__G5: G5 scores 97.85 > 50.0",
+    "harris_uncsw_2021__G5: G5 scores 100.00 > 50.0",
+    "hclinton_tomorrow_2010__G5: G5 scores 100.00 > 50.0",
+    "obama_weekly_2009__G5: G5 scores 100.00 > 50.0",
+    "reagan_farewell_1989__G5: G5 scores 98.37 > 50.0",
+    "reagan_farewell_1989: ladder not non-increasing (G1 99.60, G3 100.00, G5 98.37)"
+   ]
+  },
+  "gates_val": {
+   "n_clips": 20,
+   "violations": [
+    "eisenhower_farewell_1961__G5: G5 scores 97.90 > 50.0",
+    "lbush_radio_2001__G5: G5 scores 99.05 > 50.0"
+   ]
+  },
+  "h": {
+   "D1+": 4.5,
+   "D1-": 3.05,
+   "D2+": 2.4,
+   "D2-": 4.95,
+   "D3-": 4.1,
+   "D5-": 4.75,
+   "D6-": 2.75,
+   "D9-": 6.4
+  },
+  "name": "shipped_strict",
+  "options": {
+   "boundary_strength": false,
+   "final_bins": false,
+   "tempo_position": false,
+   "tight_pauses": false
+  },
+  "pmax_factor": 1.0006,
+  "position": {
+   "D3": [
+    0.0,
+    0.049957,
+    0.033721,
+    -0.146607
+   ]
+  },
+  "results": {
+   "core8|L1|train": {
+    "once_f1": 0.048,
+    "once_tp_fp_dup_fn": [
+     1,
+     1,
+     0,
+     39
+    ],
+    "pre_f1": 0.048,
+    "pre_tp_fp_fn": [
+     1,
+     1,
+     39
+    ]
+   },
+   "core8|L1|val": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     1,
+     0,
+     16
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     1,
+     16
+    ]
+   },
+   "core8|L2+L3|train": {
+    "once_f1": 0.491,
+    "once_tp_fp_dup_fn": [
+     27,
+     3,
+     0,
+     53
+    ],
+    "pre_f1": 0.491,
+    "pre_tp_fp_fn": [
+     27,
+     3,
+     53
+    ]
+   },
+   "core8|L2+L3|val": {
+    "once_f1": 0.429,
+    "once_tp_fp_dup_fn": [
+     9,
+     1,
+     0,
+     23
+    ],
+    "pre_f1": 0.429,
+    "pre_tp_fp_fn": [
+     9,
+     1,
+     23
+    ]
+   },
+   "lab_passed|L1|train": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     0,
+     0,
+     5
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     0,
+     5
+    ]
+   },
+   "lab_passed|L1|val": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     0,
+     0,
+     2
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     0,
+     2
+    ]
+   },
+   "lab_passed|L2+L3|train": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     0,
+     0,
+     10
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     0,
+     10
+    ]
+   },
+   "lab_passed|L2+L3|val": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     0,
+     0,
+     4
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     0,
+     4
+    ]
+   },
+   "noise|train": 1,
+   "noise|val": 0,
+   "nulls|train": {
+    "by_key": {},
+    "minutes": 13.359,
+    "per_minute": 0.0,
+    "regions": 0
+   },
+   "nulls|val": {
+    "by_key": {},
+    "minutes": 5.932,
+    "per_minute": 0.0,
+    "regions": 0
+   },
+   "readers_by_source": {
+    "accent": {
+     "minutes": 166.943,
+     "per_minute": 0.587,
+     "readers": 394,
+     "regions": 98,
+     "used_in_fit": false
+    },
+    "ears": {
+     "minutes": 111.946,
+     "per_minute": 0.348,
+     "readers": 424,
+     "regions": 39,
+     "used_in_fit": false
+    },
+    "gettysburg": {
+     "minutes": 21.017,
+     "per_minute": 0.619,
+     "readers": 10,
+     "regions": 13,
+     "used_in_fit": true
+    },
+    "poetry": {
+     "minutes": 155.647,
+     "per_minute": 0.527,
+     "readers": 157,
+     "regions": 82,
+     "used_in_fit": true
+    }
+   },
+   "synthetic_only|L1|train": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     1,
+     0,
+     47
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     1,
+     47
+    ]
+   },
+   "synthetic_only|L1|val": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     2,
+     0,
+     14
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     2,
+     14
+    ]
+   },
+   "synthetic_only|L2+L3|train": {
+    "once_f1": 0.018,
+    "once_tp_fp_dup_fn": [
+     1,
+     14,
+     0,
+     94
+    ],
+    "pre_f1": 0.018,
+    "pre_tp_fp_fn": [
+     1,
+     14,
+     94
+    ]
+   },
+   "synthetic_only|L2+L3|val": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     8,
+     0,
+     28
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     8,
+     28
+    ]
+   }
+  },
+  "scales": {
+   "D1": 0.157686,
+   "D2+": 0.44,
+   "D2-": 0.18,
+   "D3": 0.336472,
+   "D5": 2.497436,
+   "D6": 0.223144,
+   "D9": 0.121122
+  },
+  "seconds": 2.7,
+  "selection": {
+   "budget_regions": 95.01149166666667,
+   "common_start": 4.8,
+   "null_minutes": 190.023,
+   "null_regions": 95,
+   "rule": "per-key h: R1 objective (strict train F1, controls counted as false) under the train-null budget; start at the best common h; coordinate ascent; ties keep the smaller h sum",
+   "sweeps": 3,
+   "train": {
+    "F1": 0.4462809917355372,
+    "FN": 63,
+    "FP": 4,
+    "TP": 27,
+    "control_regions": 1
+   }
+  },
+  "selfref_sha256": "7dd8602be6a44d8ebfcc6efea0374285baba8b5c151a24cf17c953b768202fb0",
+  "source": "models/detector_selfref.json (CLI calibrate)",
+  "text_model": "phones",
+  "val_noise_in_train_controls": false
+ },
+ {
+  "extra_null_roles": [
+   "scales",
+   "budget"
+  ],
+  "extra_null_sources": [
+   "gettysburg",
+   "poetry",
+   "ears",
+   "accent"
+  ],
+  "gates_train": {
+   "n_clips": 50,
+   "violations": [
+    "gwbush_911_2001__G5: G5 scores 94.40 > 50.0",
+    "harris_uncsw_2021__G5: G5 scores 98.63 > 50.0",
+    "hclinton_tomorrow_2010__G5: G5 scores 99.69 > 50.0",
+    "obama_weekly_2009__G5: G5 scores 98.84 > 50.0",
+    "reagan_farewell_1989__G5: G5 scores 96.99 > 50.0",
+    "reagan_farewell_1989: ladder not non-increasing (G1 99.59, G3 100.00, G5 96.99)"
+   ]
+  },
+  "gates_val": {
+   "n_clips": 20,
+   "violations": [
+    "eisenhower_farewell_1961__G5: G5 scores 97.23 > 50.0",
+    "lbush_radio_2001__G5: G5 scores 98.04 > 50.0",
+    "eisenhower_farewell_1961: ladder not non-increasing (G1 100.00, G3 100.00, G5 97.23)"
+   ]
+  },
+  "h": {
+   "D1+": 4.2,
+   "D1-": 2.95,
+   "D2+": 4.3,
+   "D2-": 3.6,
+   "D3-": 5.25,
+   "D5-": 4.25,
+   "D6-": 2.55,
+   "D9-": 5.85
+  },
+  "name": "d_all_scales_budget",
+  "options": {
+   "boundary_strength": false,
+   "final_bins": false,
+   "tempo_position": false,
+   "tight_pauses": false
+  },
+  "pmax_factor": 1.0006,
+  "position": {
+   "D3": [
+    0.0,
+    0.049957,
+    0.033721,
+    -0.146607
+   ]
+  },
+  "results": {
+   "core8|L1|train": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     1,
+     0,
+     40
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     1,
+     40
+    ]
+   },
+   "core8|L1|val": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     1,
+     0,
+     16
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     1,
+     16
+    ]
+   },
+   "core8|L2+L3|train": {
+    "once_f1": 0.427,
+    "once_tp_fp_dup_fn": [
+     22,
+     1,
+     0,
+     58
+    ],
+    "pre_f1": 0.427,
+    "pre_tp_fp_fn": [
+     22,
+     1,
+     58
+    ]
+   },
+   "core8|L2+L3|val": {
+    "once_f1": 0.35,
+    "once_tp_fp_dup_fn": [
+     7,
+     1,
+     0,
+     25
+    ],
+    "pre_f1": 0.35,
+    "pre_tp_fp_fn": [
+     7,
+     1,
+     25
+    ]
+   },
+   "lab_passed|L1|train": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     0,
+     0,
+     5
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     0,
+     5
+    ]
+   },
+   "lab_passed|L1|val": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     0,
+     0,
+     2
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     0,
+     2
+    ]
+   },
+   "lab_passed|L2+L3|train": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     0,
+     0,
+     10
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     0,
+     10
+    ]
+   },
+   "lab_passed|L2+L3|val": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     0,
+     0,
+     4
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     0,
+     4
+    ]
+   },
+   "noise|train": 0,
+   "noise|val": 0,
+   "nulls|train": {
+    "by_key": {},
+    "minutes": 13.359,
+    "per_minute": 0.0,
+    "regions": 0
+   },
+   "nulls|val": {
+    "by_key": {},
+    "minutes": 5.932,
+    "per_minute": 0.0,
+    "regions": 0
+   },
+   "readers_by_source": {
+    "accent": {
+     "minutes": 166.943,
+     "per_minute": 0.563,
+     "readers": 394,
+     "regions": 94,
+     "used_in_fit": true
+    },
+    "ears": {
+     "minutes": 111.946,
+     "per_minute": 0.402,
+     "readers": 424,
+     "regions": 45,
+     "used_in_fit": true
+    },
+    "gettysburg": {
+     "minutes": 21.017,
+     "per_minute": 0.619,
+     "readers": 10,
+     "regions": 13,
+     "used_in_fit": true
+    },
+    "poetry": {
+     "minutes": 155.647,
+     "per_minute": 0.527,
+     "readers": 157,
+     "regions": 82,
+     "used_in_fit": true
+    }
+   },
+   "synthetic_only|L1|train": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     3,
+     0,
+     47
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     3,
+     47
+    ]
+   },
+   "synthetic_only|L1|val": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     2,
+     0,
+     14
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     2,
+     14
+    ]
+   },
+   "synthetic_only|L2+L3|train": {
+    "once_f1": 0.071,
+    "once_tp_fp_dup_fn": [
+     4,
+     14,
+     0,
+     91
+    ],
+    "pre_f1": 0.071,
+    "pre_tp_fp_fn": [
+     4,
+     14,
+     91
+    ]
+   },
+   "synthetic_only|L2+L3|val": {
+    "once_f1": 0.054,
+    "once_tp_fp_dup_fn": [
+     1,
+     8,
+     0,
+     27
+    ],
+    "pre_f1": 0.054,
+    "pre_tp_fp_fn": [
+     1,
+     8,
+     27
+    ]
+   }
+  },
+  "scales": {
+   "D1": 0.162477,
+   "D2+": 0.35,
+   "D2-": 0.31,
+   "D3": 0.336472,
+   "D5": 2.1925,
+   "D6": 0.223144,
+   "D9": 0.132132
+  },
+  "seconds": 305.6,
+  "selection": {
+   "budget_regions": 234.45578125,
+   "common_start": 4.3,
+   "null_minutes": 468.912,
+   "null_regions": 234,
+   "rule": "per-key h: R1 objective (strict train F1, controls counted as false) under the train-null budget; start at the best common h; coordinate ascent; ties keep the smaller h sum",
+   "sweeps": 3,
+   "train": {
+    "F1": 0.3893805309734513,
+    "FN": 68,
+    "FP": 1,
+    "TP": 22,
+    "control_regions": 0
+   }
+  },
+  "text_model": "phones",
+  "val_noise_in_train_controls": false
+ },
+ {
+  "extra_null_roles": [
+   "budget"
+  ],
+  "extra_null_sources": [
+   "gettysburg",
+   "poetry"
+  ],
+  "gates_train": {
+   "n_clips": 50,
+   "violations": [
+    "gwbush_911_2001__G5: G5 scores 97.85 > 50.0",
+    "harris_uncsw_2021__G5: G5 scores 100.00 > 50.0",
+    "hclinton_tomorrow_2010__G5: G5 scores 100.00 > 50.0",
+    "obama_weekly_2009__G5: G5 scores 100.00 > 50.0",
+    "reagan_farewell_1989__G5: G5 scores 98.37 > 50.0",
+    "reagan_farewell_1989: ladder not non-increasing (G1 99.60, G3 100.00, G5 98.37)"
+   ]
+  },
+  "gates_val": {
+   "n_clips": 20,
+   "violations": [
+    "eisenhower_farewell_1961__G5: G5 scores 97.90 > 50.0",
+    "lbush_radio_2001__G5: G5 scores 99.05 > 50.0"
+   ]
+  },
+  "h": {
+   "D1+": 4.5,
+   "D1-": 3.05,
+   "D2+": 2.4,
+   "D2-": 4.95,
+   "D3-": 4.1,
+   "D5-": 4.75,
+   "D6-": 2.75,
+   "D9-": 6.4
+  },
+  "name": "d_gp_budget",
+  "options": {
+   "boundary_strength": false,
+   "final_bins": false,
+   "tempo_position": false,
+   "tight_pauses": false
+  },
+  "pmax_factor": 1.0006,
+  "position": {
+   "D3": [
+    0.0,
+    0.049957,
+    0.033721,
+    -0.146607
+   ]
+  },
+  "results": {
+   "core8|L1|train": {
+    "once_f1": 0.048,
+    "once_tp_fp_dup_fn": [
+     1,
+     1,
+     0,
+     39
+    ],
+    "pre_f1": 0.048,
+    "pre_tp_fp_fn": [
+     1,
+     1,
+     39
+    ]
+   },
+   "core8|L1|val": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     1,
+     0,
+     16
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     1,
+     16
+    ]
+   },
+   "core8|L2+L3|train": {
+    "once_f1": 0.491,
+    "once_tp_fp_dup_fn": [
+     27,
+     3,
+     0,
+     53
+    ],
+    "pre_f1": 0.491,
+    "pre_tp_fp_fn": [
+     27,
+     3,
+     53
+    ]
+   },
+   "core8|L2+L3|val": {
+    "once_f1": 0.429,
+    "once_tp_fp_dup_fn": [
+     9,
+     1,
+     0,
+     23
+    ],
+    "pre_f1": 0.429,
+    "pre_tp_fp_fn": [
+     9,
+     1,
+     23
+    ]
+   },
+   "lab_passed|L1|train": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     0,
+     0,
+     5
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     0,
+     5
+    ]
+   },
+   "lab_passed|L1|val": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     0,
+     0,
+     2
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     0,
+     2
+    ]
+   },
+   "lab_passed|L2+L3|train": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     0,
+     0,
+     10
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     0,
+     10
+    ]
+   },
+   "lab_passed|L2+L3|val": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     0,
+     0,
+     4
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     0,
+     4
+    ]
+   },
+   "noise|train": 1,
+   "noise|val": 0,
+   "nulls|train": {
+    "by_key": {},
+    "minutes": 13.359,
+    "per_minute": 0.0,
+    "regions": 0
+   },
+   "nulls|val": {
+    "by_key": {},
+    "minutes": 5.932,
+    "per_minute": 0.0,
+    "regions": 0
+   },
+   "readers_by_source": {
+    "accent": {
+     "minutes": 166.943,
+     "per_minute": 0.587,
+     "readers": 394,
+     "regions": 98,
+     "used_in_fit": false
+    },
+    "ears": {
+     "minutes": 111.946,
+     "per_minute": 0.348,
+     "readers": 424,
+     "regions": 39,
+     "used_in_fit": false
+    },
+    "gettysburg": {
+     "minutes": 21.017,
+     "per_minute": 0.619,
+     "readers": 10,
+     "regions": 13,
+     "used_in_fit": true
+    },
+    "poetry": {
+     "minutes": 155.647,
+     "per_minute": 0.527,
+     "readers": 157,
+     "regions": 82,
+     "used_in_fit": true
+    }
+   },
+   "synthetic_only|L1|train": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     1,
+     0,
+     47
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     1,
+     47
+    ]
+   },
+   "synthetic_only|L1|val": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     2,
+     0,
+     14
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     2,
+     14
+    ]
+   },
+   "synthetic_only|L2+L3|train": {
+    "once_f1": 0.018,
+    "once_tp_fp_dup_fn": [
+     1,
+     14,
+     0,
+     94
+    ],
+    "pre_f1": 0.018,
+    "pre_tp_fp_fn": [
+     1,
+     14,
+     94
+    ]
+   },
+   "synthetic_only|L2+L3|val": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     8,
+     0,
+     28
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     8,
+     28
+    ]
+   }
+  },
+  "scales": {
+   "D1": 0.157686,
+   "D2+": 0.44,
+   "D2-": 0.18,
+   "D3": 0.336472,
+   "D5": 2.497436,
+   "D6": 0.223144,
+   "D9": 0.121122
+  },
+  "seconds": 77.4,
+  "selection": {
+   "budget_regions": 95.01149166666667,
+   "common_start": 4.8,
+   "null_minutes": 190.023,
+   "null_regions": 95,
+   "rule": "per-key h: R1 objective (strict train F1, controls counted as false) under the train-null budget; start at the best common h; coordinate ascent; ties keep the smaller h sum",
+   "sweeps": 3,
+   "train": {
+    "F1": 0.4462809917355372,
+    "FN": 63,
+    "FP": 4,
+    "TP": 27,
+    "control_regions": 1
+   }
+  },
+  "text_model": "phones",
+  "val_noise_in_train_controls": false
+ },
+ {
+  "extra_null_roles": [
+   "budget"
+  ],
+  "extra_null_sources": [
+   "gettysburg",
+   "poetry"
+  ],
+  "gates_train": {
+   "n_clips": 50,
+   "violations": [
+    "gwbush_911_2001__G5: G5 scores 95.30 > 50.0",
+    "harris_uncsw_2021__G5: G5 scores 99.35 > 50.0",
+    "hclinton_tomorrow_2010__G5: G5 scores 100.00 > 50.0",
+    "obama_weekly_2009__G5: G5 scores 99.65 > 50.0",
+    "reagan_farewell_1989__G5: G5 scores 97.38 > 50.0",
+    "hclinton_tomorrow_2010: ladder not non-increasing (G1 100.00, G3 99.95, G5 100.00)"
+   ]
+  },
+  "gates_val": {
+   "n_clips": 20,
+   "violations": [
+    "eisenhower_farewell_1961__G5: G5 scores 97.64 > 50.0",
+    "lbush_radio_2001__G5: G5 scores 98.16 > 50.0"
+   ]
+  },
+  "h": {
+   "D1+": 3.45,
+   "D1-": 3.5,
+   "D2+": 2.4,
+   "D2-": 4.95,
+   "D3-": 3.85,
+   "D5-": 4.05,
+   "D6-": 2.2,
+   "D9-": 6.4
+  },
+  "name": "norms_d1_gp_budget",
+  "options": {
+   "boundary_strength": false,
+   "final_bins": false,
+   "tempo_position": false,
+   "tight_pauses": false
+  },
+  "pmax_factor": 1.0006,
+  "position": {
+   "D3": [
+    0.0,
+    0.049957,
+    0.033721,
+    -0.146607
+   ]
+  },
+  "results": {
+   "core8|L1|train": {
+    "once_f1": 0.093,
+    "once_tp_fp_dup_fn": [
+     2,
+     1,
+     0,
+     38
+    ],
+    "pre_f1": 0.093,
+    "pre_tp_fp_fn": [
+     2,
+     1,
+     38
+    ]
+   },
+   "core8|L1|val": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     0,
+     0,
+     16
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     0,
+     16
+    ]
+   },
+   "core8|L2+L3|train": {
+    "once_f1": 0.518,
+    "once_tp_fp_dup_fn": [
+     29,
+     3,
+     0,
+     51
+    ],
+    "pre_f1": 0.518,
+    "pre_tp_fp_fn": [
+     29,
+     3,
+     51
+    ]
+   },
+   "core8|L2+L3|val": {
+    "once_f1": 0.5,
+    "once_tp_fp_dup_fn": [
+     11,
+     1,
+     0,
+     21
+    ],
+    "pre_f1": 0.5,
+    "pre_tp_fp_fn": [
+     11,
+     1,
+     21
+    ]
+   },
+   "lab_passed|L1|train": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     0,
+     0,
+     5
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     0,
+     5
+    ]
+   },
+   "lab_passed|L1|val": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     0,
+     0,
+     2
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     0,
+     2
+    ]
+   },
+   "lab_passed|L2+L3|train": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     0,
+     0,
+     10
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     0,
+     10
+    ]
+   },
+   "lab_passed|L2+L3|val": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     0,
+     0,
+     4
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     0,
+     4
+    ]
+   },
+   "noise|train": 1,
+   "noise|val": 0,
+   "nulls|train": {
+    "by_key": {},
+    "minutes": 13.359,
+    "per_minute": 0.0,
+    "regions": 0
+   },
+   "nulls|val": {
+    "by_key": {},
+    "minutes": 5.932,
+    "per_minute": 0.0,
+    "regions": 0
+   },
+   "readers_by_source": {
+    "accent": {
+     "minutes": 166.943,
+     "per_minute": 0.695,
+     "readers": 394,
+     "regions": 116,
+     "used_in_fit": false
+    },
+    "ears": {
+     "minutes": 111.946,
+     "per_minute": 0.402,
+     "readers": 424,
+     "regions": 45,
+     "used_in_fit": false
+    },
+    "gettysburg": {
+     "minutes": 21.017,
+     "per_minute": 0.571,
+     "readers": 10,
+     "regions": 12,
+     "used_in_fit": true
+    },
+    "poetry": {
+     "minutes": 155.647,
+     "per_minute": 0.533,
+     "readers": 157,
+     "regions": 83,
+     "used_in_fit": true
+    }
+   },
+   "synthetic_only|L1|train": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     5,
+     1,
+     47
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     6,
+     47
+    ]
+   },
+   "synthetic_only|L1|val": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     1,
+     0,
+     14
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     1,
+     14
+    ]
+   },
+   "synthetic_only|L2+L3|train": {
+    "once_f1": 0.05,
+    "once_tp_fp_dup_fn": [
+     3,
+     22,
+     0,
+     92
+    ],
+    "pre_f1": 0.05,
+    "pre_tp_fp_fn": [
+     3,
+     22,
+     92
+    ]
+   },
+   "synthetic_only|L2+L3|val": {
+    "once_f1": 0.057,
+    "once_tp_fp_dup_fn": [
+     1,
+     6,
+     0,
+     27
+    ],
+    "pre_f1": 0.057,
+    "pre_tp_fp_fn": [
+     1,
+     6,
+     27
+    ]
+   }
+  },
+  "scales": {
+   "D1": 0.16353,
+   "D2+": 0.44,
+   "D2-": 0.18,
+   "D3": 0.336472,
+   "D5": 2.497436,
+   "D6": 0.223144,
+   "D9": 0.121122
+  },
+  "seconds": 101.7,
+  "selection": {
+   "budget_regions": 95.01149166666667,
+   "common_start": 4.75,
+   "null_minutes": 190.023,
+   "null_regions": 95,
+   "rule": "per-key h: R1 objective (strict train F1, controls counted as false) under the train-null budget; start at the best common h; coordinate ascent; ties keep the smaller h sum",
+   "sweeps": 4,
+   "train": {
+    "F1": 0.4715447154471545,
+    "FN": 61,
+    "FP": 4,
+    "TP": 29,
+    "control_regions": 1
+   }
+  },
+  "text_model": "norms_d1",
+  "val_noise_in_train_controls": false
+ },
+ {
+  "extra_null_roles": [
+   "budget"
+  ],
+  "extra_null_sources": [
+   "gettysburg",
+   "poetry"
+  ],
+  "gates_train": {
+   "n_clips": 50,
+   "violations": [
+    "gwbush_911_2001__G5: G5 scores 97.85 > 50.0",
+    "harris_uncsw_2021__G5: G5 scores 100.00 > 50.0",
+    "hclinton_tomorrow_2010__G5: G5 scores 100.00 > 50.0",
+    "obama_weekly_2009__G5: G5 scores 100.00 > 50.0",
+    "reagan_farewell_1989__G5: G5 scores 98.37 > 50.0",
+    "reagan_farewell_1989: ladder not non-increasing (G1 99.60, G3 100.00, G5 98.37)"
+   ]
+  },
+  "gates_val": {
+   "n_clips": 20,
+   "violations": [
+    "eisenhower_farewell_1961__G5: G5 scores 97.90 > 50.0",
+    "lbush_radio_2001__G5: G5 scores 99.05 > 50.0"
+   ]
+  },
+  "h": {
+   "D1+": 4.5,
+   "D1-": 3.05,
+   "D2+": 2.4,
+   "D2-": 4.95,
+   "D3-": 4.1,
+   "D5-": 4.75,
+   "D6-": 2.75,
+   "D9-": 6.4
+  },
+  "name": "shipped_strict_stage2",
+  "options": {
+   "boundary_strength": false,
+   "final_bins": false,
+   "tempo_position": false,
+   "tight_pauses": false
+  },
+  "pmax_factor": 1.0006,
+  "position": {
+   "D3": [
+    0.0,
+    0.049957,
+    0.033721,
+    -0.146607
+   ]
+  },
+  "results": {
+   "core8|L1|train": {
+    "once_f1": 0.048,
+    "once_tp_fp_dup_fn": [
+     1,
+     1,
+     0,
+     39
+    ],
+    "pre_f1": 0.048,
+    "pre_tp_fp_fn": [
+     1,
+     1,
+     39
+    ]
+   },
+   "core8|L1|val": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     1,
+     0,
+     16
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     1,
+     16
+    ]
+   },
+   "core8|L2+L3|train": {
+    "once_f1": 0.491,
+    "once_tp_fp_dup_fn": [
+     27,
+     3,
+     0,
+     53
+    ],
+    "pre_f1": 0.491,
+    "pre_tp_fp_fn": [
+     27,
+     3,
+     53
+    ]
+   },
+   "core8|L2+L3|val": {
+    "once_f1": 0.429,
+    "once_tp_fp_dup_fn": [
+     9,
+     1,
+     0,
+     23
+    ],
+    "pre_f1": 0.429,
+    "pre_tp_fp_fn": [
+     9,
+     1,
+     23
+    ]
+   },
+   "lab_passed|L1|train": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     0,
+     0,
+     5
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     0,
+     5
+    ]
+   },
+   "lab_passed|L1|val": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     0,
+     0,
+     2
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     0,
+     2
+    ]
+   },
+   "lab_passed|L2+L3|train": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     0,
+     0,
+     10
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     0,
+     10
+    ]
+   },
+   "lab_passed|L2+L3|val": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     0,
+     0,
+     4
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     0,
+     4
+    ]
+   },
+   "noise|train": 1,
+   "noise|val": 0,
+   "nulls|train": {
+    "by_key": {},
+    "minutes": 13.359,
+    "per_minute": 0.0,
+    "regions": 0
+   },
+   "nulls|val": {
+    "by_key": {},
+    "minutes": 5.932,
+    "per_minute": 0.0,
+    "regions": 0
+   },
+   "readers_by_source": {
+    "accent": {
+     "minutes": 166.943,
+     "per_minute": 0.587,
+     "readers": 394,
+     "regions": 98,
+     "used_in_fit": false
+    },
+    "ears": {
+     "minutes": 111.946,
+     "per_minute": 0.348,
+     "readers": 424,
+     "regions": 39,
+     "used_in_fit": false
+    },
+    "gettysburg": {
+     "minutes": 21.017,
+     "per_minute": 0.619,
+     "readers": 10,
+     "regions": 13,
+     "used_in_fit": true
+    },
+    "poetry": {
+     "minutes": 155.647,
+     "per_minute": 0.527,
+     "readers": 157,
+     "regions": 82,
+     "used_in_fit": true
+    }
+   },
+   "synthetic_only|L1|train": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     1,
+     0,
+     47
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     1,
+     47
+    ]
+   },
+   "synthetic_only|L1|val": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     2,
+     0,
+     14
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     2,
+     14
+    ]
+   },
+   "synthetic_only|L2+L3|train": {
+    "once_f1": 0.018,
+    "once_tp_fp_dup_fn": [
+     1,
+     14,
+     0,
+     94
+    ],
+    "pre_f1": 0.018,
+    "pre_tp_fp_fn": [
+     1,
+     14,
+     94
+    ]
+   },
+   "synthetic_only|L2+L3|val": {
+    "once_f1": 0.0,
+    "once_tp_fp_dup_fn": [
+     0,
+     8,
+     0,
+     28
+    ],
+    "pre_f1": 0.0,
+    "pre_tp_fp_fn": [
+     0,
+     8,
+     28
+    ]
+   }
+  },
+  "scales": {
+   "D1": 0.157686,
+   "D2+": 0.44,
+   "D2-": 0.18,
+   "D3": 0.336472,
+   "D5": 2.497436,
+   "D6": 0.223144,
+   "D9": 0.121122
+  },
+  "seconds": 1.7,
+  "selection": {
+   "budget_regions": 95.01149166666667,
+   "common_start": 4.8,
+   "null_minutes": 190.023,
+   "null_regions": 95,
+   "rule": "per-key h: R1 objective (strict train F1, controls counted as false) under the train-null budget; start at the best common h; coordinate ascent; ties keep the smaller h sum",
+   "sweeps": 3,
+   "train": {
+    "F1": 0.4462809917355372,
+    "FN": 63,
+    "FP": 4,
+    "TP": 27,
+    "control_regions": 1
+   }
+  },
+  "selfref_sha256": "3768cdc0f8a9d2ad8f955d33128b4bc359c015afdf98a60ffec65eb4b74dd8c3",
+  "source": "models/detector_selfref.json (CLI calibrate)",
+  "text_model": "phones",
+  "val_noise_in_train_controls": false
+ }
+]

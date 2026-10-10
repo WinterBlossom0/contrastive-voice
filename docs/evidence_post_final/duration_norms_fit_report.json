@@ -1,0 +1,156 @@
+{
+ "held_out": {
+  "fit test-clean -> eval dev-clean": {
+   "fit": {
+    "speakers": 39,
+    "readings": 510,
+    "words": 90416,
+    "words_not_in_dictionary": 1384
+   },
+   "eval": {
+    "speakers": 40,
+    "readings": 543,
+    "words": 99084,
+    "words_not_in_dictionary": 1507
+   },
+   "objective": "window",
+   "speech": {
+    "words": 93379,
+    "r2_phones_proportional": 0.6487,
+    "phones_slope": 0.9615,
+    "r2_phones_fitted": 0.6502,
+    "r2_norms": 0.7192
+   },
+   "word": {
+    "words": 99084,
+    "r2_phones_proportional": 0.7124,
+    "phones_slope": 1.4688,
+    "r2_phones_fitted": 0.7929,
+    "r2_norms": 0.8513
+   },
+   "window_spread": {
+    "D1": {
+     "raw": 0.25,
+     "phones": 0.1436,
+     "norms": 0.1273
+    },
+    "D9": {
+     "raw": 0.2926,
+     "phones": 0.1352,
+     "norms": 0.1118
+    }
+   },
+   "windows": 97855
+  },
+  "fit dev-clean -> eval test-clean": {
+   "fit": {
+    "speakers": 40,
+    "readings": 543,
+    "words": 99084,
+    "words_not_in_dictionary": 1507
+   },
+   "eval": {
+    "speakers": 39,
+    "readings": 510,
+    "words": 90416,
+    "words_not_in_dictionary": 1384
+   },
+   "objective": "window",
+   "speech": {
+    "words": 85575,
+    "r2_phones_proportional": 0.6604,
+    "phones_slope": 0.9538,
+    "r2_phones_fitted": 0.6614,
+    "r2_norms": 0.7234
+   },
+   "word": {
+    "words": 90416,
+    "r2_phones_proportional": 0.7206,
+    "phones_slope": 1.4674,
+    "r2_phones_fitted": 0.8024,
+    "r2_norms": 0.8562
+   },
+   "window_spread": {
+    "D1": {
+     "raw": 0.2548,
+     "phones": 0.1467,
+     "norms": 0.1317
+    },
+    "D9": {
+     "raw": 0.2975,
+     "phones": 0.1329,
+     "norms": 0.1112
+    }
+   },
+   "windows": 89310
+  }
+ },
+ "final_fit": {
+  "speakers": 79,
+  "readings": 1053,
+  "words": 189500,
+  "words_not_in_dictionary": 2891,
+  "pauses": {
+   "end": {
+    "boundaries": 1084,
+    "share_at_least_pause_min": 0.7758,
+    "median_s": 0.48,
+    "q90_s": 0.99
+   },
+   "comma": {
+    "boundaries": 15628,
+    "share_at_least_pause_min": 0.5591,
+    "median_s": 0.24,
+    "q90_s": 0.58
+   },
+   "tight": {
+    "boundaries": 55899,
+    "share_at_least_pause_min": 0.0032,
+    "median_s": 0.0,
+    "q90_s": 0.06
+   },
+   "none": {
+    "boundaries": 106356,
+    "share_at_least_pause_min": 0.0295,
+    "median_s": 0.0,
+    "q90_s": 0.08
+   }
+  },
+  "factors": {
+   "speech": {
+    "function_word": 0.7242,
+    "comma_after": 1.2366,
+    "end_after": 1.0478
+   },
+   "word": {
+    "function_word": 0.6413,
+    "comma_after": 1.1499,
+    "end_after": 1.1623
+   }
+  },
+  "phone_duration_ratio": {
+   "speech": {
+    "vowel_primary": 4.0661,
+    "vowel_secondary": 2.386,
+    "vowel_unstressed": 2.0827,
+    "stop": 1.287,
+    "affricate": 2.0629,
+    "fricative": 1.6887,
+    "nasal": 1.2707,
+    "liquid": 1.4933,
+    "glide": 1.0
+   },
+   "word": {
+    "vowel_primary": 1.6301,
+    "vowel_secondary": 1.7903,
+    "vowel_unstressed": 1.2607,
+    "stop": 1.1169,
+    "affricate": 1.5874,
+    "fricative": 1.3716,
+    "nasal": 0.8888,
+    "liquid": 1.19,
+    "glide": 1.0
+   }
+  }
+ }
+}

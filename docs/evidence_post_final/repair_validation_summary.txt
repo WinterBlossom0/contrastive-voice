@@ -1,0 +1,206 @@
+# Fix your speech: validation evidence (2026-10-10 10:46 IST)
+
+Written by build/work/repair/validate.py (section `evidence`) from build/work/repair/validation_*.json. Git HEAD e893d5b864; sha256 repair.py 0cf2371cebf9, detector.json d5935d3f8eea, detector_selfref.json 6dd3adc53d7f. Data: the gallery clips (R1 parents reagan_farewell_1989 = train and eisenhower_farewell_1961 = val; R2 readers) and, for section 6, the fit-phase reader pickle. No test-split data was read.
+
+Product configuration = pitch method 'own', 1 round. Option = pitch method 'contour'. All counts are [agree or event] / [rows].
+
+## 1. Controls
+
+### 1.0 Null chain (renamed: reproduction check)
+40 runs, 0 flag changes, max |score change| 0.0. Every null chain is an identity by construction (stretch x1, gain 0 dB, no pause change, pitch spliced only where the tier changes), so this check shows that the analysis reproduces. It does not control for processing artefacts.
+
+### 1.1 Processing-only PSOLA (identity pitch tier, no splice)
+Definition: Praat PSOLA resynthesis with the unchanged pitch tier, (a) over the whole clip without any splice, (b) spliced over the full span of every PSOLA operation (pitch_scale, pitch_contour, emphasis with a pitch raise) of the round-1 fix, on the unedited recording. Outcome: flag changes (removed + new findings) and score change against the stored result.
+
+- (a) whole clip: 17 clips, 0 flag changes, clips with a change 0; score change median 0.0, range [-0.54, 0.38].
+- (b) fix spans: 8 runs (all with a PSOLA operation), 0 flag changes, own pitch findings removed by processing alone 0; score change median -0.05, range [-0.54, 0.07].
+- Limit: the detector is the judge here too, and the WSOLA time operations have no processing-only control (WSOLA at rate 1 is an identity).
+
+### 1.2 Sham edits (same operation, same value, matched region without a finding)
+Definition: each operation of the round-1 fixes (own and contour) with the value it used, moved to the nearest region whose words are at least 2 words away from every local finding: same number of words and one sentence when the original is in one sentence; a pause at a boundary of the same class (sentence end, other punctuation, none); a shortened pause needs a silent run longer than the kept length. Whole-clip operations have no matched region. 'Target' = a new flag in the dimension of the original finding; 'related' and 'unrelated' use the related sets of 1.3.
+
+Operations 71, shams run 45, shams with any new flag 13, with a new unrelated flag 0.
+
+| operation | operations | shams run | new target flag | new related flag | new unrelated flag | removed a finding | not run (reason: count) |
+|---|---|---|---|---|---|---|---|
+| emphasis | 2 | 2 | 0 | 0 | 0 | 0 |  |
+| gain | 22 | 14 | 0 | 0 | 0 | 0 | no 3-word region without a finding: 2; no 6-word region without a finding: 4; no 2-word region without a finding: 2 |
+| pause_insert | 18 | 8 | 2 | 0 | 0 | 1 | no none boundary without a finding: 2; no end boundary without a finding: 6; no comma boundary without a finding: 2 |
+| pause_shorten | 7 | 7 | 1 | 0 | 0 | 0 |  |
+| pitch_contour | 5 | 2 | 0 | 0 | 0 | 0 | whole-clip operation: 3 |
+| pitch_scale | 1 | 0 | 0 | 0 | 0 | 0 | whole-clip operation: 1 |
+| stretch | 16 | 12 | 9 | 3 | 0 | 0 | whole-clip operation: 2; no 2-word region without a finding: 2 |
+
+Median shift of the target measure by the sham, in flag thresholds: emphasis 0.05 (n 2), gain 0.58 (n 14), pause_insert 1.736 (n 7), pause_shorten 0.992 (n 7), pitch_contour 0.36 (n 2), stretch 1.524 (n 12).
+Read with: R1 and R2 flag D5 only for quieter speech (D5-), so a gain sham that raises the level cannot make a D5 flag; D2+ counts only where the reference has no pause, so an inserted pause at a sentence end is not countable; D4 x is measured at the reference's stressed words, so an emphasis sham on another word barely moves it.
+
+### 1.3 Clean-region check, recounted with a narrowed emphasis set
+The 175 clean trials were run again with the measure shift recorded; per-trial counts reproduce session 3: True. Shift = the largest |change| of a dimension's unit measure over the units within 2 words of the edit, divided by the dimension's flag threshold (h x scale, smallest over its signed keys).
+
+Rule (fixed before the re-run): related = the operation's target dimension plus each dimension whose measure the operation moves by at least 1.0 flag threshold (median over its clean trials, units within 2 words of the edit); applied to emphasis only. Result: emphasis related = D4 (old set: D1, D3, D4, D5, D7, D8, D9). Median shift of emphasis (x1.2, +2 st, +3 dB on one word): D1 0.081, D2 0.0, D3 0.103, D4 0.037, D5 0.026, D6 0.022, D9 0.313.
+For reference, the same rule applied to every operation gives: emphasis D4; gain D5; pause_insert D2; pause_shorten D2; pitch_contour D3; pitch_scale D3; stretch D1, D9 (not applied; only emphasis was narrowed).
+
+- Old count (old sets): related 34, unrelated 5 ({'D9': 5}).
+- New count (narrowed emphasis set; target dimension shown apart): target 25, related 8, unrelated 6 ({'D9': 5, 'D1': 1}).
+- Unrelated trials: L2B words [36, 40] pause_insert 0.4 -> [('D9', [26, 27])]; L2B words [36, 40] pause_shorten 0.4 -> [('D9', [26, 27])]; L2B words [36, 40] pitch_scale 0.7142857142857143 -> [('D9', [26, 27])]; L2B words [36, 40] pitch_contour 1.0 -> [('D9', [26, 27])]; L2B words [36, 40] gain -4.0 -> [('D9', [26, 27])]; natural_rush words [16, 20] emphasis [1.2, 2.0, 3.0] -> [('D1', [32, 33])].
+
+## 2. Detector-free instruments (round 1, own and contour)
+
+Definitions. Pause: Praat 'To TextGrid (silences)' (100 Hz, -25 dB re the loudest frame, silent and sounding intervals at least 0.05 s); measure = silent time from the middle of the word before the boundary to the middle of the word after it; agree when |measured change - intended change| <= 0.05 s. Timing: phonation time = region minus Praat silences; agree when |ln(after/before) - ln(planned ratio)| <= 0.05 (a quarter of the R1 D1 threshold). Syllable-nucleus rate (de Jong & Wempe 2009): intensity peaks (50 Hz floor) above the 99 % quantile - 25 dB, a dip > 2 dB to the next peak, voiced (Praat ac 30-450 Hz); rate = nuclei / phonation time; agree when |rate after - rate before / planned| <= 1 / phonation time after (one nucleus). Pitch: WORLD Harvest, the median five-word-window P90-P10 range (as the pipeline windows it). Level: A-weighted energy. Regions are placed with the stored word times and carried through the edit's time map; no measure uses the aligner's output on the edited audio, except the level span check.
+
+- Pause (Praat silences): all 19/25, own 13/18; measured - intended median 0.01 s, range [-0.065, 0.076] s.
+- Phonation time: local stretch 10/14, whole-clip stretch 2/2, emphasis duration 1/2; ln error median 0.001, range [-0.041, 0.797].
+- Syllable-nucleus rate: local stretch 7/14, whole-clip 0/2, emphasis 2/2; the nucleus count changed in 10 of 18 rows (WSOLA should keep it; strong compression merges intensity peaks, so the count is not stable under the edits it is meant to measure).
+- Pitch, Harvest window range: moves > 1.0 st in the intended direction 6/6; within 1.1 st of Praat ac 5/6.
+- Emphasis pitch raise, Harvest P90 of the word within 1.1 st of the intended raise: 1/2; with the word median (added after the P90 result, because Harvest shows a 10-frame octave excursion on the L3B word that Praat ac and cc do not show): 2/2.
+- Level, A-weighted, tolerance 1.5 dB, round-1 rows of validation.json: first criterion (span check: RMS over the re-aligned words, intended = sum of the gains without ramps) 19/24; revised criterion (frame check: the same edited frames through the time map, intended gain curve with ramps and overlaps) 24/24. The frame check was introduced in session 3 after the span check missed 5 rows. Recomputed here: 24/24.
+
+Misses (every row that failed a check, with its values):
+
+- L2B own d1-001 stretch phonation_agree: phonation_s [1.336, 1.04], planned_time_ratio 0.7, phonation_ln_error 0.1062, nuclei [9, 7], nucleus_rate [6.737, 6.731], nucleus_rate_planned 9.624
+- L2B own d1-001 stretch nucleus_rate_agree: phonation_s [1.336, 1.04], planned_time_ratio 0.7, phonation_ln_error 0.1062, nuclei [9, 7], nucleus_rate [6.737, 6.731], nucleus_rate_planned 9.624
+- L3B own d4-002 emphasis harvest_emphasis_agree: phonation_s [0.384, 0.552], planned_time_ratio 1.4, phonation_ln_error 0.0264, nuclei [2, 3], nucleus_rate [5.208, 5.435], nucleus_rate_planned 3.72, harvest_p90_st [82.551, 93.727], harvest_median_st [81.302, 84.249], intended_st 3.0
+- L3B own d1-004 stretch nucleus_rate_agree: phonation_s [1.82, 1.318], planned_time_ratio 0.7, phonation_ln_error 0.0342, nuclei [8, 7], nucleus_rate [4.397, 5.311], nucleus_rate_planned 6.281
+- G1 own d9-001 stretch nucleus_rate_agree: phonation_s [0.856, 1.019], planned_time_ratio 1.1972, phonation_ln_error -0.0059, nuclei [3, 4], nucleus_rate [3.505, 3.926], nucleus_rate_planned 2.927
+- G3 own d1-003 stretch nucleus_rate_agree: phonation_s [0.612, 0.84], planned_time_ratio 1.4, phonation_ln_error -0.0198, nuclei [3, 4], nucleus_rate [4.902, 4.762], nucleus_rate_planned 3.501
+- G3 contour d1-003 stretch nucleus_rate_agree: phonation_s [0.612, 0.84], planned_time_ratio 1.4, phonation_ln_error -0.0198, nuclei [3, 4], nucleus_rate [4.902, 4.762], nucleus_rate_planned 3.501
+- G5 own d1-001 stretch nucleus_rate_agree: phonation_s [10.296, 14.672], planned_time_ratio 1.3948, phonation_ln_error 0.0214, nuclei [83, 90], nucleus_rate [8.061, 6.134], nucleus_rate_planned 5.78
+- G5 own d2-005 pause_insert pause_agree: silence_s [0.0, 0.88], intended_change_s 0.82, measured_change_s 0.88
+- G5 own d1-009 stretch phonation_agree: phonation_s [0.139, 0.172], planned_time_ratio 1.1348, phonation_ln_error 0.0834, nuclei [1, 1], nucleus_rate [7.189, 5.828], nucleus_rate_planned 6.335
+- G5 contour d1-001 stretch nucleus_rate_agree: phonation_s [10.296, 14.472], planned_time_ratio 1.3948, phonation_ln_error 0.0077, nuclei [83, 89], nucleus_rate [8.061, 6.15], nucleus_rate_planned 5.78
+- G5 contour d3-002 pitch_contour harvest_agrees_with_ac: harvest_window_range_st [2.37, 4.47], ac_window_range_st [0.109, 3.863]
+- G5 contour d2-005 pause_insert pause_agree: silence_s [0.0, 0.896], intended_change_s 0.82, measured_change_s 0.896
+- G5 contour d1-009 stretch phonation_agree: phonation_s [0.139, 0.172], planned_time_ratio 1.1348, phonation_ln_error 0.0834, nuclei [1, 1], nucleus_rate [7.189, 5.828], nucleus_rate_planned 6.335
+- natural_rush own d2-001 pause_shorten pause_agree: silence_s [0.344, 0.0], intended_change_s -0.29, measured_change_s -0.344
+- natural_rush own d1-003 stretch phonation_agree: phonation_s [0.2, 0.63], planned_time_ratio 1.4192, phonation_ln_error 0.7973, nuclei [3, 5], nucleus_rate [15.0, 7.937], nucleus_rate_planned 10.569
+- natural_rush own d1-003 stretch nucleus_rate_agree: phonation_s [0.2, 0.63], planned_time_ratio 1.4192, phonation_ln_error 0.7973, nuclei [3, 5], nucleus_rate [15.0, 7.937], nucleus_rate_planned 10.569
+- natural_rush own d4-006 emphasis phonation_agree: phonation_s [0.079, 0.146], planned_time_ratio 1.5, phonation_ln_error 0.2, nuclei [1, 1], nucleus_rate [12.589, 6.871], nucleus_rate_planned 8.392, harvest_p90_st [83.635, 86.549], harvest_median_st [83.458, 85.827], intended_st 3.0
+- natural_rush own d2-007 pause_insert pause_agree: silence_s [0.096, 0.552], intended_change_s 0.51, measured_change_s 0.456
+- natural_rush own d2-008 pause_shorten pause_agree: silence_s [0.685, 0.0], intended_change_s -0.62, measured_change_s -0.685
+- natural_rush own d9-009 stretch nucleus_rate_agree: phonation_s [1.119, 1.305], planned_time_ratio 1.2092, phonation_ln_error -0.0364, nuclei [8, 11], nucleus_rate [7.146, 8.427], nucleus_rate_planned 5.91
+- natural_rush own d2-010 pause_insert pause_agree: silence_s [0.064, 0.68], intended_change_s 0.56, measured_change_s 0.616
+
+Read with: 4 of the 6 pause misses measure 0.0 s of silence on the side that holds a pause cut to PAUSE_FLOOR_S (0.06 s): after the cross-fades that short run is not a Praat silence, so the measured change is about 0.06 s larger than intended. Phonation time in a faded or low-effort region (natural_rush words 26-29) drops because quiet speech falls below the -25 dB silence threshold.
+
+## 3. Inverse recovery on the R1 clips (clean source known)
+
+Definition: the gallery R1 clips are recipe edits of a clean parent (labels of build/work/kaggle_runs/last_run/x/data/dataset, which built the gallery; parent PCM sha256 and clip length checked). For a region, m_clean, m_flawed and m_fixed are the detector-free measures of section 2 on the parent (label parent word times), the gallery clip (label clip word times) and the repaired clip (clip times through the repair's time map). Recovered share = (m_fixed - m_flawed) / (m_clean - m_flawed): 1 = back at the clean value, 0 = unchanged, < 0 = further away, > 1 = past the clean value. Computed only when |m_clean - m_flawed| >= the resolution (ln phonation 0.05, silence 0.05 s, pitch 1 st, level 1.5 dB, nucleus rate one nucleus); else the row is 'no measurable injected change'. Measures: time = ln phonation time (primary) and ln nucleus rate; pause = silent time; pitch = Harvest P90-P10 of the region (>= 50 voiced frames); level = A-weighted dB; emphasis = the time, P90 and median Harvest, and level measures of the word.
+
+Clips (own): G1, G3, G5, L1A, L1B, L2A, L2B, L3A, L3B, natural_rush. Injected edits without a measure or a repair operation: {'MUMBLE': 3, 'WORD_REPETITION': 1, 'RISING_ENDING': 1}.
+
+### 3.1 Per injected edit (all edits; an edit that no fix touches counts with its share near 0), product configuration
+| edit type, measure | rows | measurable | recovered median [q25, q75] | in [0.5, 1.5] | < 0 | > 1.5 |
+|---|---|---|---|---|---|---|
+| DEEMPHASIS, level_db | 3 | 3 | 0.00 [-0.01, 0.30] | 1 | 1 | 0 |
+| DEEMPHASIS, ln_nucleus_rate | 3 | 0 | - | 0 | 0 | 0 |
+| DEEMPHASIS, ln_phonation_s | 3 | 3 | 0.03 [0.02, 0.50] | 1 | 0 | 0 |
+| DEEMPHASIS, median_st | 3 | 2 | 1.05 [0.52, 1.57] | 0 | 0 | 1 |
+| DEEMPHASIS, peak_st | 3 | 3 | 0.00 [-0.01, 2.64] | 0 | 1 | 1 |
+| DRAG, ln_nucleus_rate | 3 | 1 | 0.26 [0.26, 0.26] | 0 | 0 | 0 |
+| DRAG, ln_phonation_s | 3 | 3 | 0.40 [0.20, 0.66] | 1 | 0 | 0 |
+| FADE, level_db | 6 | 6 | 0.28 [0.06, 0.50] | 2 | 0 | 0 |
+| LOW_EFFORT, level_db | 1 | 1 | 0.20 [0.20, 0.20] | 0 | 0 | 0 |
+| MONOTONE, range_st | 5 | 5 | 0.00 [0.00, 0.00] | 0 | 1 | 0 |
+| NATURAL_RUSH, ln_nucleus_rate | 1 | 1 | -0.97 [-0.97, -0.97] | 0 | 1 | 0 |
+| NATURAL_RUSH, ln_phonation_s | 1 | 1 | 0.94 [0.94, 0.94] | 1 | 0 | 0 |
+| PAUSE_DROPPED, silence_s | 8 | 8 | 0.97 [0.96, 0.99] | 8 | 0 | 0 |
+| PAUSE_INTRUSIVE, silence_s | 3 | 3 | 0.88 [0.86, 0.91] | 3 | 0 | 0 |
+| RUSH, ln_nucleus_rate | 6 | 5 | 0.72 [0.08, 0.79] | 3 | 1 | 0 |
+| RUSH, ln_phonation_s | 6 | 6 | 0.74 [0.60, 0.78] | 5 | 0 | 0 |
+
+### 3.2 Per injected edit with a fix operation on its words, product configuration
+| edit type, measure | rows | measurable | recovered median [q25, q75] | in [0.5, 1.5] | < 0 | > 1.5 |
+|---|---|---|---|---|---|---|
+| DEEMPHASIS, level_db | 1 | 1 | 0.60 [0.60, 0.60] | 1 | 0 | 0 |
+| DEEMPHASIS, ln_nucleus_rate | 1 | 0 | - | 0 | 0 | 0 |
+| DEEMPHASIS, ln_phonation_s | 1 | 1 | 0.97 [0.97, 0.97] | 1 | 0 | 0 |
+| DEEMPHASIS, median_st | 1 | 1 | 2.09 [2.09, 2.09] | 0 | 0 | 1 |
+| DEEMPHASIS, peak_st | 1 | 1 | 5.28 [5.28, 5.28] | 0 | 0 | 1 |
+| DRAG, ln_nucleus_rate | 2 | 1 | 0.26 [0.26, 0.26] | 0 | 0 | 0 |
+| DRAG, ln_phonation_s | 2 | 2 | 0.66 [0.53, 0.78] | 1 | 0 | 0 |
+| FADE, level_db | 4 | 4 | 0.43 [0.29, 0.60] | 2 | 0 | 0 |
+| LOW_EFFORT, level_db | 1 | 1 | 0.20 [0.20, 0.20] | 0 | 0 | 0 |
+| MONOTONE, range_st | 1 | 1 | -0.04 [-0.04, -0.04] | 0 | 1 | 0 |
+| NATURAL_RUSH, ln_nucleus_rate | 1 | 1 | -0.97 [-0.97, -0.97] | 0 | 1 | 0 |
+| NATURAL_RUSH, ln_phonation_s | 1 | 1 | 0.94 [0.94, 0.94] | 1 | 0 | 0 |
+| PAUSE_DROPPED, silence_s | 8 | 8 | 0.97 [0.96, 0.99] | 8 | 0 | 0 |
+| PAUSE_INTRUSIVE, silence_s | 3 | 3 | 0.88 [0.86, 0.91] | 3 | 0 | 0 |
+| RUSH, ln_nucleus_rate | 6 | 5 | 0.72 [0.08, 0.79] | 3 | 1 | 0 |
+| RUSH, ln_phonation_s | 6 | 6 | 0.74 [0.60, 0.78] | 5 | 0 | 0 |
+
+### 3.3 Per repair operation on a matching injected edit (same measure kind, overlapping words), product configuration
+| operation, measure | rows | measurable | recovered median [q25, q75] | in [0.5, 1.5] | < 0 | > 1.5 |
+|---|---|---|---|---|---|---|
+| emphasis, level_db | 1 | 1 | 0.60 [0.60, 0.60] | 1 | 0 | 0 |
+| emphasis, ln_nucleus_rate | 1 | 0 | - | 0 | 0 | 0 |
+| emphasis, ln_phonation_s | 1 | 1 | 0.97 [0.97, 0.97] | 1 | 0 | 0 |
+| emphasis, median_st | 1 | 1 | 2.09 [2.09, 2.09] | 0 | 0 | 1 |
+| emphasis, peak_st | 1 | 1 | 5.28 [5.28, 5.28] | 0 | 0 | 1 |
+| gain, level_db | 5 | 5 | 0.48 [0.40, 0.58] | 2 | 0 | 0 |
+| pause_insert, silence_s | 8 | 8 | 0.97 [0.96, 0.99] | 8 | 0 | 0 |
+| pause_shorten, silence_s | 3 | 3 | 0.88 [0.86, 0.91] | 3 | 0 | 0 |
+| stretch, ln_nucleus_rate | 9 | 6 | 0.81 [0.49, 1.11] | 3 | 1 | 1 |
+| stretch, ln_phonation_s | 9 | 9 | 0.88 [0.56, 0.93] | 8 | 0 | 0 |
+
+Operations on no matching injected edit (the finding matches no edit of its kind): change of the distance to the clean value (after - before; > 0 = the fix moved the region away from the clean source):
+
+- emphasis | level_db: rows 1, change -5.761 median, range [-5.761, -5.761], moved away by more than the resolution 0
+- emphasis | ln_nucleus_rate: rows 1, change 0.0 median, range [0.0, 0.0], moved away by more than the resolution 0
+- emphasis | ln_phonation_s: rows 1, change 0.0 median, range [0.0, 0.0], moved away by more than the resolution 0
+- emphasis | median_st: rows 1, change -0.03 median, range [-0.03, -0.03], moved away by more than the resolution 0
+- emphasis | peak_st: rows 1, change 0.04 median, range [0.04, 0.04], moved away by more than the resolution 0
+- gain | level_db: rows 2, change 0.124 median, range [-1.983, 2.232], moved away by more than the resolution 1
+- pause_insert | silence_s: rows 3, change -0.584 median, range [-0.76, 0.472], moved away by more than the resolution 1
+- pause_shorten | silence_s: rows 3, change 0.0 median, range [-0.344, 0.456], moved away by more than the resolution 1
+- stretch | ln_nucleus_rate: rows 2, change -0.039 median, range [-0.221, 0.143], moved away by more than the resolution 1
+- stretch | ln_phonation_s: rows 2, change -0.396 median, range [-0.571, -0.221], moved away by more than the resolution 0
+
+### 3.4 Option 'contour' (clips with a pitch finding: G3, G5, L2A, L3A), per injected edit with a fix on its words
+| edit type, measure | rows | measurable | recovered median [q25, q75] | in [0.5, 1.5] | < 0 | > 1.5 |
+|---|---|---|---|---|---|---|
+| FADE, level_db | 4 | 4 | 0.42 [0.27, 0.60] | 2 | 0 | 0 |
+| MONOTONE, range_st | 3 | 3 | 0.96 [0.80, 0.99] | 3 | 0 | 0 |
+| PAUSE_DROPPED, silence_s | 7 | 7 | 0.97 [0.96, 0.99] | 7 | 0 | 0 |
+| RUSH, ln_nucleus_rate | 4 | 3 | 0.72 [0.40, 0.75] | 2 | 0 | 0 |
+| RUSH, ln_phonation_s | 4 | 4 | 0.63 [0.52, 0.74] | 3 | 0 | 0 |
+
+Limits: the Praat silence threshold is relative to the loudest frame, so a fade or low-effort edit can turn quiet speech into 'silence' (natural_rush words 26-29: phonation 0.20 s); the nucleus count is unstable under strong compression; natural_rush words 28-31 are where the aligner places words differently from the label (STATUS: re-alignment flips there), so the regions of the fixes there do not match the label regions.
+
+## 4. Residual departure of removed findings
+
+Definition: after the fix, the detector's measure of each original finding (finding_measure: the peak of the unit measure over the finding's units in the flag direction; whole-passage: the clip measure). Residual share = sign(delta) x measure_after / |delta|: 1 = unchanged, 0 = at the target, < 0 = past it. 'Removed' = no flag of the same dimension and direction on the same words (compare_findings). A shortened pause that falls below the D2 detection floor has no measure and is counted apart (the fix plans max(target, PAUSE_FLOOR_S); the target is no measurable pause when the reference has none).
+
+| configuration | runs | findings | removed | with a measure | pause below floor | residual share median [q25, q75] | >= 0.25 | >= 0.5 | past target |
+|---|---|---|---|---|---|---|---|---|---|
+| own, round 1 (product) | 14 | 62 | 37 | 30 | 7 | 0.209 [0.0, 0.352] | 12 | 6 | 6 |
+| all 40 runs | 40 | 196 | 122 | 108 | 14 | 0.163 [-0.0, 0.365] | 42 | 17 | 22 |
+
+Product configuration, residual share of removed findings by fix status: applied n 16 median 0.0 max 0.53; capped n 10 median 0.284 max 0.701; covered n 4 median 0.412 max 0.627. Removed findings by status: {'applied': 23, 'capped': 10, 'covered': 4}. The removed sets and new-finding counts reproduce validation_runs.json: True.
+
+## 5. New findings per run
+
+40 runs; runs with a new finding 5; new findings 5, of which counted (with points) 1. Product configuration: 2 of 14 runs, 2 new findings.
+
+- G5 own round 1: d4-010 D4 FADE words [78, 78] points 0.0 counted False
+- G5 own round 2: d4-012 D4 FADE words [78, 78] points 0.0 counted False
+- G5 contour round 1: d4-010 D4 FADE words [78, 78] points 0.0 counted False
+- G5 contour round 2: d4-009 D4 FADE words [78, 78] points 0.0 counted False
+- natural_rush own round 1: d1-005 D1 DRAG words [32, 33] points 0.64 counted True
+
+Correction: the earlier statement '0 new findings except natural_rush round 1' is wrong. G5 has one new uncounted D4 member (type FADE, word 78, 0 points) in all 4 runs; natural_rush own round 1 has one new counted D1 DRAG.
+
+## 6. No-reference (SELF) pause fixes on fit-phase readers
+
+Data: 985 readers ({'accent': 394, 'ears': 424, 'gettysburg': 10, 'poetry': 157}), the fit-phase reader pickle (gettysburg and poetry: fit sources; accent and ears: validation sources; no test data), analysed with the shipped SELF detector (selfref 3768cdc0f8a9). For each D2 finding: the pause the SELF fix leaves (plan_pause: shorten to max(target, PAUSE_FLOOR_S), or insert the missing time) and the share of the other readers of the same text with an acoustic pause >= 0.2 s (the pipeline's pause measure) at that boundary.
+
+- Longer-pause findings (fix shortens): 32 (all at unpunctuated boundaries: {'none': 32}); the fix leaves a pause below 0.2 s in 32.
+- Share of other readers pausing at the flagged boundary: median 0.084 [0.04, 0.169], max 0.9. Boundaries where at least 10 % / 25 % / 50 % of the other readers pause: 12 / 8 / 2 of 32; at least one other reader: 31. A majority phrase break removed by the fix: 2. By source: {'accent': {'findings': 25, 'majority_break': 0}, 'gettysburg': {'findings': 3, 'majority_break': 0}, 'poetry': {'findings': 4, 'majority_break': 2}}.
+- Base rate over all 2653 unpunctuated boundaries of these texts: mean share of readers pausing 0.0436; boundaries with at least 10 % / 25 % / 50 % pausing: 421 / 165 / 63.
+- Shorter-pause findings (fix inserts room tone): 23; share of other readers pausing there median 0.807; where fewer than half pause: 6.
+- Limits: only D2 fixes are checked (SELF D1, D3, D5, D9 fixes are not); the accent group is one text read by 394 readers, so 'other readers' there is a large pool, while poetry groups have 6-11 readers.
+
+## What the evidence supports and what it does not
+
+- Supported: the edits execute as planned when measured without the detector (pause, phonation time, Harvest range, level frame check, with the misses listed above); on R1 clips the fixed regions move toward the clean source by the shares in section 3; processing-only PSOLA makes no flag change; sham edits of the same size on clean regions make flags mainly in the target dimension.
+- Not supported: improved or more natural delivery (no listening test), validity on natural flaws (all flagged clips are recipe edits), the 'removed' count as 'fixed' (section 4: many removed findings keep part of the departure), the syllable-nucleus rate as a stable timing measure under strong compression.
+
