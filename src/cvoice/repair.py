@@ -4,11 +4,15 @@ Each finding of a result (pipeline.analyze) states the participant's value and t
 reference rendition carried to the speaker's own overall tempo, pitch range or level). An edit from the project's own
 tool set (flaws.py: WSOLA time scaling, Praat PSOLA pitch, room-tone pauses, gain) moves the measure to the target, and
 a Chain of Warps maps the original samples to the edited samples. `verify` analyses the edited audio again with the
-settings of the original result and runs three controls: a placebo chain with null parameters, a second pitch tracker
-for pitch edits, and the word alignment of the edited audio against the time map.
+settings of the original result and runs three checks: a reproduction check (the unedited audio and the chain with null
+parameters must give the original result again; every null operation is an identity by construction, so this check
+controls determinism and settings, not processing artefacts), a second pitch tracker for pitch edits, and the word
+alignment of the edited audio against the time map. The detector that sets the targets also judges the result, so a
+removed flag shows detector consistency, not a perceived improvement.
 
-The caps follow the listening-test numbers collected in build/work/research_new/fix_your_speech.md (Q2): Praat PSOLA
-loses about 0.2-0.4 MOS at x1.5 duration or +-3 st and 1.1-1.4 MOS at x2 (Choi et al. 2021, NANSY, Tables 6-7).
+The caps are chosen limits, extrapolated from whole-utterance listening tests (build/work/research_new/fix_your_speech.md,
+Q2): Praat PSOLA loses about 0.2-0.4 MOS at x1.5 duration or +-3 st and 1.1-1.4 MOS at x2 (Choi et al. 2021, NANSY,
+Tables 6-7). No listening test of local word-level edits was found.
 """
 from __future__ import annotations
 
@@ -39,7 +43,8 @@ MAX_PITCH_SCALE = 1.5  # all rounds together; 1 / MAX_PITCH_SCALE for compressio
 MAX_FRAME_ST = 3.0  # one round; speaker identity holds up to 3 st (Bae & Joo 2022)
 HARD_FRAME_ST = 4.0  # all rounds together
 MIN_AUDIBLE_ST = 1.5  # pitch-distance JND 1.5-2 st ('t Hart; docs/PAPERS.md #40): a smaller range change is not heard
-# Level: smooth gain of a few dB (level JND 1.5 dB, docs/PAPERS.md #66).
+# Level: smooth gain. The level JND (1.5 dB, docs/PAPERS.md #66) is a lower limit of audibility; the 6 dB cap has no
+# quality source. Gain does not restore vocal effort, which changes spectral tilt and F0 (docs/PAPERS.md #69).
 MAX_GAIN_DB = 6.0  # all rounds together
 MAX_PEAK = 0.98  # full scale = 1; a gain stops before the region clips
 GAIN_RAMP_S = 0.05
@@ -54,7 +59,7 @@ PITCH_SPLICE_MIN_ST = 0.01
 PITCH_SPLICE_PAD_S = C.PSOLA_STEP_S + 1 / C.PSOLA_F0[0]
 MAX_ROUNDS = 3
 
-PLACEBO_TOLERANCE = 0.5  # index points: a null-parameter chain must not move the score more than this
+PLACEBO_TOLERANCE = 0.5  # index points: the null-parameter chain of the reproduction check must not move the score more than this
 TRACKER_TOLERANCE_LN = math.log(1.25)  # two pitch trackers agree when their range changes differ by less than a factor 1.25
 BOUNDARY_TOLERANCE_S = 2 * C.CTC_FRAME_S  # the aligner resolves word edges to one CTC frame on each side
 
@@ -70,6 +75,8 @@ UNFIXABLE_REASON = {
                   "removes or re-voices speech, which is not a delivery setting that an edit can change.",
 }
 APPLIED, CAPPED, COVERED, SKIPPED, UNFIXABLE = "applied", "capped", "covered", "skipped", "unfixable"
+# Fix.cause: why a fix stopped short (capped) or was skipped.
+CAP, HEADROOM, FLAT_PITCH, INAUDIBLE, SHARED_CAP = "cap", "headroom", "flat_pitch", "inaudible", "shared_cap"
 TIME_KINDS = ("stretch", "emphasis")
 PITCH_KINDS = ("pitch_scale", "pitch_contour")
 
@@ -96,7 +103,7 @@ class Operation:
     round: int = 1
 
     def scaled(self, strength: float) -> Operation:
-        """The same operation at a fraction of its change: 0 changes nothing (placebo), 1 is the planned edit. Factors
+        """The same operation at a fraction of its change: 0 changes nothing (the null chain), 1 is the planned edit. Factors
         scale in the log domain, seconds, semitones and dB linearly."""
         value = self.value
         if self.kind in ("stretch", "pitch_scale"):
@@ -111,16 +118,18 @@ class Operation:
         return dataclasses.replace(self, value=value)
 
     def null(self) -> Operation:
-        """The same operation with parameters that change nothing (placebo)."""
+        """The same operation with parameters that change nothing (the reproduction check)."""
         return self.scaled(0.0)
 
 
 @dataclass(frozen=True)
 class Fix:
     """What happened to one finding. status: applied, capped (a partial fix at the cap; `reason` says why), covered
-    (charged to another finding of its group and fixed with it), skipped (the allowed change is too small to hear),
-    unfixable. wanted / applied: the operation value that reaches the target and the value used. share: the part of the
-    wanted change that was applied (factors in the log domain), 1 for a full fix. round: the fix round (1 = first)."""
+    (charged to another finding of its group and fixed with it), skipped (the allowed change is too small to hear, or
+    other fixes use the whole allowed change), unfixable. wanted / applied: the operation value that reaches the target
+    and the value used. share: the part of the wanted change that was applied (factors in the log domain), 1 for a full
+    fix. round: the fix round (1 = first). cause: CAP or HEADROOM for a capped fix; FLAT_PITCH, INAUDIBLE or SHARED_CAP
+    for a skipped one; "" otherwise."""
     finding: str
     dimension: str
     type: str
@@ -131,6 +140,7 @@ class Fix:
     reason: str = ""
     share: float | None = None
     round: int = 1
+    cause: str = ""
 
     @property
     def partial(self) -> bool:
@@ -163,7 +173,7 @@ class Speaker:
 @dataclass
 class FixOutcome:
     """audio: edited samples (16 kHz, int16 grid); time_map: original samples -> edited samples; speaker (the original
-    recording and its measures) and operations let `verify` run the placebo chain. used: the value each operation used;
+    recording and its measures) and operations let `verify` run the null chain. used: the value each operation used;
     peak_st: the largest F0 change of a frame per operation (0 for an operation without a pitch change)."""
     audio: np.ndarray
     fixes: list[Fix]
@@ -300,7 +310,7 @@ def capped_fix(f: dict, kind: str, wanted, applied, capped: bool, cap_text: str,
     if capped:
         return Fix(f["id"], f["dimension"], f["type"], CAPPED, kind, wanted, applied,
                    f"partial fix: capped at {cap_text} where the full fix needs {wanted_text} ({share:.0%} of the "
-                   "change); a larger change would sound processed, so the finding can remain", share)
+                   "change); a larger change could sound processed, so the finding can remain", share, cause=CAP)
     return Fix(f["id"], f["dimension"], f["type"], APPLIED, kind, wanted, applied, share=1.0)
 
 
@@ -384,10 +394,16 @@ def reference_contour(result: dict, sp: Speaker, first: int, last: int, target_r
     return times[inside], centred
 
 
-def inaudible(f: dict, kind: str, wanted, change_st: float, limit_st: float) -> tuple[None, Fix]:
+def inaudible(f: dict, kind: str, wanted, change_st: float, limit_st: float, flat: bool = False) -> tuple[None, Fix]:
+    """flat: the speaker's own range is so small that the largest allowed excursion scale cannot reach MIN_AUDIBLE_ST."""
+    if flat:
+        why = (f"the pitch range here is only {f['participant']:.1f} st, so even the largest allowed excursion scale "
+               f"(x{MAX_PITCH_SCALE}) changes it by less than")
+    else:
+        why = (f"the allowed edit changes the pitch range by about {change_st:.1f} st (frame change at most {limit_st:.1f} st), "
+               "below")
     return None, Fix(f["id"], f["dimension"], f["type"], SKIPPED, kind, wanted, None,
-                     f"skipped: the allowed edit changes the pitch range by about {change_st:.1f} st (frame change at most "
-                     f"{limit_st:.1f} st), below the {MIN_AUDIBLE_ST} st that listeners can hear", 0.0)
+                     f"skipped: {why} the {MIN_AUDIBLE_ST} st that listeners can hear", 0.0, cause=FLAT_PITCH if flat else INAUDIBLE)
 
 
 def plan_pitch(f: dict, sp: Speaker, result: dict, method: str, spent: Budget) -> tuple[Operation | None, Fix]:
@@ -412,7 +428,8 @@ def plan_pitch(f: dict, sp: Speaker, result: dict, method: str, spent: Budget) -
     scale, capped = clamp(wanted, min(1.0, 1 / (MAX_PITCH_SCALE * spent.scale_min)), max(1.0, MAX_PITCH_SCALE / spent.scale_max))
     change = min(f["participant"] * abs(scale - 1), 2 * limit)
     if change < MIN_AUDIBLE_ST:
-        return inaudible(f, "pitch_scale", wanted, change, limit)
+        flat = wanted > 1 and f["participant"] * (MAX_PITCH_SCALE - 1) < MIN_AUDIBLE_ST
+        return inaudible(f, "pitch_scale", wanted, change, limit, flat)
     op = Operation("pitch_scale", *span, scale, f["id"], is_whole_clip(f), None, words, measure, limit)
     return op, capped_fix(f, op.kind, wanted, scale, capped, f"x{scale:.2f} pitch excursion", f"x{wanted:.2f}",
                           log_share(wanted, scale))
@@ -421,7 +438,8 @@ def plan_pitch(f: dict, sp: Speaker, result: dict, method: str, spent: Budget) -
 def plan_emphasis(f: dict, sp: Speaker, spent: Budget) -> tuple[Operation, Fix]:
     """Emphasis (stress points: the mean of three robust z-scores, ln duration per syllable, P90 pitch, P90 level). Each
     component rises by the missing points times the speaker's own scale of that component. The result's points use the
-    reference's scales; in the same-speaker regime the two scales are close."""
+    reference's scales; in the same-speaker regime (R1) the two scales are close. Known limit: with another speaker's
+    reference (R2) the scales can differ, so the edit size is checked only in R1."""
     word = f["words"][0]
     sigma = stress_reference(word_stats(sp.frames, sp.regions, sp.syllables).u)[1]
     points = f["baseline"] - f["participant"]
@@ -471,7 +489,7 @@ def plan(f: dict, sp: Speaker, result: dict, pitch_method: str = "own", ledger: 
     else:
         raise ValueError(f"no repair rule for dimension {dim}")
     if op is not None and op.null().value == op.value:
-        return None, dataclasses.replace(fix, status=SKIPPED, applied=None, share=0.0, reason=(
+        return None, dataclasses.replace(fix, status=SKIPPED, applied=None, share=0.0, cause=SHARED_CAP, reason=(
             "skipped: other fixes of these words already use the whole allowed change"))
     return op, fix
 
@@ -675,13 +693,13 @@ def realised_fix(fix: Fix, used, stats: dict) -> Fix:
         share = fix.share if fix.share is not None else 1.0
         return dataclasses.replace(fix, status=CAPPED, reason=(
             f"partial fix: the pitch change of a frame is limited to {stats['limit_st']:.1f} st, which clipped "
-            f"{stats['clipped']:.0%} of the changed frames; a larger change would sound processed"
-            + (f"; {fix.reason}" if fix.reason else "")), share=round(share * (1 - stats["clipped"]), 3))
+            f"{stats['clipped']:.0%} of the changed frames; a larger change could sound processed"
+            + (f"; {fix.reason}" if fix.reason else "")), share=round(share * (1 - stats["clipped"]), 3), cause=CAP)
     if fix.operation not in ("gain", "emphasis") or used == fix.applied:
         return fix
     wanted = fix.wanted if fix.operation == "gain" else fix.wanted[2]
     got = used if fix.operation == "gain" else used[2]
-    return dataclasses.replace(fix, status=CAPPED, applied=used, share=min(1.0 if fix.share is None else fix.share, linear_share(wanted, got)),
+    return dataclasses.replace(fix, status=CAPPED, applied=used, share=min(1.0 if fix.share is None else fix.share, linear_share(wanted, got)), cause=HEADROOM,
                                reason=f"partial fix: capped at {got:+.1f} dB by the clipping limit; the region has no "
                                       "more headroom")
 
@@ -694,7 +712,7 @@ def inverse(chain: flaws.Chain) -> flaws.Chain:
 
 
 def to_original(op: Operation, back: flaws.Chain) -> Operation:
-    """An operation planned on edited audio, carried to original sample coordinates (for the placebo chain)."""
+    """An operation planned on edited audio, carried to original sample coordinates (for the null chain)."""
     start = int(round(float(back(op.start, "right"))))
     end = start if op.kind == "pause_insert" else int(round(float(back(op.end, "left"))))
     contour = None if op.contour is None else (np.asarray(back(op.contour[0] * SR, "left")) / SR, op.contour[1])
@@ -797,7 +815,9 @@ def analyse(x: np.ndarray, original_result: dict, analyze_kwargs: dict) -> dict:
 
 
 def placebo_audio(outcome: FixOutcome) -> np.ndarray:
-    """The same chain of operations with null parameters (stretch 1.0, gain 0 dB, pitch scale 1.0, no pause change)."""
+    """The same chain of operations with null parameters (stretch 1.0, gain 0 dB, pitch scale 1.0, no pause change): the
+    audio of the reproduction check. Every null operation returns its input (the pitch splice covers no changed tier
+    point), so the chain controls determinism, not processing artefacts."""
     return run_operations(outcome.speaker, [op.null() for op in outcome.operations])[0]
 
 
@@ -825,6 +845,33 @@ def compare_findings(before: dict, after: dict) -> dict:
                  for f in before["flaws"] if f["id"] not in removed]
     new = [finding_brief(g) for g in after["flaws"] if not any(same_finding(f, g) for f in before["flaws"])]
     return {"score": after["scores"]["overall"], "removed": removed, "remaining": remaining, "new_findings": new}
+
+
+def row_values(f: dict, result: dict) -> list[float] | None:
+    """The values of f's measure in `result` over f's words (boundaries for pauses), in f's unit and sign convention
+    (participant minus target); None when the result has no row of that dimension. The rows index words, so they hold for
+    an edited recording of the same transcript."""
+    from .pipeline import _ROWS
+    row = next((r for r in result.get("rows", []) if r.get("key") == _ROWS[f["dimension"]][0]), None)
+    if row is None:
+        return None
+    first, last = f["words"][0], f["words"][1] - (1 if f["dimension"] == "D2" else 0)
+    return [v for v in row["p"][first:last + 1] if v is not None]
+
+
+def residual(f: dict, after: dict) -> float | None:
+    """The departure that remains of finding f in the re-analysis `after`, in f's unit and sign convention: for a local
+    finding the value furthest in f's direction over its words, for a whole-passage one the delta of the same whole-passage
+    finding or difference. None when no value is measured there (for a shortened pause: no pause above the detection
+    floor). A value of the other sign is an overshoot."""
+    if is_whole_clip(f):
+        same = [g for g in [*after.get("flaws", []), *after.get("differences", [])] if is_whole_clip(g) and g["dimension"] == f["dimension"]]
+        return None if not same or same[0].get("delta") is None else float(same[0]["delta"])
+    values = row_values(f, after)
+    if not values:
+        return None
+    sign = direction(f)
+    return float(sign * max(sign * v for v in values))
 
 
 def cc_semitones(x: np.ndarray) -> np.ndarray:
@@ -918,21 +965,22 @@ def alignment_check(outcome: FixOutcome, before: dict, after: dict) -> dict:
 
 
 def verify(outcome: FixOutcome, original_result: dict, analyze_kwargs: dict) -> dict:
-    """Analyse the edited audio and the placebo chain with the settings of the original result. analyze_kwargs: the
+    """Analyse the edited audio and the null chain with the settings of the original result. analyze_kwargs: the
     pipeline.analyze arguments other than the participant (transcript, baseline, detector, references, aligner, cache_dir,
     ...); the regime defaults to the original's. `reproduced` is False when the unedited audio does not give the original
-    score again, i.e. the settings differ from the original analysis and the comparison is not valid."""
+    score again, i.e. the settings differ from the original analysis and the comparison is not valid. The report key
+    "placebo" holds the null-chain re-analysis (a reproduction check; the key name is kept for the validation scripts)."""
     before = analyse(outcome.source, original_result, analyze_kwargs)
     after = analyse(outcome.audio, original_result, analyze_kwargs)
-    placebo = analyse(placebo_audio(outcome), original_result, analyze_kwargs)
+    null_chain = analyse(placebo_audio(outcome), original_result, analyze_kwargs)
     score0 = original_result["scores"]["overall"]
-    placebo_part = compare_findings(original_result, placebo)
-    delta = None if placebo["scores"]["overall"] is None or score0 is None else round(placebo["scores"]["overall"] - score0, 2)
+    null_part = compare_findings(original_result, null_chain)
+    delta = None if null_chain["scores"]["overall"] is None or score0 is None else round(null_chain["scores"]["overall"] - score0, 2)
     return {
         "score_before": score0,
         "reproduced": before["scores"]["overall"] == score0 and len(before["flaws"]) == len(original_result["flaws"]),
         **compare_findings(original_result, after),
-        "placebo": {**placebo_part, "score_delta": delta, "within_tolerance": delta is not None and abs(delta) <= PLACEBO_TOLERANCE},
+        "placebo": {**null_part, "score_delta": delta, "within_tolerance": delta is not None and abs(delta) <= PLACEBO_TOLERANCE},
         "pitch_check": pitch_check(outcome),
         "alignment": alignment_check(outcome, original_result, after),
         "fixes": [dataclasses.asdict(fx) for fx in outcome.fixes],

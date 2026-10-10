@@ -7,7 +7,7 @@ const PLOT_L = 64, PLOT_R = 16;          // px; the wavesurfer strip uses the sa
 const DISPLAY_HOP_S = 0.02;              // s; frame rows are thinned to this hop before drawing
 const MIN_PLAY_S = 0.6;                  // s; a flaw's span is padded to this length for A/B playback
 const BAND_ALPHA = 0.16, BAND_ALPHA_SEL = 0.20;   // flag wash; the recording line keeps >= 3:1 on it up to 0.20
-const ROW_GAP_PX = 24;                   // room for each row's heading
+const ROW_GAP_PX = 32;                   // room for each row's heading, clear of the lowest tick label of the row above
 const HATCH_STEP_PX = 7;                 // px between the hatch lines of a sub-word span
 const GROUP_PAD_PX = 4;                  // px between a group outline and its members' washes
 const LABEL_PAD_PX = 3, LABEL_CHAR_PX = 7;   // a wash number's padding and its width per character at 11 px
@@ -81,6 +81,8 @@ const OWN_EVIDENCE = { D9: "word_time_ln" };
 const GROUP_NAME = { Cadence: "Pace", Tone: "Pitch range", Clarity: "Clarity" };
 const groupLabel = (word) => GROUP_NAME[word] || word;
 const SUB_NAME = { D3: "Pitch range", D6: "Clarity" };
+// The finding's own measure (a group can join two measures of one brief word, e.g. Pace and Speech tempo under Cadence).
+const measureName = (f) => SUB_NAME[f.dimension] || S.result.scores.dims.find((d) => d.key === f.dimension)?.label || groupLabel(f.brief_word);
 // Bundled examples named by what a listener hears, in order of how clearly they show the tool; the first ones open the menu and
 // the rest sit under "More examples". Items without an entry show their group and label.
 const EXAMPLES = [
@@ -94,7 +96,9 @@ const EXAMPLES = [
 ];
 const EXAMPLE_NAME = Object.fromEntries(EXAMPLES);
 const FEATURED_COUNT = 9;
-const exampleName = (it) => EXAMPLE_NAME[it.id] || `${it.group}, ${it.label}`;
+const TWIN_NAME = "Same reading, no reference";
+const TWINS = new Set();                 // ids of no-reference examples that read the audio of an example with a reference
+const exampleName = (it) => TWINS.has(it.id) ? TWIN_NAME : EXAMPLE_NAME[it.id] || `${it.group}, ${it.label}`;
 const TOP_N = 3;
 const TICK_MS = 380;                     // ms of the points tick when an example opens
 const BAND_STEPS = 7;                    // intro: at most this many band steps (style.css .intro .tl-band: 1 s, then 0.16 s each)
@@ -114,10 +118,11 @@ const SELF_COPY = {
 };
 const SELF_LIMIT = "A rough check: your reading is graded against itself. For better results, use a reference reading of the same text.";
 // What a fix did to one finding, in the words the page shows (app.plain_outcome gives the reason).
-const FIX_HEAD = { fixed: "Fixed: this spot is no longer flagged", partly: "Partly fixed", unfixable: "Can't be fixed by editing" };
 const FIX_STAGES = ["edit", "check"];   // app.FIX_STAGES (tests/test_app.py compares them)
 const FIX_STAGE_TEXT = { edit: "Editing your recording…", check: "Checking the result…" };
-const LISTEN_SIDES = [["yours", "Yours"], ["fixed", "Fixed"], ["target", "Target"]];
+// "Edited", never "Fixed": an edit can leave a spot flagged or apply only part of the change (build/work/repair/FIX_CONTRACT.md).
+const LISTEN_SIDES = [["yours", "Yours"], ["fixed", "Edited"], ["target", "Target"]];
+const HEAR_FIXED = { reference: "Hear it fixed", self: "Hear it closer to your typical delivery" };
 
 // ---------------------------------------------------------------------------------------------------- helpers
 const $ = (s) => document.querySelector(s);
@@ -220,7 +225,12 @@ const S = { fix: { info: null, source: null, jobs: new Map(), busy: null, player
   refTimer: null, bothTimer: null, tl: null, chart: null, hasLibs: false, selKind: "flaw", allDimensions: false, openId: 0,
   mediaId: 0, youReady: false, refReady: false, inSpan: new Set(), listenAt: null, audio: null, sources: new WeakMap(), levelOn: false, countId: 0, counted: false, side: "you", wsRef: null, playId: 0, priority: null, pattern: null };
 
-function differences() { return (S.result.regime === "R2" || isSelf()) && Array.isArray(S.result.differences) ? S.result.differences : []; }
+// Graded on its own, the overall articulation rate is not shown: it compares the reader with other speakers, not with themselves.
+const articulationRate = (d) => d.unit === "syllables/s" || /articulation rate/i.test(d.label || "");
+function differences() {
+  if (!(S.result.regime === "R2" || isSelf()) || !Array.isArray(S.result.differences)) return [];
+  return isSelf() ? S.result.differences.filter((d) => !articulationRate(d)) : S.result.differences;
+}
 function selected() { return (S.selKind === "difference" ? differences() : S.result.flaws)[S.sel]; }
 function mediaSpan(f, who) { return f[who === "you" ? "p" : "b"] || [0, S.result[who === "you" ? "participant" : "baseline"].duration]; }
 
@@ -350,9 +360,10 @@ function renderSummary(r) {
         el("span", { class: "sub-h", text: isSelf(r) ? " this spot" : " yours, then the reference" })),
       fixButton(f, i, { scroll: true })))));
   tickPoints(document.querySelectorAll("#top-cards .card-pts"));
-  const n = r.flaws.length + differences().length;
-  $("#see-all").hidden = !n;
-  $("#see-all").textContent = `See all ${n} ${n === 1 ? "finding" : "findings"}`;
+  // the same count as the "Every finding" heading (#flaw-count): flagged findings only; differences sit under their own headings
+  const n = r.flaws.length;
+  $("#see-all").hidden = !n && !differences().length;
+  $("#see-all").textContent = !n ? "See every finding" : `See all ${n} ${n === 1 ? "finding" : "findings"}`;
 }
 
 // Rows whose flag threshold is a plain physical change; the same rows as app.LIMIT_ROWS (tests/test_app.py compares them).
@@ -396,9 +407,20 @@ function renderLimit(r) {
   $("#detect-limit").textContent = line || "";
 }
 
+/** Graded on its own, the ring holds the number of spots that stand out: a score against your own typical delivery is not a grade. */
+function showSpots(r) {
+  const n = r.flaws.length;
+  S.countId += 1;
+  for (const id of ["#ring-value", "#ring-glow"]) $(id).style.strokeDasharray = `0 ${RING_C.toFixed(2)}`;
+  $("#overall-fig").textContent = String(n);
+  $("#overall-fig").classList.remove("ticking");
+  $(".ring-label").textContent = n === 1 ? "spot stands out" : "spots stand out";
+}
+
 function renderLedger(r) {
-  const o = r.scores.overall;
-  showScore(o);
+  $(".ring-wrap").classList.toggle("spots", isSelf(r));
+  if (isSelf(r)) showSpots(r);
+  else { $(".ring-label").textContent = "Delivery score"; showScore(r.scores.overall); }
   $("#regime-badge").textContent = regimeBadge(r);
   $("#regime-badge").hidden = false;
   // Only a combined reference needs saying; one reading is the default.
@@ -519,7 +541,7 @@ function renderFlawList() {
         "data-kind": "flaw", "data-peek": i, onclick: () => select(i) },
         el("span", { class: "n", text: `#${i + 1}` }), el("span", { class: "t" }, dimIcon(f.dimension), findingText(f)),
         el("span", { class: "pts", text: f.counted === false ? "shared" : findingPts(f) }),
-        el("span", { class: "m" }, el("span", { text: `${groupLabel(f.brief_word)}, ${wholePassage(f) ? "whole passage" : span(f.p)}` }),
+        el("span", { class: "m" }, el("span", { text: `${measureName(f)}, ${wholePassage(f) ? "whole passage" : span(f.p)}` }),
           el("i", { class: `dash ${st[2]}`, "aria-label": `Severity: ${st[2]}` }))), patternTags(f));
   };
   const groupItem = (members) => {
@@ -679,7 +701,7 @@ function renderExplain() {
     el("div", { class: "ex-head" },
       el("div", {},
         el("h3", {}, diff ? null : el("span", { class: "ex-num", text: `#${S.sel + 1}` }), diff ? null : " ", findingText(f)),
-        el("p", { class: "ex-status", text: `${groupLabel(f.brief_word)}, ${wholePassage(f) ? "whole passage" : span(f.p)}` }),
+        el("p", { class: "ex-status", text: `${measureName(f)}, ${wholePassage(f) ? "whole passage" : span(f.p)}` }),
         patternTags(f)),
       pts ? el("p", { class: "ex-pts" }, pts, el("small", { text: f.counted === false ? "carried by the group" : "from your score" })) : null),
     el("p", { class: "ex-words", text: quotedWords(r, f) }),
@@ -687,9 +709,11 @@ function renderExplain() {
     why ? el("p", { class: "ex-why", text: why }) : "",
     diff ? "" : thresholdGauge(f) ?? "",
     el("div", { class: "card-actions" },
-      el("button", { type: "button", class: "listen-btn", "data-audio": listenAudio(), ...(diff ? {} : { "data-listen": S.sel }), onclick: () => listen(S.sel, S.selKind) }, "Listen",
-        el("span", { class: "sub-h", text: isSelf() ? (f.p ? ` this spot ${span(f.p)}` : " from the start") : ` yours ${span(f.p)}, then the reference ${span(f.b)}` })),
+      el("button", { type: "button", class: "listen-btn", "data-audio": listenAudio(), ...(diff ? {} : { "data-listen": S.sel }), onclick: () => listen(S.sel, S.selKind) }, "Listen"),
       diff ? null : fixButton(f, S.sel)),
+    // what Listen plays, as a caption under the buttons, so the time ranges never wrap inside a button
+    el("p", { class: "listen-caption" }, ...(isSelf() ? (f.p ? ["Listen plays this spot, ", el("span", { class: "nowrap", text: span(f.p) }), "."] : ["Listen plays from the start."])
+      : ["Listen plays yours, ", el("span", { class: "nowrap", text: span(f.p) }), ", then the reference, ", el("span", { class: "nowrap", text: span(f.b) }), "."])),
     diff ? "" : fixerView(f));
   if (!diff && f.fix) box.append(el("p", { class: "fix" }, el("b", { text: "How to fix" }), f.fix));
   tickPoints(box.querySelectorAll(".ex-pts"));
@@ -698,7 +722,7 @@ function renderExplain() {
     const members = r.flaws.filter((x) => f.group.includes(x.id));
     box.append(el("p", { class: "group-note", text: `${groupName(f)} group: ${members.length} findings share one penalty. ${f.counted === false ? "This member adds no points lost; the counted member carries the group's penalty." : "The score if fixed removes the whole group's penalty."}` }),
       el("div", { class: "group-links" }, ...members.map((member) => el("button", { type: "button", class: "plain",
-        onclick: () => select(r.flaws.indexOf(member)), text: `#${r.flaws.indexOf(member) + 1} ${findingText(member)}` }))));
+        onclick: () => select(r.flaws.indexOf(member)), text: `#${r.flaws.indexOf(member) + 1} ${findingText(member)} (${measureName(member)})` }))));
   }
   const detail = el("details", { class: "measure-details" }, el("summary", { text: "Details" }), dl,
     listedContext(f) ? null : el("p", { class: "what", text: (f.candidate ? f.text.replace(CANDIDATE_TEXT, "").trim() : f.text) || "" }));
@@ -1050,7 +1074,7 @@ function eventBars(words, vals, isGap) {
 
 function chartModel(r) {
   const c = { ink: css("--ink"), ink2: css("--ink2"), muted: css("--muted"), rule: css("--rule"), surface: css("--surface"),
-    ref: css("--ref"), you: css("--you"), flag: css("--flag"), neutral: css("--neutral"), tol: css("--tol") };
+    ref: css("--ref"), you: css("--you"), flag: css("--flag"), flagText: css("--flag-text"), neutral: css("--neutral"), tol: css("--tol") };
   const width = $("#chart-host").clientWidth, narrow = width < 620;
   const pxPerS = Math.max(width - PLOT_L - PLOT_R, 1) / r.participant.duration;
   const defs = rowDefs(r), n = defs.length;
@@ -1075,9 +1099,10 @@ function chartModel(r) {
       const times = (a) => a.map((_, i) => i * r.hop).filter((_, i) => i % stride === 0);
       const thin = (a) => a.filter((_, i) => i % stride === 0);
       const x = times(row.p);
-      for (const [name, vals, color, dash] of [[isSelf(r) ? "Your typical" : "Reference", row.b, c.ref, "dash"], ["This recording", row.p, c.you, "solid"]]) {
+      // the dashed reference is drawn over this recording, so it stays visible where the two lines meet
+      for (const [name, vals, color, dash, width] of [["This recording", row.p, c.you, "solid", 2], [isSelf(r) ? "Your typical" : "Reference", row.b, c.ref, "dash", 2.4]]) {
         traces.push({ type: "scatter", mode: "lines", name: `${name}, ${spec.s.split(" (")[0].toLowerCase()}`, x, y: thin(vals), yaxis: ax, connectgaps: false,
-          line: { color, width: 2, dash }, hovertemplate: `%{y:.1f} ${unit}<extra></extra>` });
+          line: { color, width, dash }, hovertemplate: `%{y:.1f} ${unit}<extra></extra>` });
       }
     } else if (d.key === "stress") {
       const mid = (i) => (r.words[i].p[0] + r.words[i].p[1]) / 2;
@@ -1134,7 +1159,7 @@ function chartModel(r) {
     if (left < free(side) || left > Math.max(x1 * pxPerS, start + LABEL_SHIFT_PX)) return null;
     taken[side] = left + width;
     return { xref: "x", yref: `${rowAxis[key]} domain`, x: left / pxPerS, y: side === "top" ? 1 : 0, xanchor: "left",
-      yanchor: side, yshift: side === "top" ? -3 : 1, showarrow: false, text, font: { size: 11, color: c.flag, weight: 700 }, bgcolor: rgba(c.surface, 0.85), borderpad: 1 };
+      yanchor: side, yshift: side === "top" ? -3 : 1, showarrow: false, text, font: { size: 11, color: c.flagText, weight: 700 }, bgcolor: rgba(c.surface, 0.85), borderpad: 1 };
   };
   r.flaws.forEach((f, i) => {   // flagged regions: a wash in the dimension's row (and the contour row it summarises)
     if (wholePassage(f)) return;   // listed and explained, not painted over the whole chart
@@ -1369,7 +1394,7 @@ function loadMedia(r, base) {
 
 /** This recording in the accent at moderate opacity; heard bars at full accent. */
 const waveColors = () => ({ waveColor: rgba(css("--you"), 0.5), progressColor: css("--you-text"), cursorColor: css("--ink") });
-const refWaveColors = () => ({ waveColor: "rgba(163,163,171,0.32)", progressColor: "rgba(163,163,171,0.7)" });   // the reference stays neutral
+const refWaveColors = () => ({ waveColor: rgba(css("--ink2"), 0.32), progressColor: rgba(css("--ink2"), 0.7) });   // the reference stays neutral
 
 /** The analyser of the playing element, made once per element; null where Web Audio is missing or the element is taken. */
 function analyserFor(media) {
@@ -1426,8 +1451,49 @@ function showReferenceAt(tb) {
 /** The player's progress groove: the share of the playing reading heard so far, in its own colour. */
 function showProgress(who, share) {
   const bar = $("#player-progress");
+  const clamped = Math.min(Math.max(share, 0), 1);
   bar.classList.toggle("ref", who === "ref");
-  bar.firstElementChild.style.width = `${(100 * Math.min(Math.max(share, 0), 1)).toFixed(2)}%`;
+  bar.firstElementChild.style.width = `${(100 * clamped).toFixed(2)}%`;
+  document.documentElement.style.setProperty("--t", clamped.toFixed(4));   // the hero light follows the playback position
+}
+
+// ---------------------------------------------------------------------------------------------------- hero horizon
+const RIDGE_COLUMNS = 96;          // path points per ridge; fixed, so a new reading morphs the old path point by point
+const RIDGE_DB = [-40, 10];        // loudness range (dB re voiced median) mapped from the valley floor to the peak
+
+/** A loudness contour as RIDGE_COLUMNS heights from 0 to 1: the loudest frame of each column, then a moving mean. */
+function ridgeHeights(frames, smoothing) {
+  const per = frames.length / RIDGE_COLUMNS;
+  const peaks = Array.from({ length: RIDGE_COLUMNS }, (_, k) => {
+    let loudest = RIDGE_DB[0];
+    for (let i = Math.floor(k * per); i < Math.min(frames.length, Math.ceil((k + 1) * per)); i++) loudest = Math.max(loudest, frames[i] ?? RIDGE_DB[0]);
+    return (Math.min(loudest, RIDGE_DB[1]) - RIDGE_DB[0]) / (RIDGE_DB[1] - RIDGE_DB[0]);
+  });
+  return peaks.map((_, k) => {
+    const window = peaks.slice(Math.max(0, k - smoothing), k + smoothing + 1);
+    return window.reduce((a, v) => a + v, 0) / window.length;
+  });
+}
+
+/** A closed ridge in the 1000 x 120 hero viewBox: quadratic curves through the column midpoints, valley at y = floor. */
+function ridgePath(heights, peakY, floorY) {
+  const step = 1000 / (heights.length - 1);
+  const pt = (k) => [k * step, floorY - heights[k] * (floorY - peakY)];
+  let d = `M-4 124 L-4 ${pt(0)[1].toFixed(1)}`;   // the closing edges lie outside the clipped viewBox, so only the crest is stroked
+  for (let k = 0; k < heights.length - 1; k++) {
+    const [x, y] = pt(k), [nx, ny] = pt(k + 1);
+    d += ` Q${x.toFixed(1)} ${y.toFixed(1)} ${((x + nx) / 2).toFixed(1)} ${((y + ny) / 2).toFixed(1)}`;
+  }
+  return `${d} L1004 ${pt(heights.length - 1)[1].toFixed(1)} L1004 124 Z`;
+}
+
+/** The hero horizon: the near ridge is this recording's loudness, the far ridge the time-aligned reference (or, with
+ *  no reference, a long average of this recording: its typical delivery). Decorative only. */
+function drawHorizon(r) {
+  const energy = r.rows?.find((row) => row.key === "energy");
+  if (!energy?.p?.length) return;
+  $("#ridge-near").setAttribute("d", ridgePath(ridgeHeights(energy.p, 2), 30, 112));
+  $("#ridge-far").setAttribute("d", ridgePath(isSelf(r) ? ridgeHeights(energy.p, 9) : ridgeHeights(energy.b, 3), 6, 88));
 }
 
 function setPlaying(on) {
@@ -1576,7 +1642,7 @@ const findingNumber = (id) => S.result.flaws.findIndex((f) => f.id === id) + 1;
 
 function fixButton(f, i, { scroll = false } = {}) {
   if (!fixSource()) return null;
-  const button = el("button", { type: "button", class: "fix-btn", "data-fix": f.id, onclick: () => hearFixed(i, scroll) }, "Hear it fixed");
+  const button = el("button", { type: "button", class: "fix-btn", "data-fix": f.id, onclick: () => hearFixed(i, scroll) }, HEAR_FIXED[isSelf() ? "self" : "reference"]);
   button.disabled = !!S.fix.busy;
   return button;
 }
@@ -1619,6 +1685,15 @@ function startFix(key, body) {
 async function hearFixed(i, scroll = false) {
   if (S.sel !== i || S.selKind !== "flaw") select(i, { scroll });
   const f = S.result.flaws[i], entry = startFix(f.id, { finding: storedIndex(f) });
+  if (!entry || !(await entry.done) || selected()?.id !== f.id) return;
+  entry.player?.play("fixed");
+}
+
+const melodyKey = (f) => `${f.id}:contour`;
+
+/** "Try the reference's melody": the same finding fixed again with the reference's pitch contour, then looped. */
+async function tryMelody(i) {
+  const f = S.result.flaws[i], entry = startFix(melodyKey(f), { finding: storedIndex(f), pitch_method: "contour" });
   if (!entry || !(await entry.done) || selected()?.id !== f.id) return;
   entry.player?.play("fixed");
 }
@@ -1725,30 +1800,71 @@ function playerControls(player, sides, note) {
     note ? el("p", { class: "note", text: note }) : null);
 }
 
-/** The fix of one finding in plain words, and its three-way player once the server has fixed it. */
+/** The heading of one fix (app.fix_entry outcomes). It never says "Fixed" alone: a spot can stop being flagged with only part of the change. */
+function outcomeHead(x) {
+  if (x.outcome === "no_longer_flagged") return x.share != null && x.share < 1 ? `No longer flagged · ${Math.round(x.share * 100)}% of the change applied` : "No longer flagged";
+  if (x.outcome === "still_flagged") return "Still flagged · partly changed";
+  if (x.outcome === "unfixable") return `Can't be fixed by editing: ${numbered(x.reason || "")}`;
+  return numbered(x.reason || "");   // skipped: the reason is the whole statement
+}
+
+/** The fix's reason below its heading; the applied share is already in the heading, and an unfixable or skipped reason is the heading. */
+function outcomeReason(x) {
+  if (!x.reason || x.outcome === "unfixable" || x.outcome === "skipped") return "";
+  return numbered(x.reason.replace(/^\d+% of the change toward the target was applied\.\s*/, ""));
+}
+
+const playable = (x) => x && (x.outcome === "no_longer_flagged" || x.outcome === "still_flagged");
+
+/** The score before and after when the job states a change; graded on its own, the flagged spots before and after. */
+const changeText = (v) => `${v < 0 ? "−" : "+"}${Math.abs(v).toFixed(2)}`;
+
+/** The score change when the job states one (reference mode, reproduced); graded on its own, the flagged spots before and after. */
+function scoreLine(done) {
+  if (done.score_change != null) return el("p", { class: "fix-score" }, "Score change ", el("b", { text: changeText(done.score_change) }), " points");
+  if (done.mode === "self" && done.flags_after != null) return el("p", { class: "fix-score" }, "Spots that stand out ", el("b", { text: String(done.flags_before) }), " → ", el("b", { text: String(done.flags_after) }));
+  return done.score_change_note ? el("p", { class: "note", text: done.score_change_note }) : null;
+}
+
+/** One fix job of a finding (own pitch or the reference's melody) in plain words, with its three-way player. */
+function fixResult(f, entry, key) {
+  const parts = [];
+  if (entry.state !== "done") return [entry.state === "running" ? progressLine(entry) : el("p", { class: "fix-error", text: entry.error })];
+  const done = entry.fix, fx = done.fixes.find((x) => x.finding === f.id) || { outcome: "unfixable", reason: "" };
+  parts.push(el("p", { class: "fix-head", text: outcomeHead(fx) }));
+  if (outcomeReason(fx)) parts.push(el("p", { class: "fix-reason", text: outcomeReason(fx) }));
+  if (playable(fx)) parts.push(scoreLine(done));
+  if (done.caution) parts.push(el("p", { class: "fix-caution", text: done.caution }));
+  if (playable(fx) && fx.limit) parts.push(el("p", { class: "note", text: fx.limit }));
+  parts.push(...fixNotes(done));
+  const pair = done.listen.find((p) => p.finding === f.id);
+  if (pair && playable(fx)) {
+    if (!entry.player) {
+      const r = S.result, context = Math.max(pair.original[0] - pair.original_context[0], pair.original_context[1] - pair.original[1]);
+      const tracks = { yours: regionTrack(S.base + r.participant.audio, pair.original_context), fixed: regionTrack(entry.audio, pair.edited_context) };
+      if (!isSelf(r) && r.baseline.audio && f.b) tracks.target = regionTrack(S.base + r.baseline.audio, [Math.max(0, f.b[0] - context), Math.min(r.baseline.duration, f.b[1] + context)]);
+      entry.player = new LoopPlayer(tracks, true, () => {});
+    }
+    parts.push(playerControls(entry.player, LISTEN_SIDES, "Loops these words with a second before and after."));
+  }
+  if (fx.alt_pitch_available && key === f.id && !S.fix.jobs.has(melodyKey(f))) {
+    const button = el("button", { type: "button", class: "fix-btn", "data-fix": `${f.id}-melody`, onclick: () => tryMelody(S.result.flaws.indexOf(f)) }, "Try the reference's melody");
+    button.disabled = !!S.fix.busy;
+    parts.push(el("div", { class: "melody" }, button,
+      el("p", { class: "note", text: "Changes your intonation pattern on these words to the reference's, instead of widening your own." })));
+  }
+  return parts.filter(Boolean);
+}
+
+/** The fix of one finding, and below it the fix with the reference's melody once asked for. */
 function fixerView(f) {
   const entry = fixSource() ? S.fix.jobs.get(f.id) : null;
   if (!entry) return el("div", { class: "fixer", "data-fixer": f.id, hidden: "" });
-  const box = el("div", { class: "fixer", "data-fixer": f.id });
-  if (entry.state !== "done") {
-    box.append(entry.state === "running" ? progressLine(entry) : el("p", { class: "fix-error", text: entry.error }));
-    return box;
-  }
-  const done = entry.fix, fx = done.fixes.find((x) => x.finding === f.id), outcome = fx?.outcome || "unfixable";
-  box.classList.add(`is-${outcome}`);
-  box.append(el("p", { class: "fix-head", text: outcome === "unfixable" ? `${FIX_HEAD.unfixable}: ${fx?.reason || ""}` : FIX_HEAD[outcome] }));
-  if (outcome === "partly" && fx.reason) box.append(el("p", { class: "fix-reason", text: fx.reason }));
-  if (outcome !== "unfixable") box.append(el("p", { class: "fix-score" }, "Score ", el("b", { text: scoreText(done.score_before) }), " → ", el("b", { text: scoreText(done.score_after) })));
-  box.append(...fixNotes(done));
-  const pair = done.listen.find((p) => p.finding === f.id);
-  if (!pair || outcome === "unfixable") return box;
-  if (!entry.player) {
-    const r = S.result, context = Math.max(pair.original[0] - pair.original_context[0], pair.original_context[1] - pair.original[1]);
-    const tracks = { yours: regionTrack(S.base + r.participant.audio, pair.original_context), fixed: regionTrack(entry.audio, pair.edited_context) };
-    if (!isSelf(r) && r.baseline.audio && f.b) tracks.target = regionTrack(S.base + r.baseline.audio, [Math.max(0, f.b[0] - context), Math.min(r.baseline.duration, f.b[1] + context)]);
-    entry.player = new LoopPlayer(tracks, true, () => {});
-  }
-  box.append(playerControls(entry.player, LISTEN_SIDES, "Loops these words with a second before and after."));
+  const box = el("div", { class: "fixer", "data-fixer": f.id }, ...fixResult(f, entry, f.id));
+  const fx = entry.state === "done" ? entry.fix.fixes.find((x) => x.finding === f.id) : null;
+  box.classList.add(`is-${fx?.outcome || entry.state}`);
+  const melody = S.fix.jobs.get(melodyKey(f));
+  if (melody) box.append(el("div", { class: "fixer-melody" }, el("p", { class: "fix-sub", text: "With the reference's melody" }), ...fixResult(f, melody, melodyKey(f))));
   return box;
 }
 
@@ -1756,9 +1872,11 @@ function progressLine(entry) {
   return el("p", { class: "fix-progress", role: "status" }, el("span", { class: "spin", "aria-hidden": "true" }), FIX_STAGE_TEXT[entry.stage] || FIX_STAGE_TEXT.edit);
 }
 
-/** Cautions under a fix: spots the edit made stand out, and a check of the edited recording that did not pass. */
+/** Under a fix: spots the edit made stand out, the checks of the re-analysis that passed (quiet), and a caution when one did not. */
 function fixNotes(done) {
+  const passed = (done.checks || []).filter((c) => c.passed);
   return [done.new_findings ? el("p", { class: "note", text: done.new_findings === 1 ? "The edit made one other spot stand out." : `The edit made ${done.new_findings} other spots stand out.` }) : null,
+    passed.length ? el("ul", { class: "fix-checks", "aria-label": "Checks that passed" }, ...passed.map((c) => el("li", { text: c.label }))) : null,
     done.checks_passed ? null : el("p", { class: "note", text: "Listen before you rely on this: one check of the edited recording did not pass." })].filter(Boolean);
 }
 
@@ -1767,13 +1885,16 @@ const numbered = (text) => text.replace(/\b(d\d-\d{3})\b/g, (id) => `#${findingN
 
 function fixAllLine(fix) {
   const n = (k) => fix.fixes.filter((x) => x.outcome === k).length, parts = [];
-  if (n("fixed")) parts.push(`${n("fixed")} ${n("fixed") === 1 ? "spot" : "spots"} fixed`);
-  if (n("partly")) parts.push(`${n("partly")} partly fixed`);
+  const spots = (k) => `${k} ${k === 1 ? "spot" : "spots"}`;
+  const partial = fix.fixes.filter((x) => x.outcome === "no_longer_flagged" && x.share != null && x.share < 1).length;
+  if (n("no_longer_flagged")) parts.push(`${spots(n("no_longer_flagged"))} no longer flagged${partial ? ` (${partial} with part of the change)` : ""}`);
+  if (n("still_flagged")) parts.push(`${n("still_flagged")} still flagged`);
   if (n("unfixable")) parts.push(`${n("unfixable")} can't be fixed by editing`);
+  if (n("skipped")) parts.push(`${n("skipped")} not edited`);
   return parts.join(", ") + ".";
 }
 
-/** "Fix everything and listen": the button, then the score before and after, the whole reading as yours or fixed, and each fix. */
+/** "Fix everything and listen": the button, then the score change (or the flagged spots), the whole reading as yours or edited, and each edit. */
 function renderFixAll() {
   const wrap = $("#fix-all"), body = $("#fix-all-body"), r = S.result;
   wrap.hidden = !fixSource();
@@ -1794,17 +1915,32 @@ function renderFixAll() {
       fixed: { url: entry.audio, span: [0, fix.duration], toCommon: (t) => interp(t, map.ys, map.xs), fromCommon: (t) => interp(t, map.xs, map.ys) } }, false, () => {});
   }
   const items = r.flaws.map((f, i) => [f, i, fix.fixes.find((x) => x.finding === f.id)]).filter(([, , x]) => x);
-  body.append(
-    el("p", { class: "fix-all-score", "aria-label": `Score ${scoreText(fix.score_before)} before the edits, ${scoreText(fix.score_after)} after` },
-      el("span", { class: "from", text: scoreText(fix.score_before) }), el("span", { class: "arrow", text: "→" }), el("span", { class: "to", text: scoreText(fix.score_after) })),
+  // Each edit of the whole reading as its own loop (yours or fixed, with a second of context), kept across redraws.
+  entry.edits = entry.edits || new Map();
+  const editControls = (f) => {
+    const pair = fix.listen.find((p) => p.finding === f.id);
+    if (!pair) return null;
+    if (!entry.edits.has(f.id)) entry.edits.set(f.id, new LoopPlayer({ yours: regionTrack(S.base + r.participant.audio, pair.original_context),
+      fixed: regionTrack(entry.audio, pair.edited_context) }, true, () => {}));
+    return playerControls(entry.edits.get(f.id), LISTEN_SIDES.slice(0, 2), null);
+  };
+  const spots = fix.score_change == null && fix.mode === "self" && fix.flags_after != null;
+  body.append(...[
+    fix.score_change != null ? el("p", { class: "fix-all-score", "aria-label": `Score change ${changeText(fix.score_change)} points` },
+      el("span", { class: "to", text: changeText(fix.score_change) }), el("span", { class: "unit", text: "points" }))
+    : spots ? el("p", { class: "fix-all-score", "aria-label": `${fix.flags_before} spots stood out before the edits, ${fix.flags_after} after` },
+      el("span", { class: "from", text: String(fix.flags_before) }), el("span", { class: "arrow", text: "→" }), el("span", { class: "to", text: String(fix.flags_after) }),
+      el("span", { class: "unit", text: fix.flags_after === 1 ? "spot stands out" : "spots stand out" }))
+    : fix.score_change_note ? el("p", { class: "note", text: fix.score_change_note }) : null,
     el("p", { class: "note", text: `Your whole reading with every fix applied. ${fixAllLine(fix)}` }),
+    fix.caution ? el("p", { class: "fix-caution", text: fix.caution }) : null,
     playerControls(entry.player, LISTEN_SIDES.slice(0, 2), null),
     ...fixNotes(fix),
     el("details", { class: "fix-list" }, el("summary", { text: "What each fix did" }),
       el("ul", {}, ...items.map(([f, i, x]) => el("li", { class: `is-${x.outcome}` },
         el("button", { type: "button", class: "plain", onclick: () => select(i, { scroll: true }), text: `#${i + 1} ${findingText(f)}` }),
-        el("span", { text: x.covered_by && x.outcome !== "unfixable" ? `${FIX_HEAD[x.outcome]}, with #${findingNumber(x.covered_by)}` :
-          x.outcome === "unfixable" ? `${FIX_HEAD.unfixable}: ${numbered(x.reason)}` : x.reason ? `${FIX_HEAD[x.outcome]}: ${x.reason}` : FIX_HEAD[x.outcome] }))))));
+        el("span", { text: [outcomeHead(x), outcomeReason(x)].filter(Boolean).join(". ") }),
+        playable(x) ? editControls(f) : null))))].filter(Boolean));
 }
 
 // ---------------------------------------------------------------------------------------------------- render
@@ -1842,6 +1978,7 @@ function render(r, base, focus = null, source = null) {
   $("#listed-wrap").open = false;   // one panel element and one list column serve every example
   for (const box of [$(".side"), $("#flaws"), $("#differences"), $("#listed")]) box.scrollTop = 0;
   renderLedger(r);
+  drawHorizon(r);
   renderFixAll();
   renderFilters(r);
   renderFlawList();
@@ -1879,13 +2016,22 @@ function coverArt(id) {
   return svgEl("svg", { viewBox: "0 0 44 44" }, svgEl("rect", { width: 44, height: 44, fill: css("--panel") }), ...bars);
 }
 
+/** The example with a reference whose reading a no-reference example grades on its own (gallery index `reference_version`). */
+const referenceTwin = (it, items) => it.reference_version ? items.find((x) => x.id === it.reference_version) : undefined;
+
 function buildChips(index) {
+  const twinOf = new Map(index.items.map((it) => [it, referenceTwin(it, index.items)]).filter(([, twin]) => twin));
+  twinOf.forEach((_, it) => TWINS.add(it.id));
+  // graded on its own, an example shows its flagged spots, as its page does
+  const chipScore = (it) => it.regime !== "SELF" || it.n_flaws == null ? scoreText(it.overall) : `${it.n_flaws} ${it.n_flaws === 1 ? "spot" : "spots"}`;
   const chip = (it) => el("button", { type: "button", class: "chip", "aria-pressed": "false", "data-id": it.id, title: it.title, onclick: () => openExample(it) },
     el("span", { class: "art", "aria-hidden": "true" }, coverArt(it.id)), el("span", { class: "name", text: exampleName(it) }),
-    el("span", { class: "score", text: scoreText(it.overall) }));
-  const ranked = EXAMPLES.map(([id]) => index.items.find((it) => it.id === id)).filter(Boolean);
+    el("span", { class: "score", text: chipScore(it) }));
+  // each no-reference twin follows the example it reads
+  const withTwins = (list) => list.flatMap((it) => [it, ...[...twinOf].filter(([, twin]) => twin === it).map(([own]) => own)]);
+  const ranked = withTwins(EXAMPLES.map(([id]) => index.items.find((it) => it.id === id)).filter(Boolean));
   const featured = ranked.slice(0, FEATURED_COUNT);
-  const rest = [...ranked.slice(FEATURED_COUNT), ...index.items.filter((it) => !ranked.includes(it))];
+  const rest = [...ranked.slice(FEATURED_COUNT), ...withTwins(index.items.filter((it) => !ranked.includes(it) && !twinOf.has(it)))];
   $("#chips").replaceChildren(...(featured.length ? featured : rest).map(chip));
   $("#chips-more").replaceChildren(...(featured.length ? rest : []).map(chip));
   $("#more-examples").hidden = !featured.length || !rest.length;
@@ -2088,8 +2234,8 @@ async function init() {
   setTimeout(() => document.body.classList.remove("intro"), INTRO_MS);
   if (reducedMotion()) document.body.classList.remove("intro");
   // The page keeps room for the fixed player bar, whose height changes when it wraps at phone width.
-  const player = $(".player-in");
-  new ResizeObserver(() => document.documentElement.style.setProperty("--player-h", `${player.offsetHeight}px`)).observe(player.parentElement);
+  const player = $(".player");   // the whole sticky strip, padding included, so a heading scrolled to lands below it
+  new ResizeObserver(() => document.documentElement.style.setProperty("--player-h", `${player.offsetHeight}px`)).observe(player);
   $("#all-dimensions").addEventListener("click", () => {
     S.allDimensions = !S.allDimensions;
     $("#all-dimensions").setAttribute("aria-pressed", String(S.allDimensions));

@@ -156,7 +156,23 @@
    "overall": 86.11,
    "regime": "R1",
    "result": "results/L3A.json",
+   "self_version": "L3A_self",
    "title": "Level 3 recipe edits, set A",
+   "truth": 4
+  },
+  {
+   "audio": "audio/L3A.wav",
+   "description": "The set A recording graded without a reference reading, against the reader's own typical delivery; set A shows the same recording graded against the reference. 4 edits injected; evaluated: rush (found), pause dropped (missed), monotone (missed: a monotone finding lies on the edit but overlaps it by less than the evaluation's 50% rule), fade (found). Without a reference, some flagged spots may be natural phrasing, and a problem that runs through the whole reading is not found.",
+   "group": "Level 3",
+   "id": "L3A_self",
+   "label": "Set A, no reference",
+   "n_flaws": 3,
+   "overall": 95.67,
+   "reference_version": "L3A",
+   "regime": "SELF",
+   "result": "results/L3A_self.json",
+   "text": "You know, down the hall and up the stairs from this office is the part of the White House where the President and his family live. There are a few favorite windows I have up there that I like to stand and look out of early in the morning. The view is over the grounds here to the Washington Monument, and then the Mall and the Jefferson Memorial. But on mornings when the humidity is low, you can see past the Jefferson to the river, the Potomac, and the Virginia shore.",
+   "title": "Level 3 recipe edits, set A, without a reference",
    "truth": 4
   },
   {
@@ -283,6 +299,7 @@
    "overall": 90.34,
    "regime": "R1",
    "result": "results/natural_rush.json",
+   "text": "We annually spend on military security more than the net income of all United States corporations. This conjunction of an immense military establishment and a large arms industry is new in the American experience. The total influence economic, political, even spiritual-- is felt in every city, every State house, every office of the Federal government.",
    "title": "Natural-rushing edit: a finding with that label (Dwight D. Eisenhower, level 3)",
    "truth": 4
   },

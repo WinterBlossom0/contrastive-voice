@@ -411,12 +411,17 @@ def test_fix_job_lifecycle(server, monkeypatch, body, kind):
     assert calls[1] == ("verify", ["baseline", "cache_dir", "detector", "transcript"])   # the analysis's own inputs
     fix = job["fix"]
     assert fix["score_before"] == 90.0 and fix["score_after"] == 95.0 and fix["checks_passed"] and fix["new_findings"] == 0
+    assert fix["mode"] == "reference" and fix["caution"] is None and fix["score_change"] == 5.0 and fix["score_change_note"] is None
+    assert [c["name"] for c in fix["checks"]] == ["reproduced", "alignment"] and all(c["passed"] and c["label"] for c in fix["checks"])
+    assert "placebo" not in json.dumps(fix)
     assert fix["target"] == ("d5-002" if kind == "one" else "all")
     outcomes = {f["finding"]: (f["outcome"], f["reason"]) for f in fix["fixes"]}
     if kind == "one":
-        assert outcomes == {"d5-002": ("fixed", "")}
+        assert outcomes == {"d5-002": ("no_longer_flagged", "")}
     else:
-        assert outcomes == {"d1-001": ("fixed", ""), "d5-002": ("unfixable", "Record these words again.")}
+        assert outcomes == {"d1-001": ("no_longer_flagged", ""), "d5-002": ("unfixable", "Record these words again.")}
+        assert fix["counts"] == {"no_longer_flagged": 1, "still_flagged": 0, "unfixable": 1, "skipped": 0, "partial": 0, "floor_removed": 0}
+    assert all(set(f) >= CONTRACT_FIX_FIELDS for f in fix["fixes"])
     assert fix["listen"][0]["edited_context"] == [0, 1.3]
     assert job["audio"] == f"api/jobs/{made['job_id']}/fixed.wav"
     s, data, hdr = call(f"{base}/{job['audio']}")
@@ -430,9 +435,17 @@ def test_fix_of_a_self_result_reanalyses_without_a_reference(server, monkeypatch
     base, _, tmp = server
     calls = fake_repair(monkeypatch)
     jid = finished_analysis(base, tmp)
-    s, made = post_json(f"{base}/api/jobs/{jid}/fix", {"all": True, "pitch_method": "contour"})
-    assert s == 200 and wait_done(base, made["job_id"])["state"] == "done"
-    assert calls == [("all", None, "contour", TEXT), ("verify", ["cache_dir", "transcript"])]
+    s, reply = post_json(f"{base}/api/jobs/{jid}/fix", {"all": True, "pitch_method": "contour"})
+    assert (s, reply["detail"]) == (422, appmod.CONTOUR_SELF_WORDS) and not calls   # no reference melody without a reference
+    s, made = post_json(f"{base}/api/jobs/{jid}/fix", {"all": True})
+    assert s == 200
+    job = wait_done(base, made["job_id"])
+    assert job["state"] == "done"
+    assert calls == [("all", None, "own", TEXT), ("verify", ["cache_dir", "transcript"])]
+    fix = job["fix"]
+    assert fix["mode"] == "self" and fix["caution"] == appmod.SELF_CAUTION and fix["score_change"] is None
+    assert fix["score_change_note"] == appmod.SELF_SCORE_WORDS and fix["flags_before"] == 2
+    assert not any(f["alt_pitch_available"] for f in fix["fixes"])
 
 
 def test_one_job_at_a_time_for_analysis_and_fix(server, monkeypatch):
@@ -497,17 +510,97 @@ def test_gallery_source_finds_the_bundled_text_and_bank(tmp_path):
     assert one == appmod.FixSource(g / "audio/one.wav", g / "results/one.json", TEXT, "R1", g / "audio/base.wav", None)
     assert banked.references == tuple(g / f"audio/r{k}.wav" for k in range(3)) and banked.baseline == g / "audio/r0.wav" and banked.regime == "R2"
     assert other is None and appmod.fixable_examples(g) == ["one", "bank"]
+    (g / "results" / "own.json").write_text(json.dumps({"regime": "SELF", "baseline": {"duration": 2.0}}))
+    (g / "results" / "texted.json").write_text(json.dumps({"regime": "R1", "baseline": {"audio": "audio/far.wav"}}))
+    own = appmod.gallery_source(g, {"id": "own", "audio": "audio/one.wav", "result": "results/own.json", "text": TEXT})
+    texted = appmod.gallery_source(g, {"id": "texted", "baseline": "far", "audio": "audio/t.wav", "result": "results/texted.json", "text": TEXT})
+    assert own == appmod.FixSource(g / "audio/one.wav", g / "results/own.json", TEXT, "SELF")
+    assert texted == appmod.FixSource(g / "audio/t.wav", g / "results/texted.json", TEXT, "R1", g / "audio/far.wav")
+
+
+CONTRACT_FIX_FIELDS = {"finding", "status", "outcome", "reason", "detail", "share", "covered_by", "flagged_after", "residual",
+                       "residual_share", "unit", "floor_removed", "alt_pitch_available", "limit", "round"}
 
 
 def test_plain_outcome_of_each_fix_status():
-    fix = lambda status, reason="": repair.Fix("d1-001", "D1", "RUSH", status, None, None, None, reason)  # noqa: E731
-    assert appmod.plain_outcome(fix(repair.APPLIED), {"d1-001"}) == ("fixed", "")
-    assert appmod.plain_outcome(fix(repair.CAPPED, "partial fix: ..."), {"d1-001"}) == ("fixed", "")
-    assert appmod.plain_outcome(fix(repair.CAPPED, "partial fix: ..."), set()) == ("partly", appmod.CAPPED_WORDS)
-    assert appmod.plain_outcome(fix(repair.APPLIED), set()) == ("partly", appmod.STILL_FLAGGED_WORDS)
-    assert appmod.plain_outcome(fix(repair.SKIPPED, "skipped: the allowed edit ..."), set()) == ("unfixable", appmod.INAUDIBLE_WORDS)
-    assert appmod.plain_outcome(fix(repair.SKIPPED, "skipped: other fixes of these words ..."), set()) == ("unfixable", appmod.SHARED_CAP_WORDS)
+    def fix(status, reason="", share=None, cause="", finding="d1-001"):
+        return repair.Fix(finding, "D1", "RUSH", status, None, None, None, reason, share, cause=cause)
+    capped = fix(repair.CAPPED, "partial fix: ...", 0.52, repair.CAP)
+    partial = "52% of the change toward the target was applied. " + appmod.CAUSE_WORDS[repair.CAP]
+    assert appmod.plain_outcome(fix(repair.APPLIED, share=1.0), {"d1-001"}) == ("no_longer_flagged", "")
+    assert appmod.plain_outcome(capped, {"d1-001"}) == ("no_longer_flagged", partial)   # gone, but only part of the change
+    assert appmod.plain_outcome(capped, set()) == ("still_flagged", partial)
+    assert appmod.plain_outcome(fix(repair.APPLIED, share=1.0), set()) == ("still_flagged", appmod.STILL_FLAGGED_WORDS)
+    assert appmod.plain_outcome(fix(repair.SKIPPED, cause=repair.INAUDIBLE), set()) == ("skipped", appmod.CAUSE_WORDS[repair.INAUDIBLE])
+    assert appmod.plain_outcome(fix(repair.SKIPPED, cause=repair.SHARED_CAP), set()) == ("skipped", appmod.CAUSE_WORDS[repair.SHARED_CAP])
+    assert appmod.plain_outcome(fix(repair.SKIPPED, cause=repair.FLAT_PITCH), set()) == (
+        "skipped", "Your pitch here is too flat to widen enough within natural limits.")
     assert appmod.plain_outcome(fix(repair.UNFIXABLE, "clarity cannot be edited."), set()) == ("unfixable", "Clarity cannot be edited.")
+    owner = fix(repair.CAPPED, share=0.53, cause=repair.CAP, finding="d5-005")
+    assert appmod.plain_outcome(fix(repair.COVERED), {"d1-001"}, owner) == (
+        "no_longer_flagged", "The edit of d5-005 also changes this spot; it applied 53% of its change.")
+    texts = [*appmod.CAUSE_WORDS.values(), *appmod.LIMIT_WORDS.values(), appmod.SELF_CAUTION, *appmod.CHECK_LABELS.values()]
+    assert not any("would sound" in t or "sounds natural" in t or "placebo" in t.lower() for t in texts)
+
+
+def summary_of(monkeypatch, fixes, report, result, mode="reference", pitch_method="own"):
+    monkeypatch.setattr(appmod.repair, "listen_pairs", lambda out, context_s: [])
+    return appmod.fix_summary(SimpleNamespace(audio=np.zeros(C.SR), fixes=fixes), report, None, result, mode, pitch_method)
+
+
+def test_fix_summary_contract(monkeypatch):
+    """Residual, floor removals, the reference-melody offer, covered shares and the score change against the checks."""
+    flaws = [{"id": "d3-001", "dimension": "D3", "words": [2, 4], "delta": -1.8, "unit": "ln", "context": "s"},
+             {"id": "d2-002", "dimension": "D2", "words": [5, 6], "delta": 0.9, "unit": "s", "context": "s"},
+             {"id": "d5-003", "dimension": "D5", "words": [6, 8], "delta": -12.0, "unit": "dB", "context": "s", "counted": True},
+             {"id": "d4-004", "dimension": "D4", "words": [7, 7], "delta": -2.0, "unit": "p", "context": "s", "counted": False}]
+    result = {"regime": "R2", "flaws": flaws}
+    after = {"flaws": [{"id": "x"}], "differences": [],
+             "rows": [{"key": "volume", "p": [0.0] * 6 + [-2.0, -5.5, -1.0]}, {"key": "pauses", "p": [None] * 8},
+                      {"key": "pitch_range", "p": [None, None, -1.2, -1.0, -0.9]}]}
+    fixes = [repair.Fix("d3-001", "D3", "MONOTONE", repair.SKIPPED, "pitch_scale", 2.0, None, "skipped: ...", 0.0, cause=repair.FLAT_PITCH),
+             repair.Fix("d2-002", "D2", "PAUSE_LONG", repair.APPLIED, "pause_shorten", 0.2, 0.2, "", 1.0),
+             repair.Fix("d5-003", "D5", "FADE", repair.CAPPED, "gain", 12.0, 6.0, "partial fix: ...", 0.5, cause=repair.CAP),
+             repair.Fix("d4-004", "D4", "FADE", repair.COVERED, None, None, None, "its penalty is charged to d5-003; ...")]
+    report = {"score_before": 80.0, "score": 90.0, "reproduced": True, "removed": ["d2-002", "d5-003", "d4-004"], "new_findings": [],
+              "remaining": [{"id": "d3-001", "now": []}], "placebo": {"within_tolerance": True},
+              "pitch_check": [{"agree": True}], "alignment": {"words_off": []}, "result": after}
+    fix = summary_of(monkeypatch, fixes, report, result)
+    by = {f["finding"]: f for f in fix["fixes"]}
+    assert by["d3-001"]["outcome"] == "skipped" and by["d3-001"]["alt_pitch_available"] and by["d3-001"]["residual"] == -1.2
+    assert by["d2-002"]["floor_removed"] and by["d2-002"]["residual"] is None and by["d2-002"]["reason"] == appmod.FLOOR_WORDS
+    assert by["d5-003"]["outcome"] == "no_longer_flagged" and by["d5-003"]["share"] == 0.5 and by["d5-003"]["residual"] == -5.5
+    assert by["d5-003"]["residual_share"] == round(5.5 / 12, 3) and by["d5-003"]["limit"] == appmod.LIMIT_WORDS["gain"]
+    assert by["d4-004"]["covered_by"] == "d5-003" and by["d4-004"]["share"] == 0.5 and "50%" in by["d4-004"]["reason"]
+    assert fix["counts"]["partial"] == 2 and fix["counts"]["floor_removed"] == 1 and fix["flags_after"] == 1
+    assert [c["name"] for c in fix["checks"]] == ["reproduced", "alignment", "pitch_trackers"] and fix["score_change"] == 10.0
+    contour = summary_of(monkeypatch, fixes, report, result, pitch_method="contour")
+    assert not any(f["alt_pitch_available"] for f in contour["fixes"])   # the melody was already the reference's
+    unreproduced = summary_of(monkeypatch, fixes, {**report, "reproduced": False}, result)
+    assert unreproduced["score_change"] is None and unreproduced["score_change_note"] == appmod.NOT_REPRODUCED_WORDS
+    assert not unreproduced["checks"][0]["passed"] and not unreproduced["checks_passed"]
+    drifted = summary_of(monkeypatch, fixes, {**report, "placebo": {"within_tolerance": False}}, result)
+    assert drifted["score_change"] is None   # the null chain is part of the reproduction check
+    own = summary_of(monkeypatch, fixes, report, result, mode="self")
+    assert own["score_change"] is None and own["caution"] == appmod.SELF_CAUTION
+    assert not any(f["alt_pitch_available"] for f in own["fixes"])
+
+
+def test_shipped_gallery_self_example_and_item_texts():
+    """The SELF example sits beside its reference version, and every item text reads the words of its result."""
+    from cvoice.align import parse_transcript
+    from cvoice.pipeline import ROOT
+    g = ROOT / "gallery"
+    items = {it["id"]: it for it in json.loads((g / "index.json").read_text())["items"]}
+    own, ref = items["L3A_self"], items["L3A"]
+    assert own["reference_version"] == "L3A" and ref["self_version"] == "L3A_self" and own["audio"] == ref["audio"]
+    result = json.loads((g / own["result"]).read_text())
+    assert own["regime"] == result["regime"] == "SELF" and result["detection"]["reference_mode"] == "none"
+    assert (own["overall"], own["n_flaws"], own["truth"]) == (result["scores"]["overall"], len(result["flaws"]), len(result["truth"]))
+    for item in (it for it in items.values() if it.get("text")):
+        words = [w["w"] for w in json.loads((g / item["result"]).read_text())["words"]]
+        assert list(parse_transcript(item["text"]).disp) == words, item["id"]
+    assert {"L3A_self", "natural_rush"} <= set(appmod.fixable_examples(g))
 
 
 @pytest.mark.slow
@@ -540,9 +633,10 @@ def test_real_fix_of_a_gallery_example(tmp_path):
                 time.sleep(0.25)
             assert job["state"] == "done", job
             fix = job["fix"]
-            assert fix["checks"]["reproduced"] and fix["score_before"] == stored["scores"]["overall"]
+            assert fix["checks"][0] == {"name": "reproduced", "passed": True, "label": appmod.CHECK_LABELS["reproduced"]}
+            assert fix["score_before"] == stored["scores"]["overall"]
             assert {f["finding"] for f in fix["fixes"]} == ({stored["flaws"][0]["id"]} if "finding" in body else {f["id"] for f in stored["flaws"]})
-            assert all(f["outcome"] in ("fixed", "partly", "unfixable") for f in fix["fixes"])
+            assert all(f["outcome"] in ("no_longer_flagged", "still_flagged", "unfixable", "skipped") for f in fix["fixes"])
             if "all" in body:
                 assert fix["score_after"] > fix["score_before"] and fix["listen"]
             s, data, hdr = call(f"{base}/{job['audio']}")

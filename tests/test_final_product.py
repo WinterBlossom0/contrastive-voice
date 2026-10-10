@@ -30,7 +30,10 @@ def test_shipped_detector_is_the_frozen_final_detector():
 
 
 def test_gallery_results_were_made_with_the_frozen_detector():
-    assert {r['pipeline']['config_sha256'] for r in gallery_results().values()} == {FINAL_CONFIG}
+    results = gallery_results().values()
+    assert {r['pipeline']['config_sha256'] for r in results if r['regime'] != 'SELF'} == {FINAL_CONFIG}
+    self_detector = json.loads((ROOT / 'models/detector_selfref.json').read_text())
+    assert {r['pipeline']['config_sha256'] for r in results if r['regime'] == 'SELF'} == {self_detector['selfref_sha256']}
     assert json.loads((GALLERY / gallery.EVALUATION).read_text())['config_sha256'] == FINAL_CONFIG
 
 

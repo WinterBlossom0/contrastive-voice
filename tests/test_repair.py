@@ -112,6 +112,17 @@ def test_pitch_fix_below_the_audible_change_is_skipped(rec):
     out = repair.fix_all(result_of(rec, [finding("D3", (2, 6), -1.8, participant=0.1, baseline=5.0)]), rec.wav)
     assert out.fixes[0].status == repair.SKIPPED and out.operations == []
     assert "1.5 st" in out.fixes[0].reason and np.array_equal(out.audio, rec.wav)
+    assert out.fixes[0].cause == repair.FLAT_PITCH  # 0.1 st x 1.5 cannot reach an audible change
+    small = repair.fix_all(result_of(rec, [finding("D3", (2, 6), -0.1, participant=5.0, baseline=5.2)]), rec.wav).fixes[0]
+    assert small.status == repair.SKIPPED and small.cause == repair.INAUDIBLE  # a wide range, but the change wanted is small
+
+
+def test_skip_and_cap_causes(rec):
+    out = repair.fix_all(result_of(rec, [finding("D1", (2, 6), -math.log(3.0), id="a"), finding("D5", (2, 6), -12.0, id="g"),
+                                         finding("D5", (3, 5), -12.0, id="h")]), rec.wav)
+    status = {fx.finding: fx for fx in out.fixes}
+    assert status["a"].cause == repair.CAP and "could sound processed" in status["a"].reason
+    assert status["h"].status == repair.SKIPPED and status["h"].cause == repair.SHARED_CAP
 
 
 def test_caps_unfixable_and_disfluency(rec):
@@ -144,13 +155,13 @@ def test_inserted_pause_is_not_scaled_by_a_later_whole_clip_stretch(rec):
     assert abs((len(both.audio) - len(only.audio)) - 0.5 * SR) < 0.02 * SR
 
 
-def test_placebo_of_gain_and_pause_operations_is_bit_identical(rec):
+def test_null_chain_of_gain_and_pause_operations_is_bit_identical(rec):
     out = repair.fix_all(result_of(rec, [finding("D5", (2, 6), -6.0), finding("D2", (9, 10), 0.55, id="d2-002", participant=0.75, baseline=0.2),
                                          finding("D2", (4, 5), -0.5, id="d2-003", participant=0.06, baseline=0.56)]), rec.wav)
     assert np.array_equal(repair.placebo_audio(out), rec.wav)
 
 
-def test_pitch_placebo_is_bit_identical_and_a_whole_clip_pitch_edit_keeps_the_pauses(rec):
+def test_pitch_null_chain_is_bit_identical_and_a_whole_clip_pitch_edit_keeps_the_pauses(rec):
     out = repair.fix_all(result_of(rec, [finding("D3", (0, 15), -0.4, participant=4.0, baseline=6.0, context="whole passage")]), rec.wav)
     assert out.operations[0].whole_clip and not np.array_equal(out.audio, rec.wav)
     assert np.array_equal(repair.placebo_audio(out), rec.wav)
@@ -164,7 +175,7 @@ def test_pitch_placebo_is_bit_identical_and_a_whole_clip_pitch_edit_keeps_the_pa
     assert np.array_equal(repair.run_operations(out.speaker, [flat])[0], rec.wav)
 
 
-def test_scaled_operation_is_the_dose_and_zero_is_the_placebo():
+def test_scaled_operation_is_the_dose_and_zero_is_the_null_chain():
     ops = [repair.Operation("stretch", 0, SR, 1.44, "a"), repair.Operation("pause_insert", 5, 5, 0.4, "b"),
            repair.Operation("pause_shorten", 0, SR, 0.2, "c"), repair.Operation("pitch_scale", 0, SR, 2.25, "d"),
            repair.Operation("pitch_contour", 0, SR, 1.0, "e"), repair.Operation("emphasis", 0, SR, (1.44, 2.0, 4.0), "f"),
@@ -216,6 +227,18 @@ def test_overlapping_fixes_of_one_round_share_the_hard_caps_and_never_reverse(re
     assert repair.time_limits(spent) == (repair.MIN_FAST_FACTOR, 1.0) and repair.gain_limits(spent) == (-15.0, 0.0)
 
 
+def test_residual_is_the_remaining_departure_in_the_finding_direction():
+    after = {"rows": [{"key": "pace", "p": [0.0, -0.1, -0.3, 0.2, None]}, {"key": "pauses", "p": [None, 0.4, None, None]}],
+             "flaws": [], "differences": [{"dimension": "D1", "context": "whole passage", "delta": -0.05}]}
+    assert repair.residual(finding("D1", (1, 3), -0.6), after) == -0.3
+    assert repair.residual(finding("D1", (3, 4), -0.6), after) == 0.2  # overshoot: the other sign
+    assert repair.residual(finding("D1", (1, 3), 0.6), after) == 0.2
+    assert repair.residual(finding("D2", (1, 2), 0.9), after) == 0.4  # the pause after word 1
+    assert repair.residual(finding("D2", (2, 3), 0.9), after) is None  # no pause above the floor there
+    assert repair.residual(finding("D1", (0, 4), -0.3, context="whole passage"), after) == -0.05
+    assert repair.residual(finding("D3", (0, 4), -0.3), after) is None  # no row of that dimension
+
+
 def test_listen_pairs_give_the_region_in_both_recordings(rec):
     out = repair.fix_all(result_of(rec, [finding("D1", (2, 6), -math.log(1.3))]), rec.wav)
     pair = repair.listen_pairs(out, context_s=0.5)[0]
@@ -232,14 +255,14 @@ def gallery_kwargs():
 
 
 @pytest.mark.slow
-def test_gallery_l3a_fix_all_removes_flags_within_the_caps_and_the_placebo_does_not():
+def test_gallery_l3a_fix_all_removes_flags_within_the_caps_and_reproduces():
     original = json.loads((GALLERY / "results/L3A.json").read_text())
     kwargs = gallery_kwargs()
     out = repair.fix_all(original, GALLERY / "audio/L3A.wav", transcript=kwargs["transcript"])
     check = repair.verify(out, original, kwargs)
     status = {fx.finding: fx for fx in out.fixes}
     assert check["reproduced"]
-    assert status["d3-001"].status == repair.SKIPPED  # x1.5 of a 0.07 st range is inaudible
+    assert status["d3-001"].status == repair.SKIPPED and status["d3-001"].cause == repair.FLAT_PITCH  # x1.5 of 0.07 st
     assert status["d1-003"].status == repair.CAPPED and status["d5-005"].status == repair.CAPPED
     assert "d2-002" in check["removed"] and check["new_findings"] == []
     assert check["score"] > original["scores"]["overall"] + 8  # 86.11 -> 96.17 when written

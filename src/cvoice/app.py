@@ -22,7 +22,8 @@ with `references` (a reference bank) is passed to the pipeline as its bank, and 
 recordings; the pipeline selects the reference mode, and a finished job states the mode it used (`reference`).
 
 Analysis and fix jobs share one queue: one job at a time. A fix job re-analyses with the inputs of its analysis (the
-decoded recordings and the transcript stay in the analysis job folder), so the scores before and after are comparable.
+decoded recordings and the transcript stay in the analysis job folder), so the scores before and after are comparable
+when the reproduction check passes (fix_summary gives the fix job's JSON).
 """
 from __future__ import annotations
 
@@ -70,11 +71,34 @@ LIMIT_ROWS = {"D1": "pace", "D2": "pauses", "D5": "volume"}
 MODE_REGIMES = {"single": "R2", "consensus5": "R2_consensus"}  # detector.json regime entry of each upload reference mode
 LISTEN_CONTEXT_S = 1.0  # s of audio before and after a fixed region in the page's looping player
 BUSY = "Another analysis or fix is running. Try again when it has finished."
-# Plain words for a fix that stopped short of its target, by repair.Fix status (the reason prefix tells the two skips apart).
-CAPPED_WORDS = "A larger change would sound processed, so the edit stops part of the way."
-SHARED_CAP_WORDS = "Other fixes already change these words as far as they can go without sounding processed."
-INAUDIBLE_WORDS = "The change that still sounds natural here is too small to hear."
+# Plain words of a fix that stopped short of its target or was skipped, by repair.Fix cause. The caps are chosen limits,
+# not measured thresholds, so the words say "could".
+CAUSE_WORDS = {
+    repair.CAP: "A larger change could sound processed, so the edit stops part of the way.",
+    repair.HEADROOM: "A louder edit would clip the recording, so the edit stops part of the way.",
+    repair.SHARED_CAP: "Other fixes already change these words about as far as they can go before they could sound processed.",
+    repair.FLAT_PITCH: "Your pitch here is too flat to widen enough within natural limits.",
+    repair.INAUDIBLE: "The change allowed here is probably too small to hear.",
+}
 STILL_FLAGGED_WORDS = "The edit changed this spot, but it is still flagged."
+FLOOR_WORDS = "The pause is now shorter than the shortest pause the analysis measures, so it is no longer compared."
+# What an edit of each kind cannot change (fix_your_speech.md; docs/PAPERS.md #69 for effort).
+LIMIT_WORDS = {
+    "gain": "A level change does not restore vocal effort, so these words can still sound weak.",
+    "pause_insert": "An added silence has no slowing or pitch fall before it, so the break can sound abrupt.",
+    "emphasis": "The size of an emphasis edit was checked only against the same speaker's own recording.",
+}
+SELF_CAUTION = ("Closer to your typical delivery. Without a reference reading, some flagged spots may be natural phrasing, "
+                "so listen before you change how you read.")
+CHECK_LABELS = {
+    "reproduced": "Your unedited recording analysed again gives the same result, so before and after can be compared.",
+    "alignment": "Every word of the edited recording is found where the edit moved it.",
+    "pitch_trackers": "Two pitch trackers agree on how much the pitch range changed.",
+}
+NOT_REPRODUCED_WORDS = ("Your unedited recording analysed again did not give the same result, so the scores before and "
+                        "after are not compared.")
+SELF_SCORE_WORDS = "Without a reference reading, the result counts flagged spots instead of a score."
+CONTOUR_SELF_WORDS = "The reference's melody needs a reference reading, and this analysis has none."
 
 
 def max_request_bytes() -> int:
@@ -321,9 +345,16 @@ def fix_target(request: FixRequest, result: dict) -> int | None:
 
 def gallery_source(gallery: Path, item: dict) -> FixSource | None:
     """The fix inputs of a bundled example: its audio, stored result and the bundled baseline it was analysed against
-    (a bank example names one of the bank's readings). None when the gallery bundles no text for that baseline."""
+    (a bank example names one of the bank's readings). An item with its own `text` (an example whose baseline is not
+    offered for uploads, or a SELF example) uses that text and the baseline audio of its result. None when the gallery
+    bundles no text for the example."""
     result_path = gallery / item["result"]
-    regime = json.loads(result_path.read_text())["regime"]
+    result = json.loads(result_path.read_text())
+    regime = result["regime"]
+    if item.get("text"):
+        if regime == SELF_REGIME:
+            return FixSource(gallery / item["audio"], result_path, item["text"], regime)
+        return FixSource(gallery / item["audio"], result_path, item["text"], regime, gallery / result["baseline"]["audio"])
     for baseline in bundled_baselines(gallery).values():
         references = baseline.get("references") or []
         if item.get("baseline") == baseline["id"]:
@@ -350,15 +381,26 @@ def analyze_kwargs(source: FixSource, detector: Path, cache_dir: Path | None) ->
             "detector": load_detector(detector)}
 
 
-def plain_outcome(fix: repair.Fix, removed: set[str]) -> tuple[str, str]:
-    """(fixed | partly | unfixable, the reason in plain words or ""), from the fix status and the re-analysis."""
+def unsigned_zero(value: float) -> float:
+    """-0.0 + 0.0 is 0.0 in IEEE 754, so the page never shows "-0"."""
+    return value + 0.0
+
+
+def plain_outcome(fix: repair.Fix, removed: set[str], owner: repair.Fix | None = None) -> tuple[str, str]:
+    """(no_longer_flagged | still_flagged | unfixable | skipped, the reason in plain words or ""), from the fix, the
+    re-analysis and, for a covered finding, the fix of the finding whose edit covers it."""
     if fix.status == repair.UNFIXABLE:
         return "unfixable", fix.reason[:1].upper() + fix.reason[1:]
     if fix.status == repair.SKIPPED:
-        return "unfixable", SHARED_CAP_WORDS if "other fixes" in fix.reason else INAUDIBLE_WORDS
-    if fix.finding in removed:
-        return "fixed", ""
-    return "partly", CAPPED_WORDS if fix.status == repair.CAPPED else STILL_FLAGGED_WORDS
+        return "skipped", CAUSE_WORDS.get(fix.cause, CAUSE_WORDS[repair.INAUDIBLE])
+    outcome = "no_longer_flagged" if fix.finding in removed else "still_flagged"
+    if owner is not None:
+        whose = f"The edit of {owner.finding} also changes this spot"
+        partial = owner.share is not None and owner.share < 1
+        return outcome, (f"{whose}; it applied {owner.share:.0%} of its change." if partial else f"{whose}.")
+    if fix.share is not None and fix.share < 1:
+        return outcome, f"{fix.share:.0%} of the change toward the target was applied. {CAUSE_WORDS.get(fix.cause, '')}".strip()
+    return outcome, ("" if outcome == "no_longer_flagged" else STILL_FLAGGED_WORDS)
 
 
 def covering_finding(fix: repair.Fix, result: dict) -> str | None:
@@ -368,22 +410,76 @@ def covering_finding(fix: repair.Fix, result: dict) -> str | None:
     return next((f["id"] for f in result["flaws"] if f["id"] != fix.finding and f["id"] in fix.reason), None)
 
 
-def fix_summary(outcome: repair.FixOutcome, report: dict, finding: int | None, result: dict) -> dict:
-    """What the page shows: the score before and after, which findings went, stayed or are new, the checks of the
-    re-analysis, each fix in plain words, and the region of each edit in the original and the fixed audio."""
+def fix_checks(report: dict) -> list[dict]:
+    """The checks of the re-analysis, each {name, passed, label}. "reproduced" holds the unedited recording and the null
+    chain (repair.verify); "pitch_trackers" is present only when an edit changed the pitch."""
+    null_chain, alignment = report.get("placebo") or {}, report.get("alignment") or {}
+    passed = {"reproduced": bool(report.get("reproduced")) and bool(null_chain.get("within_tolerance", True)),
+              "alignment": not alignment.get("words_off")}
+    if report.get("pitch_check"):
+        passed["pitch_trackers"] = all(row.get("agree", True) for row in report["pitch_check"])
+    return [{"name": name, "passed": ok, "label": CHECK_LABELS[name]} for name, ok in passed.items()]
+
+
+def fix_entry(fx: repair.Fix, finding: dict, owner: repair.Fix | None, removed: set[str], after: dict | None,
+              context: dict) -> dict:
+    """One fix in the shape of the page contract. owner: the fix whose edit covers this finding; after: the re-analysis
+    (None when the report has none); context: mode, pitch_method and regime of the fix job."""
+    outcome, words = plain_outcome(fx, removed, owner)
+    left = None if after is None else repair.residual(finding, after)
+    floor_removed = fx.operation == "pause_shorten" and outcome == "no_longer_flagged" and after is not None and left is None
+    if floor_removed:
+        words = FLOOR_WORDS
+    share = owner.share if owner is not None else fx.share
+    limit = LIMIT_WORDS.get(fx.operation) if outcome in ("no_longer_flagged", "still_flagged") else None
+    if fx.operation == "emphasis" and context["regime"] == "R1":
+        limit = None
+    alt = (context["mode"] == "reference" and context["pitch_method"] == "own" and fx.dimension == "D3"
+           and outcome in ("skipped", "still_flagged"))
+    return {"finding": fx.finding, "status": fx.status, "outcome": outcome, "reason": words, "detail": fx.reason, "share": share,
+            "covered_by": None if owner is None else owner.finding, "flagged_after": fx.finding not in removed,
+            "residual": None if left is None else unsigned_zero(round(left, 3)),
+            "residual_share": None if left is None or not finding.get("delta") else unsigned_zero(round(left / finding["delta"], 3)),
+            "unit": finding.get("unit"), "floor_removed": floor_removed, "alt_pitch_available": alt, "limit": limit, "round": fx.round}
+
+
+def score_change_note(reproduced: bool, mode: str) -> str | None:
+    """Why the fix job gives no score change, or None."""
+    if not reproduced:
+        return NOT_REPRODUCED_WORDS
+    if mode == "self":
+        return SELF_SCORE_WORDS
+    return None
+
+
+def fix_summary(outcome: repair.FixOutcome, report: dict, finding: int | None, result: dict, mode: str = "reference",
+                pitch_method: str = "own") -> dict:
+    """What the page shows: the score change when the re-analysis reproduces the original (reference mode only), the
+    flagged spots before and after, which findings went, stayed or are new, the checks of the re-analysis, each fix in
+    plain words with its remaining departure, and the region of each edit in the original and the fixed audio. mode:
+    "reference" or "self"."""
     removed = set(report["removed"])
-    fixes = []
-    for fx in outcome.fixes:
-        status, words = plain_outcome(fx, removed)
-        fixes.append({"finding": fx.finding, "status": fx.status, "outcome": status, "reason": words, "detail": fx.reason,
-                      "share": fx.share, "covered_by": covering_finding(fx, result)})
-    placebo, alignment = report.get("placebo") or {}, report.get("alignment") or {}
-    checks = {"reproduced": bool(report.get("reproduced")), "placebo": bool(placebo.get("within_tolerance", True)),
-              "pitch": all(row.get("agree", True) for row in report.get("pitch_check") or []), "alignment": not alignment.get("words_off")}
-    return {"target": "all" if finding is None else result["flaws"][finding]["id"], "score_before": report.get("score_before"),
-            "score_after": report.get("score"), "removed": report["removed"], "remaining": [r["id"] for r in report.get("remaining", [])],
-            "new_findings": len(report.get("new_findings") or []), "checks": checks, "checks_passed": all(checks.values()),
-            "fixes": fixes, "listen": repair.listen_pairs(outcome, LISTEN_CONTEXT_S), "duration": round(len(outcome.audio) / C.SR, 3)}
+    after = report.get("result")
+    flaws = {f["id"]: f for f in result["flaws"]}
+    by_id = {fx.finding: fx for fx in outcome.fixes}
+    context = {"mode": mode, "pitch_method": pitch_method, "regime": result.get("regime")}
+    fixes = [fix_entry(fx, flaws[fx.finding], by_id.get(covering_finding(fx, result)), removed, after, context) for fx in outcome.fixes]
+    checks = fix_checks(report)
+    reproduced = next(c["passed"] for c in checks if c["name"] == "reproduced")
+    before, score = report.get("score_before"), report.get("score")
+    comparable = reproduced and mode == "reference" and before is not None and score is not None
+    note = score_change_note(reproduced, mode)
+    counts = {name: sum(f["outcome"] == name for f in fixes) for name in ("no_longer_flagged", "still_flagged", "unfixable", "skipped")}
+    counts["partial"] = sum(f["outcome"] == "no_longer_flagged" and f["share"] is not None and f["share"] < 1 for f in fixes)
+    counts["floor_removed"] = sum(f["floor_removed"] for f in fixes)
+    return {"target": "all" if finding is None else result["flaws"][finding]["id"], "mode": mode, "pitch_method": pitch_method,
+            "caution": SELF_CAUTION if mode == "self" else None,
+            "score_before": before, "score_after": score, "score_change": round(score - before, 2) if comparable else None,
+            "score_change_note": note, "flags_before": len(result["flaws"]), "flags_after": None if after is None else len(after["flaws"]),
+            "removed": report["removed"], "remaining": [r["id"] for r in report.get("remaining", [])],
+            "new_findings": len(report.get("new_findings") or []), "checks": checks, "checks_passed": all(c["passed"] for c in checks),
+            "counts": counts, "fixes": fixes, "listen": repair.listen_pairs(outcome, LISTEN_CONTEXT_S),
+            "duration": round(len(outcome.audio) / C.SR, 3)}
 
 
 def run_fix(job: dict, folder: Path, source: FixSource, finding: int | None, pitch_method: str, detector: Path,
@@ -401,7 +497,8 @@ def run_fix(job: dict, folder: Path, source: FixSource, finding: int | None, pit
         audio.write_wav(folder / "fixed.wav", outcome.audio)
         job.update(stage="check")
         report = repair.verify(outcome, result, analyze_kwargs(source, detector, cache_dir))
-        job.update(state="done", stage="done", fix=fix_summary(outcome, report, finding, result))
+        mode = "self" if source.regime == SELF_REGIME else "reference"
+        job.update(state="done", stage="done", fix=fix_summary(outcome, report, finding, result, mode, pitch_method))
     except Exception as e:  # report, never lose the worker thread silently
         traceback.print_exc()
         job.update(state="error", error=f"The fix failed ({type(e).__name__}: {e}).")
@@ -465,6 +562,8 @@ def create_app(gallery: Path = GALLERY, detector: Path = DEFAULT_DETECTOR, work:
 
     def start_fix(source: FixSource, request: FixRequest) -> dict:
         finding = fix_target(request, json.loads(source.result.read_text()))
+        if source.regime == SELF_REGIME and request.pitch_method == "contour":
+            raise HTTPException(422, CONTOUR_SELF_WORDS)
         if source.regime != SELF_REGIME and not detector.exists():
             raise HTTPException(503, f"Fixing is not available: {detector.name} is missing.")
         made = jobs.new("fix")
