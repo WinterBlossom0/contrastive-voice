@@ -342,7 +342,9 @@ function quotedWords(r, f) {
 function renderSummary(r) {
   const top = topFindings(r), mode = r.detection?.reference_mode, against = isSelf(r) ? TYPICAL : MODE_TEXT[mode] && mode !== "single" ? `the ${MODE_TEXT[mode]}` : "the reference reading";
   $("#summary-line").textContent = !r.flaws.length ? noRegions(r)
+    : top.length === 1 && isSelf(r) ? `Compared with ${against}, one spot stands out the most.`
     : top.length === 1 ? `Compared with ${against}, one finding costs you the most points.`
+    : top.length && isSelf(r) ? `Compared with ${against}, these ${top.length} spots stand out the most.`
     : top.length ? `Compared with ${against}, these ${top.length} findings cost you the most points.`
     : `Compared with ${against}, every finding costs less than 0.01 points.`;
   $("#fixes-title").textContent = FIX_COUNT_WORDS[top.length] || "Your biggest fixes";
@@ -1492,7 +1494,8 @@ function ridgePath(heights, peakY, floorY) {
 function drawHorizon(r) {
   const energy = r.rows?.find((row) => row.key === "energy");
   if (!energy?.p?.length) return;
-  $("#ridge-near").setAttribute("d", ridgePath(ridgeHeights(energy.p, 2), 30, 112));
+  // a narrow screen squeezes the 96 columns together, so the near ridge takes a longer mean to stay a hill line, not spikes
+  $("#ridge-near").setAttribute("d", ridgePath(ridgeHeights(energy.p, innerWidth < 640 ? 5 : 2), 30, 112));
   $("#ridge-far").setAttribute("d", ridgePath(isSelf(r) ? ridgeHeights(energy.p, 9) : ridgeHeights(energy.b, 3), 6, 88));
 }
 
@@ -1805,7 +1808,7 @@ function outcomeHead(x) {
   if (x.outcome === "no_longer_flagged") return x.share != null && x.share < 1 ? `No longer flagged · ${Math.round(x.share * 100)}% of the change applied` : "No longer flagged";
   if (x.outcome === "still_flagged") return "Still flagged · partly changed";
   if (x.outcome === "unfixable") return `Can't be fixed by editing: ${numbered(x.reason || "")}`;
-  return numbered(x.reason || "");   // skipped: the reason is the whole statement
+  return `Not edited · ${numbered(x.reason || "")}`;
 }
 
 /** The fix's reason below its heading; the applied share is already in the heading, and an unfixable or skipped reason is the heading. */
@@ -1926,8 +1929,9 @@ function renderFixAll() {
   };
   const spots = fix.score_change == null && fix.mode === "self" && fix.flags_after != null;
   body.append(...[
-    fix.score_change != null ? el("p", { class: "fix-all-score", "aria-label": `Score change ${changeText(fix.score_change)} points` },
-      el("span", { class: "to", text: changeText(fix.score_change) }), el("span", { class: "unit", text: "points" }))
+    fix.score_change != null ? el("p", { class: "fix-all-score", "aria-label": `Score ${num(fix.score_before, 2)} before the edits, ${num(fix.score_after, 2)} after` },
+      el("span", { class: "from", text: num(fix.score_before, 2) }), el("span", { class: "arrow", text: "→" }), el("span", { class: "to", text: num(fix.score_after, 2) }),
+      el("span", { class: "unit", text: `${changeText(fix.score_change)} points` }))
     : spots ? el("p", { class: "fix-all-score", "aria-label": `${fix.flags_before} spots stood out before the edits, ${fix.flags_after} after` },
       el("span", { class: "from", text: String(fix.flags_before) }), el("span", { class: "arrow", text: "→" }), el("span", { class: "to", text: String(fix.flags_after) }),
       el("span", { class: "unit", text: fix.flags_after === 1 ? "spot stands out" : "spots stand out" }))
