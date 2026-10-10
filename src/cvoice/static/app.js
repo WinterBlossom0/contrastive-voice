@@ -358,11 +358,11 @@ function renderSummary(r) {
       el("span", { class: "card-pts", text: findingPts(f) })),
     el("p", { class: "card-words", text: quotedWords(r, f) }),
     el("p", { class: "card-line", text: plainLine(f) }),
-    rank ? null : thresholdGauge(f),
+    thresholdGauge(f),
     f.fix ? el("p", { class: "card-fix", text: f.fix }) : null,
     el("div", { class: "card-actions" },
-      el("button", { type: "button", class: "listen-btn", "data-audio": listenAudio(), "data-listen": i, onclick: () => listen(i) }, "Listen",
-        el("span", { class: "sub-h", text: isSelf(r) ? " this spot" : " yours, then the reference" })),
+      el("button", { type: "button", class: "listen-btn", "data-audio": listenAudio(), "data-listen": i, onclick: () => listen(i),
+        title: isSelf(r) ? "Plays this spot" : "Plays yours, then the reference" }, "Listen"),
       fixButton(f, i, { scroll: true })))));
   tickPoints(document.querySelectorAll("#top-cards .card-pts"));
   // the same count as the "Every finding" heading (#flaw-count): flagged findings only; differences sit under their own headings
@@ -1418,7 +1418,7 @@ function loadMedia(r, base) {
   if (S.ws) S.ws.destroy();
   if (S.wsRef) S.wsRef.destroy();
   S.wsRef = null;
-  S.ws = WaveSurfer.create({ container: "#wave", height: 72, normalize: true, cursorWidth: 2, barWidth: 2, barGap: 1, barRadius: 2,
+  S.ws = WaveSurfer.create({ container: "#wave", height: WAVE_H, normalize: true, cursorWidth: 2, barWidth: 2, barGap: 1, barRadius: 2,
     ...waveColors() });
   const ws = S.ws;
   // The reference waveform is drawn only; the reference audio element plays it, and setTime shows its progress.
@@ -1523,57 +1523,259 @@ function showProgress(who, share) {
   document.documentElement.style.setProperty("--t", clamped.toFixed(4));   // the hero light follows the playback position
 }
 
-// ---------------------------------------------------------------------------------------------------- hero horizon
-const RIDGE_COLUMNS = 96;          // path points per ridge; fixed, so a new reading morphs the old path point by point
-const RIDGE_DB = [-40, 10];        // loudness range (dB re voiced median) mapped from the valley floor to the peak
+// ---------------------------------------------------------------------------------------------------- hero panels
+const WAVE_H = 72;                 // px, this recording's waveform at rest
+const WAVE_MAX_H = 180;            // px, the tallest it grows beside a tall score card
+const REF_LANE_H = 70;             // px, about the height of the reference lane; a reading without one may grow by it
 
-/** A loudness contour as RIDGE_COLUMNS heights from 0 to 1: the loudest frame of each column, then a moving mean. */
-function ridgeHeights(frames, smoothing) {
-  const per = frames.length / RIDGE_COLUMNS;
-  const peaks = Array.from({ length: RIDGE_COLUMNS }, (_, k) => {
+/** On a wide screen the score card and the timeline panel sit side by side: the waveform grows until the panel ends
+ *  with the card, so no blank stays under the shorter one. */
+function fitHeroWave() {
+  if (!S.ws) return;
+  const panel = $("#hero-wave"), current = S.ws.options.height;
+  let target = WAVE_H;
+  if (matchMedia("(min-width: 1061px)").matches) {
+    const shown = [...panel.children].filter((child) => child.offsetParent);
+    const content = Math.max(...shown.map((child) => child.getBoundingClientRect().bottom)) - panel.getBoundingClientRect().top
+      + parseFloat(getComputedStyle(panel).paddingBottom);
+    const tallest = isSelf() ? WAVE_MAX_H + REF_LANE_H : WAVE_MAX_H;
+    target = Math.round(Math.max(WAVE_H, Math.min(tallest, current + $("#ledger").offsetHeight - content)));
+  }
+  if (Math.abs(target - current) > 1) S.ws.setOptions({ height: target });
+}
+
+// ---------------------------------------------------------------------------------------------------- hero horizon
+const RIDGE_DB = [-40, 10];        // loudness range (dB re voiced median) mapped from silence to the loudest
+const LIGHT_AT = 0.7;              // rest position of the low light, as a share of the width (style.css .glow, --t)
+const RANGE_PAD = 24;              // px of range beyond each side of the hero, so no edge shows
+// Three mountain ranges, back to front. top, low: summit height as a share of the horizon height for the loudest and the
+// quietest summit; spacing: px of width per summit (a narrow screen gets fewer summits); smooth: Gaussian smoothing of
+// the contour as a share of the spacing; snow: depth of the snow cap as a share of the summit's relief, on summits
+// higher than snowAt (share of the horizon height).
+const RANGES = {
+  far: { top: 0.9, low: 0.52, spacing: 150, smooth: 0.22, snow: 0.46, snowAt: 0.5 },
+  mid: { top: 0.7, low: 0.38, spacing: 196, smooth: 0.24, snow: 0.4, snowAt: 0.44 },
+  near: { top: 0.54, low: 0.3, spacing: 270, smooth: 0.26, snow: 0.3, snowAt: 0.36 },
+};
+const SLOPE_STEPS = [0.18, 0.45, 0.74];   // where a slope bends, as a share of the way from the summit down to the col
+const SLOPE_CURVE = 1.35;                // > 1: steep under the summit, flatter towards the col, so the tip is sharp
+const MIN_SLOPE = 0.5;                   // px of drop per px of width from a summit: about 27 degrees
+const VERTS_PER_SUMMIT = 2 * SLOPE_STEPS.length + 2;   // the summit, its slope vertices on both sides, and one col
+
+/** A loudness contour as `samples` values from 0 to 1: the loudest frame per sample, a Gaussian smoothing over `sigma`
+ *  samples (so only features as wide as a mountain stay), then the 10th to the 95th percentile scaled to 0 to 1. */
+function loudnessContour(frames, samples, sigma) {
+  const per = frames.length / samples;
+  const raw = Array.from({ length: samples }, (_, k) => {
     let loudest = RIDGE_DB[0];
-    for (let i = Math.floor(k * per); i < Math.min(frames.length, Math.ceil((k + 1) * per)); i++) loudest = Math.max(loudest, frames[i] ?? RIDGE_DB[0]);
+    for (let i = Math.floor(k * per); i < Math.min(frames.length, Math.ceil((k + 1) * per)); i++) {
+      if (Number.isFinite(frames[i])) loudest = Math.max(loudest, frames[i]);
+    }
     return (Math.min(loudest, RIDGE_DB[1]) - RIDGE_DB[0]) / (RIDGE_DB[1] - RIDGE_DB[0]);
   });
-  return peaks.map((_, k) => {
-    const window = peaks.slice(Math.max(0, k - smoothing), k + smoothing + 1);
-    return window.reduce((a, v) => a + v, 0) / window.length;
+  const reach = Math.ceil(3 * sigma);
+  const weights = Array.from({ length: 2 * reach + 1 }, (_, j) => Math.exp(-((j - reach) ** 2) / (2 * sigma * sigma)));
+  const smooth = raw.map((_, k) => {
+    let sum = 0, total = 0;
+    weights.forEach((weight, j) => {
+      const i = k + j - reach;
+      if (i < 0 || i >= samples) return;
+      sum += weight * raw[i];
+      total += weight;
+    });
+    return sum / total;
   });
+  const sorted = [...smooth].sort((a, b) => a - b);
+  const low = sorted[Math.floor(0.1 * (samples - 1))], high = sorted[Math.floor(0.95 * (samples - 1))];
+  return smooth.map((v) => Math.min(1, Math.max(0, (v - low) / Math.max(high - low, 1e-6))));
 }
 
-/** A closed ridge in the 1000 x 120 hero viewBox: quadratic curves through the column midpoints, valley at y = floor. */
-function ridgePath(heights, peakY, floorY) {
-  const step = 1000 / (heights.length - 1);
-  const pt = (k) => [k * step, floorY - heights[k] * (floorY - peakY)];
-  let d = `M-4 124 L-4 ${pt(0)[1].toFixed(1)}`;   // the closing edges lie outside the clipped viewBox, so only the crest is stroked
-  for (let k = 0; k < heights.length - 1; k++) {
-    const [x, y] = pt(k), [nx, ny] = pt(k + 1);
-    d += ` Q${x.toFixed(1)} ${y.toFixed(1)} ${((x + nx) / 2).toFixed(1)} ${((y + ny) / 2).toFixed(1)}`;
+/** `count` summit positions (sample indices): the loudest local maxima at least `apart` samples apart. A long even
+ *  stretch without a maximum gets its loudest free sample, so a width always has the same number of summits and the
+ *  ranges of a new reading morph point by point. */
+function pickSummits(contour, count, apart) {
+  const n = contour.length;
+  const chosen = [];
+  const free = (i) => i >= apart / 2 && i <= n - 1 - apart / 2 && chosen.every((j) => Math.abs(i - j) >= apart);
+  const maxima = contour.map((_, i) => i).filter((i) => i > 0 && i < n - 1 && contour[i] >= contour[i - 1] && contour[i] > contour[i + 1]);
+  for (const i of maxima.sort((a, b) => contour[b] - contour[a])) {
+    if (chosen.length === count) break;
+    if (free(i)) chosen.push(i);
   }
-  return `${d} L1004 ${pt(heights.length - 1)[1].toFixed(1)} L1004 124 Z`;
+  while (chosen.length < count) {
+    let best = -1;
+    for (let i = 0; i < n; i++) if (free(i) && (best < 0 || contour[i] > contour[best])) best = i;
+    if (best < 0) break;
+    chosen.push(best);
+  }
+  return chosen.sort((a, b) => a - b);
 }
 
-/** The hero horizon: the near ridge is this recording's loudness, the far ridge the time-aligned reference (or, with
- *  no reference, a long average of this recording: its typical delivery). Decorative only. */
+/** Pseudo-random 0 to 1, fixed per (index, salt), so a reading always draws the same rocks. */
+function rockNoise(index, salt) {
+  const v = Math.sin(index * 12.9898 + salt * 78.233) * 43758.5453;
+  return v - Math.floor(v);
+}
+
+/** One range as a list of vertices {x, h} (h in px above the horizon floor), left to right: a col, then per summit its
+ *  left slope, the summit, its right slope and the next col. The summits sit on the loudest stretches of the contour,
+ *  the cols on the quietest stretch between two summits; the slope vertices follow the contour, so a second loud word
+ *  near a summit shows as a shoulder. cap(x) is the highest a range may reach at x (it stays under the hero text). */
+function rangeVertices(contour, spec, width, height, cap) {
+  const n = contour.length;
+  const count = Math.max(2, Math.round(width / spec.spacing));
+  const xAt = (i) => (i + 0.5) * width / n;
+  const indexAt = (x) => Math.min(n - 1, Math.max(0, Math.floor(x / width * n)));
+  const summitH = (v) => height * (spec.low + (spec.top - spec.low) * v);
+  const summits = pickSummits(contour, count, Math.round(0.62 * n / count)).map((i) => ({ x: xAt(i), h: summitH(contour[i]) }));
+  const cols = summits.concat([null]).map((right, k) => {
+    const left = summits[k - 1];
+    const from = left ? indexAt(left.x) : 0, to = right ? indexAt(right.x) : n - 1;
+    let quiet = from;
+    for (let i = from; i <= to; i++) if (contour[i] < contour[quiet]) quiet = i;
+    const lowest = Math.min(...[left, right].filter(Boolean).map((s) => s.h));
+    const h = Math.min(height * spec.low * (0.3 + 0.5 * contour[quiet]), 0.68 * lowest);
+    if (!left) return { x: -RANGE_PAD, h };
+    if (!right) return { x: width + RANGE_PAD, h };
+    const span = right.x - left.x;
+    return { x: Math.min(Math.max(xAt(quiet), left.x + 0.32 * span), left.x + 0.68 * span), h };
+  });
+  const slope = (peak, col, k, side) => SLOPE_STEPS.map((t, j) => {
+    const x = peak.x + (col.x - peak.x) * t, relief = peak.h - col.h;
+    const shaped = col.h + relief * (1 - t) ** SLOPE_CURVE;
+    const measured = Math.min(peak.h - 0.14 * relief, Math.max(col.h, summitH(contour[indexAt(x)])));
+    // the contour counts for more further down, so a shoulder forms on the slope and the summit stays a point
+    const weight = 0.55 * t;
+    const h = (1 - weight) * shaped + weight * measured + 0.08 * relief * (rockNoise(8 * k + j, side) - 0.5);
+    // near the summit never flatter than MIN_SLOPE, so no summit turns into a table; lower down a slope may level out
+    if (t > 0.5) return { x, h };
+    return { x, h: Math.max(col.h + 0.3 * relief * (1 - t), Math.min(h, peak.h - MIN_SLOPE * Math.abs(x - peak.x))) };
+  });
+  const vertices = [cols[0]];
+  summits.forEach((peak, k) => vertices.push(...slope(peak, cols[k], k, 1).reverse(), peak, ...slope(peak, cols[k + 1], k, 2), cols[k + 1]));
+  // a summit and its slopes shrink by one factor, taken at the summit, so a slope keeps its angle under the text edge
+  const shrink = (x) => Math.min(1, cap(x) / (height * spec.top));
+  return vertices.map(({ x, h }, i) => ({ x, h: h * shrink(i % VERTS_PER_SUMMIT ? vertices[i - (i % VERTS_PER_SUMMIT) + SLOPE_STEPS.length + 1].x : x) }));
+}
+
+const pathOf = (points, height) => `M${points.map(({ x, h }) => `${x.toFixed(1)} ${(height - h).toFixed(1)}`).join(" L")} Z`;
+
+/** The snow cap of each summit: the top edge follows the range, the lower edge is a snow line with gullies that run
+ *  down the slope. A summit under the snow height gets an empty cap, so every cap path keeps the same commands. */
+function snowPath(vertices, spec, height) {
+  const caps = [];
+  for (let at = SLOPE_STEPS.length + 1, k = 0; at < vertices.length; at += VERTS_PER_SUMMIT, k++) {
+    const peak = vertices[at];
+    const relief = peak.h - Math.max(vertices[at - SLOPE_STEPS.length - 1].h, vertices[at + SLOPE_STEPS.length + 1].h);
+    const depth = Math.max(0, relief * spec.snow), line = peak.h - depth;
+    const reach = SLOPE_STEPS.length + 1;
+    if (peak.h < height * spec.snowAt || depth < 3) {
+      caps.push(pathOf(Array(2 * reach + 8).fill(peak), height));
+      continue;
+    }
+    // vertices on one side from the summit outwards while they lie above the snow line and within reach, then the
+    // point where the slope leaves either; the reach keeps a long gentle shoulder from turning into a flat snow slab
+    const limit = 0.4 * Math.min(Math.abs(vertices[at - reach].x - peak.x), Math.abs(vertices[at + reach].x - peak.x));
+    const side = (dir) => {
+      const above = [];
+      let prev = peak;
+      for (let j = 1; j <= reach; j++) {
+        const cur = vertices[at + dir * j];
+        const byLine = cur.h <= line ? (prev.h - line) / (prev.h - cur.h) : Infinity;
+        const byReach = Math.abs(cur.x - peak.x) > limit ? (limit - Math.abs(prev.x - peak.x)) / Math.abs(cur.x - prev.x) : Infinity;
+        const t = Math.min(byLine, byReach);
+        if (Number.isFinite(t)) return { above, cross: { x: prev.x + (cur.x - prev.x) * t, h: prev.h + (cur.h - prev.h) * t } };
+        above.push(cur);
+        prev = cur;
+      }
+      return { above: above.slice(0, -1), cross: prev };
+    };
+    const left = side(-1), right = side(1);
+    const pad = (list, cross) => list.concat(Array(reach - list.length).fill(cross));
+    const top = [...pad(left.above, left.cross).reverse(), peak, ...pad(right.above, right.cross)];
+    const gullies = [0.16, 0.33, 0.5, 0.67, 0.84].map((f, j) => ({
+      x: right.cross.x + (left.cross.x - right.cross.x) * f,
+      h: right.cross.h + (left.cross.h - right.cross.h) * f - depth * [0.26, 0.04, 0.6, 0.1, 0.24][j] * (0.6 + 0.8 * rockNoise(k * 5 + j, 3)),
+    }));
+    caps.push(pathOf([left.cross, ...top, right.cross, ...gullies], height));
+  }
+  return caps.join(" ");
+}
+
+/** The face of each summit turned away from the low light: from the summit down the slope to the col, then back up a
+ *  crest line that leans a little into the shade. */
+function shadePath(vertices, width, height) {
+  const faces = [];
+  for (let at = SLOPE_STEPS.length + 1, k = 0; at < vertices.length; at += VERTS_PER_SUMMIT, k++) {
+    const peak = vertices[at], dir = peak.x < LIGHT_AT * width ? -1 : 1;
+    const slopeDown = Array.from({ length: SLOPE_STEPS.length + 1 }, (_, j) => vertices[at + dir * (j + 1)]);
+    const col = slopeDown[slopeDown.length - 1];
+    const crest = [1, 0.62, 0.3].map((f, j) => ({ x: peak.x + dir * 0.16 * f * peak.h * (0.7 + 0.6 * rockNoise(k * 3 + j, 5)), h: peak.h * (1 - f) - (f === 1 ? 2 : 0) }));
+    faces.push(pathOf([peak, ...slopeDown, { x: col.x, h: -2 }, ...crest], height));
+  }
+  return faces.join(" ");
+}
+
+/** The right end of the widest line of an element's text, in viewport px (the element box can be wider than its text). */
+function textRight(el) {
+  const range = document.createRange();
+  range.selectNodeContents(el);
+  return Math.max(...[...range.getClientRects()].map((r) => r.right));
+}
+
+/** The hero horizon: three snow-capped ranges drawn from loudness. The near range is this recording; the middle and the
+ *  far range are the time-aligned reference (or, with no reference, longer averages of this recording: its typical
+ *  delivery). Decorative only. */
 function drawHorizon(r) {
   const energy = r.rows?.find((row) => row.key === "energy");
   if (!energy?.p?.length) return;
-  // a narrow screen squeezes the 96 columns together, so the near ridge takes a longer mean to stay a hill line, not spikes
-  $("#ridge-near").setAttribute("d", ridgePath(ridgeHeights(energy.p, innerWidth < 640 ? 5 : 2), 30, 112));
-  $("#ridge-far").setAttribute("d", ridgePath(isSelf(r) ? ridgeHeights(energy.p, 9) : ridgeHeights(energy.b, 3), 6, 88));
+  S.horizon = { energy, self: isSelf(r) };
+  drawRanges();
   drawClouds(energy, isSelf(r));
+}
+
+function drawRanges() {
+  const { energy, self } = S.horizon;
+  const box = $(".horizon"), width = Math.round(box.clientWidth), height = Math.round(box.clientHeight);
+  if (!width || !height) return;
+  S.horizon.width = width;
+  const at = box.getBoundingClientRect();
+  const right = Math.max(textRight($("#hero-title")), textRight($("#value-line"))) - at.left;
+  const bottom = $("#value-line").getBoundingClientRect().bottom - at.top;
+  box.style.setProperty("--text-right", `${Math.round(right)}px`);
+  box.style.setProperty("--text-bottom", `${Math.round(bottom)}px`);
+  document.body.style.setProperty("--floor", `${Math.round(at.bottom - document.body.getBoundingClientRect().top)}px`);
+  // under the text a range stays 14 px below the value line; it rises to full height over 200 px right of the text
+  const clear = Math.max(24, height - bottom - 14);
+  const cap = (x) => {
+    const f = Math.min(1, Math.max(0, (x - right - 16) / 200));
+    return clear + f * f * (3 - 2 * f) * Math.max(0, height - clear);
+  };
+  const samples = Math.max(64, Math.round(width / 4)), pxPerSample = width / samples;
+  const source = { near: [energy.p, 1], mid: self ? [energy.p, 1.7] : [energy.b, 1], far: self ? [energy.p, 2.4] : [energy.b, 1.4] };
+  for (const [name, spec] of Object.entries(RANGES)) {
+    const svg = $(`#range-${name}`);
+    svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+    if (!svg.firstChild) svg.append(...["rock", "snow", "shade"].map((part) => svgEl("path", { class: part })));
+    const [frames, longer] = source[name];
+    const contour = loudnessContour(frames, samples, (spec.smooth * longer * spec.spacing) / pxPerSample);
+    const vertices = rangeVertices(contour, spec, width, height, cap);
+    svg.querySelector(".rock").setAttribute("d", `M${-RANGE_PAD} ${height + 2} L${pathOf(vertices, height).slice(1, -2)} L${width + RANGE_PAD} ${height + 2} Z`);
+    svg.querySelector(".snow").setAttribute("d", snowPath(vertices, spec, height));
+    svg.querySelector(".shade").setAttribute("d", shadePath(vertices, width, height));
+  }
 }
 
 // ---------------------------------------------------------------------------------------------------- hero clouds
 const CLOUD_PAD = 40;           // px of cloud image beyond each side of the hero, so the sway never shows a cut edge
 const CLOUD_GAP = 0.1;          // columns quieter than this share of the loud level get no puff: a pause splits the clouds
-// Per layer; at phone width the sizes scale by 0.8 and the columns widen by 1.5, so the clouds keep a cloud shape. base: puff baseline in px above the image bottom; spacing: px per
-// time column; r: puff radius range in px; blur: body and haze blur in px; haze: haze opacity; colours from the lit
-// underside to the top.
+// Per layer; at phone width the sizes scale by 0.8 and the columns widen by 1.5, so the clouds keep a cloud shape. at: puff
+// baseline above the horizon floor, as a share of the horizon height; spacing: px per time column; r: puff radius range
+// in px; blur: body and haze blur in px; haze: haze opacity; colours from the lit underside to the top.
 const CLOUD_LAYERS = {
-  far: { base: 34, spacing: 15, r: [4, 30], blur: [4.5, 13], haze: 0.6, lit: "#9a7a86", mid: "#5f5571", top: "#3b3851" },
-  near: { base: 66, spacing: 12, r: [5, 38], blur: [3.6, 12], haze: 0.55, lit: "#a97d7b", mid: "#6b5b7a", top: "#423b59" },
-  glow: { base: 66, spacing: 12, r: [5, 38], blur: [4, 12], haze: 0.6, lit: "#f2d4bf", mid: "#d9b6b8", top: "#a893c0" },
+  far: { at: 0.6, spacing: 15, r: [4, 26], blur: [4.5, 13], haze: 0.6, lit: "#a07e88", mid: "#635874", top: "#3d3953" },
+  near: { at: 0.34, spacing: 12, r: [5, 32], blur: [3.6, 12], haze: 0.55, lit: "#b08a86", mid: "#76657f", top: "#4a425e" },
+  glow: { at: 0.34, spacing: 12, r: [5, 32], blur: [4, 12], haze: 0.6, lit: "#f2d4bf", mid: "#d9b6b8", top: "#a893c0" },
 };
 
 /** Amplitude per time column from a level contour (dB per 10 ms frame): the RMS of the linear amplitude, a moving mean,
@@ -1597,9 +1799,9 @@ function cloudAmplitudes(frames, columns, smoothing) {
 }
 
 /** One cloud layer as an SVG document: a puff per time column, sized by the amplitude, lit from below, blurred. */
-function cloudSvg(amplitudes, layer, width, height, scale) {
+function cloudSvg(amplitudes, layer, width, height, scale, rangeH) {
   const inner = width - 2 * CLOUD_PAD, spacing = inner / amplitudes.length;
-  const base = height - layer.base * scale, [rMin, rMax] = layer.r.map((v) => v * scale);
+  const base = height - layer.at * rangeH, [rMin, rMax] = layer.r.map((v) => v * scale);
   const jitter = (k, salt) => { const v = Math.sin(k * 12.9898 + salt * 78.233) * 43758.5453; return v - Math.floor(v); };
   // the baseline rises and falls slowly, so the bank is a row of separate clouds, not beads on a line
   const lift = (x) => scale * (7 * Math.sin(x / 173 + 1.3) + 4 * Math.sin(x / 61));
@@ -1645,7 +1847,7 @@ function drawClouds(energy, self) {
   const show = (id, amplitudes, layer) => {
     const img = $(id);
     if (img.dataset.url) URL.revokeObjectURL(img.dataset.url);
-    img.dataset.url = URL.createObjectURL(new Blob([cloudSvg(amplitudes, layer, width, height, scale)], { type: "image/svg+xml" }));
+    img.dataset.url = URL.createObjectURL(new Blob([cloudSvg(amplitudes, layer, width, height, scale, $(".horizon").clientHeight)], { type: "image/svg+xml" }));
     img.src = img.dataset.url;
   };
   show("#cloud-far", far, CLOUD_LAYERS.far);
@@ -2396,6 +2598,9 @@ async function init() {
   // The page keeps room for the fixed player bar, whose height changes when it wraps at phone width.
   const player = $(".player");   // the whole sticky strip, padding included, so a heading scrolled to lands below it
   new ResizeObserver(() => document.documentElement.style.setProperty("--player-h", `${player.offsetHeight}px`)).observe(player);
+  let fitFrame = 0;
+  const heroFit = new ResizeObserver(() => { cancelAnimationFrame(fitFrame); fitFrame = requestAnimationFrame(fitHeroWave); });
+  for (const box of [$("#ledger"), $(".tl-stage"), $("#hero-wave")]) heroFit.observe(box);
   $("#all-dimensions").addEventListener("click", () => {
     S.allDimensions = !S.allDimensions;
     $("#all-dimensions").setAttribute("aria-pressed", String(S.allDimensions));
@@ -2408,10 +2613,14 @@ async function init() {
     resizeTimer = setTimeout(() => {
       if (S.tl && $("#tl-host").clientWidth !== S.tl.width) drawTimeline();
       if (S.chart && $("#chart-host").clientWidth !== S.chart.width) drawChart();
+      if (S.horizon && $(".horizon").clientWidth !== S.horizon.width) drawRanges();
       if (S.clouds && $(".clouds-near").clientWidth + 2 * CLOUD_PAD !== S.clouds.width) drawClouds(S.clouds.energy, S.clouds.self);
     }, 150);
   });
-  document.fonts?.ready.then(() => { if (S.result) drawTimeline(); });
+  document.fonts?.ready.then(() => {
+    if (S.result) drawTimeline();
+    if (S.horizon) drawRanges();   // the serif changes where the hero text ends, which bounds the ranges under it
+  });
   await ensureLibs();
   S.hasLibs = typeof Plotly !== "undefined" && typeof WaveSurfer === "function" && !!WaveSurfer.Regions && !!WaveSurfer.Timeline;
   if (!S.hasLibs) showAlert("The chart and audio libraries could not be loaded, so the chart and the waveform are unavailable. Scores, flagged regions and the transcript still work.");

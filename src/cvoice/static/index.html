@@ -9,7 +9,7 @@
 <link rel="icon" href="data:,">
 <link rel="preload" href="vendor/fonts/AtkinsonHyperlegibleNext-Regular.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="vendor/fonts/Newsreader-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="style.css?v=2026-10-10g">
+<link rel="stylesheet" href="style.css?v=2026-10-10j">
 <script defer src="https://cdn.jsdelivr.net/npm/plotly.js-cartesian-dist-min@4.1.1/plotly-cartesian.min.js"
         integrity="sha384-zc4SwKObGL/W0M3RUI09UPWjlgIZHfbwMgcZO6713mRh78tfUmIQKhzCyE2LIiUg" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/wavesurfer.js@8.0.1/dist/wavesurfer.min.js"
@@ -18,7 +18,7 @@
         integrity="sha384-Tk81r51AIztO5k+iOj/eOq9ZEGD2XVkPnZR8QVxzq1dkyEmsBSCjYpdCoeD/AZQ9" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/wavesurfer.js@8.0.1/dist/plugins/timeline.min.js"
         integrity="sha384-2l5/6KGTIt5kr+AcoXrcOzSiDUedbqv1LlHsFtQ5/ABj0cbzhpA2w6bCvc4Ns2vk" crossorigin="anonymous"></script>
-<script defer src="app.js?v=2026-10-10g"></script>
+<script defer src="app.js?v=2026-10-10j"></script>
 </head>
 <body class="intro">
 <svg width="0" height="0" class="defs" aria-hidden="true" focusable="false">
@@ -28,6 +28,13 @@
     </linearGradient>
     <filter id="f-glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="4" result="b"/>
       <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <linearGradient id="g-far-rock" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7d6886"/><stop offset="0.7" stop-color="#9b7787"/><stop offset="1" stop-color="#ab8286"/></linearGradient>
+    <linearGradient id="g-far-snow" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e2cdd0"/><stop offset="1" stop-color="#b997ab"/></linearGradient>
+    <linearGradient id="g-mid-rock" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4c405a"/><stop offset="0.8" stop-color="#60495c"/><stop offset="1" stop-color="#6b505d"/></linearGradient>
+    <linearGradient id="g-mid-snow" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f1dfd7"/><stop offset="1" stop-color="#c5a1ae"/></linearGradient>
+    <linearGradient id="g-near-rock" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#433a4b"/><stop offset="0.42" stop-color="#2c2832"/><stop offset="0.82" stop-color="#1f1e1d"/></linearGradient>
+    <linearGradient id="g-near-snow" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f5e7dd"/><stop offset="1" stop-color="#cdaab1"/></linearGradient>
+    <linearGradient id="g-near-shade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0e0c18" stop-opacity="0.66"/><stop offset="0.85" stop-color="#0e0c18" stop-opacity="0"/></linearGradient>
   </defs>
 </svg>
 
@@ -75,16 +82,10 @@
     <div class="sky"></div>
     <div class="clouds clouds-far"><div class="drift"><img id="cloud-far" alt=""></div></div>
     <div class="glow"></div>
+    <svg class="range" id="range-far" focusable="false" preserveAspectRatio="none"></svg>
     <div class="clouds clouds-near"><div class="drift"><img id="cloud-near" alt=""><img id="cloud-lit" class="cloud-lit" alt=""></div></div>
-    <svg class="ridges" viewBox="0 0 1000 120" preserveAspectRatio="none" focusable="false">
-      <defs>
-        <linearGradient id="g-far" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6b5878"/><stop offset="1" stop-color="#2c283a"/></linearGradient>
-        <radialGradient id="g-mist" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#b9a6d6" stop-opacity="0.22"/><stop offset="1" stop-color="#b9a6d6" stop-opacity="0"/></radialGradient>
-      </defs>
-      <path id="ridge-far" class="ridge-far" d="M-4 124 L-4 70 L1004 70 L1004 124 Z"/>
-      <g class="mist"><ellipse cx="300" cy="88" rx="300" ry="20"/><ellipse cx="1150" cy="88" rx="300" ry="20"/></g>
-      <path id="ridge-near" class="ridge-near" d="M-4 124 L-4 100 L1004 100 L1004 124 Z"/>
-    </svg>
+    <svg class="range" id="range-mid" focusable="false" preserveAspectRatio="none"></svg>
+    <svg class="range" id="range-near" focusable="false" preserveAspectRatio="none"></svg>
   </div>
   <div class="hero-grid">
     <div id="ledger" class="sum-head" aria-labelledby="summary-line">
@@ -131,71 +132,72 @@
 </section>
 
 <div class="main-grid">
-  <section id="text-view" class="panel" aria-labelledby="text-title">
-    <h2 id="text-title">Your text</h2>
-    <p class="note">Highlighted words have a finding: select one to read it. Select any other word to hear it.</p>
-    <p id="whole-note" class="note" hidden>The selected finding concerns the whole passage.</p>
-    <p id="transcript" class="transcript"></p>
-  </section>
+  <div class="text-col">
+    <section id="text-view" class="panel" aria-labelledby="text-title">
+      <h2 id="text-title">Your text</h2>
+      <p class="note">Highlighted words have a finding: select one to read it. Select any other word to hear it.</p>
+      <p id="whole-note" class="note" hidden>The selected finding concerns the whole passage.</p>
+      <p id="transcript" class="transcript"></p>
+      <p class="note text-key">Underlines get firmer as a finding gets more serious: <span class="key-line f-dot">dotted</span>, <span class="key-line f-dash">dashed</span>, <span class="key-line f-solid">solid</span>.</p>
+    </section>
+    <section id="all-findings" class="fold">
+      <h2><button type="button" class="fold-toggle" id="all-findings-toggle" aria-expanded="false" aria-controls="all-findings-body">Every finding <span id="flaw-count"></span></button></h2>
+      <div class="fold-body" id="all-findings-body" inert>
+        <section id="clip-wrap" aria-label="Findings over the whole passage" hidden>
+          <h3>Over the whole passage</h3>
+          <div id="clip-cards"></div>
+        </section>
+        <aside class="side" aria-label="Findings list">
+          <div class="side-head">
+            <div class="finding-filters">
+              <label>Measure<select id="dimension-filter" aria-controls="flaws differences listed"></select></label>
+              <label>Pattern<select id="pattern-filter" aria-controls="flaws differences listed"></select></label>
+            </div>
+            <button type="button" id="clear-filter" hidden>Show all</button>
+          </div>
+          <ol id="flaws" class="flaws"></ol>
+          <section id="differences-wrap" hidden>
+            <h3>Largest differences from the reference</h3>
+            <p class="note">Shown for comparison; they do not change the score.</p>
+            <ul id="differences" class="flaws differences"></ul>
+          </section>
+          <details id="listed-wrap" hidden>
+            <summary>More differences <span id="listed-count"></span></summary>
+            <p id="listed-note" class="note"></p>
+            <ul id="listed" class="flaws differences"></ul>
+          </details>
+        </aside>
+      </div>
+    </section>
+    <section id="measures" class="fold">
+      <h2><button type="button" class="fold-toggle" id="measures-toggle" aria-expanded="false" aria-controls="measures-body">Every measurement</button></h2>
+      <div class="fold-body" id="measures-body" inert>
+        <p class="note">Each measure scores out of 100. Select one to show only its findings.</p>
+        <div id="cards" class="cards"></div>
+        <div class="work">
+          <section class="stage" aria-label="Measurement charts">
+            <div class="stage-head">
+              <h3>Charts over time</h3>
+              <button type="button" id="all-dimensions" class="plain" aria-pressed="false" aria-controls="chart">Show all measures</button>
+            </div>
+          <div class="legend" aria-label="Chart key">
+            <span><i class="sw sw-ref"></i><span id="key-ref">Reference rendition</span></span>
+            <span><i class="sw sw-you"></i>This recording</span>
+            <span><i class="sw sw-tol"></i>Tolerance band</span>
+            <span><i class="sw sw-flag"></i>Flagged region (dotted, dashed, solid by severity)</span>
+            <span id="key-difference" hidden><i class="sw sw-difference"></i>Selected difference (not scored)</span>
+            <span id="key-stress"><i class="sw sw-stress"></i>Stress point</span>
+            <span id="key-group" hidden><i class="sw sw-group"></i>Finding group (shared penalty)</span>
+            <span id="key-subword" hidden><i class="sw sw-subword"></i>Sub-word evidence span (hatched)</span>
+          </div>
+            <div id="chart-host"><div id="chart"></div><div id="cursor"></div></div>
+          </section>
+        </div>
+      </div>
+    </section>
+  </div>
   <section id="explain" class="explain panel" aria-label="Selected finding" aria-live="polite"></section>
 </div>
-
-<section id="all-findings" class="fold">
-  <h2><button type="button" class="fold-toggle" id="all-findings-toggle" aria-expanded="false" aria-controls="all-findings-body">Every finding <span id="flaw-count"></span></button></h2>
-  <div class="fold-body" id="all-findings-body" inert>
-    <section id="clip-wrap" aria-label="Findings over the whole passage" hidden>
-      <h3>Over the whole passage</h3>
-      <div id="clip-cards"></div>
-    </section>
-    <aside class="side" aria-label="Findings list">
-      <div class="side-head">
-        <div class="finding-filters">
-          <label>Measure<select id="dimension-filter" aria-controls="flaws differences listed"></select></label>
-          <label>Pattern<select id="pattern-filter" aria-controls="flaws differences listed"></select></label>
-        </div>
-        <button type="button" id="clear-filter" hidden>Show all</button>
-      </div>
-      <ol id="flaws" class="flaws"></ol>
-      <section id="differences-wrap" hidden>
-        <h3>Largest differences from the reference</h3>
-        <p class="note">Shown for comparison; they do not change the score.</p>
-        <ul id="differences" class="flaws differences"></ul>
-      </section>
-      <details id="listed-wrap" hidden>
-        <summary>More differences <span id="listed-count"></span></summary>
-        <p id="listed-note" class="note"></p>
-        <ul id="listed" class="flaws differences"></ul>
-      </details>
-    </aside>
-  </div>
-</section>
-
-<section id="measures" class="fold">
-  <h2><button type="button" class="fold-toggle" id="measures-toggle" aria-expanded="false" aria-controls="measures-body">Every measurement</button></h2>
-  <div class="fold-body" id="measures-body" inert>
-    <p class="note">Each measure scores out of 100. Select one to show only its findings.</p>
-    <div id="cards" class="cards"></div>
-    <div class="work">
-      <section class="stage" aria-label="Measurement charts">
-        <div class="stage-head">
-          <h3>Charts over time</h3>
-          <button type="button" id="all-dimensions" class="plain" aria-pressed="false" aria-controls="chart">Show all measures</button>
-        </div>
-      <div class="legend" aria-label="Chart key">
-        <span><i class="sw sw-ref"></i><span id="key-ref">Reference rendition</span></span>
-        <span><i class="sw sw-you"></i>This recording</span>
-        <span><i class="sw sw-tol"></i>Tolerance band</span>
-        <span><i class="sw sw-flag"></i>Flagged region (dotted, dashed, solid by severity)</span>
-        <span id="key-difference" hidden><i class="sw sw-difference"></i>Selected difference (not scored)</span>
-        <span id="key-stress"><i class="sw sw-stress"></i>Stress point</span>
-        <span id="key-group" hidden><i class="sw sw-group"></i>Finding group (shared penalty)</span>
-        <span id="key-subword" hidden><i class="sw sw-subword"></i>Sub-word evidence span (hatched)</span>
-      </div>
-        <div id="chart-host"><div id="chart"></div><div id="cursor"></div></div>
-      </section>
-    </div>
-  </div>
-</section>
 
 <section class="upload-wrap" aria-label="Analyse your reading">
   <details id="upload" class="panel">
