@@ -9,7 +9,7 @@
 <link rel="icon" href="data:,">
 <link rel="preload" href="vendor/fonts/AtkinsonHyperlegibleNext-Regular.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="vendor/fonts/Newsreader-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="style.css?v=2026-10-10f">
+<link rel="stylesheet" href="style.css?v=2026-10-10g">
 <script defer src="https://cdn.jsdelivr.net/npm/plotly.js-cartesian-dist-min@4.1.1/plotly-cartesian.min.js"
         integrity="sha384-zc4SwKObGL/W0M3RUI09UPWjlgIZHfbwMgcZO6713mRh78tfUmIQKhzCyE2LIiUg" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/wavesurfer.js@8.0.1/dist/wavesurfer.min.js"
@@ -18,7 +18,7 @@
         integrity="sha384-Tk81r51AIztO5k+iOj/eOq9ZEGD2XVkPnZR8QVxzq1dkyEmsBSCjYpdCoeD/AZQ9" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/wavesurfer.js@8.0.1/dist/plugins/timeline.min.js"
         integrity="sha384-2l5/6KGTIt5kr+AcoXrcOzSiDUedbqv1LlHsFtQ5/ABj0cbzhpA2w6bCvc4Ns2vk" crossorigin="anonymous"></script>
-<script defer src="app.js?v=2026-10-10f"></script>
+<script defer src="app.js?v=2026-10-10g"></script>
 </head>
 <body class="intro">
 <svg width="0" height="0" class="defs" aria-hidden="true" focusable="false">
@@ -73,7 +73,9 @@
   <p class="value-line" id="value-line">Read a speech against a reference reading (your best take, a coach's, or a well-known speaker's), hear both side by side, and fix the words that cost you the most first.</p>
   <div class="horizon" aria-hidden="true">
     <div class="sky"></div>
+    <div class="clouds clouds-far"><div class="drift"><img id="cloud-far" alt=""></div></div>
     <div class="glow"></div>
+    <div class="clouds clouds-near"><div class="drift"><img id="cloud-near" alt=""><img id="cloud-lit" class="cloud-lit" alt=""></div></div>
     <svg class="ridges" viewBox="0 0 1000 120" preserveAspectRatio="none" focusable="false">
       <defs>
         <linearGradient id="g-far" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6b5878"/><stop offset="1" stop-color="#2c283a"/></linearGradient>
@@ -109,11 +111,13 @@
     </div>
     <div class="hero-wave panel" id="hero-wave" aria-label="Your reading against the reference, over time">
       <div class="tl-stage">
+      <p id="lane-ref" class="lane-label" aria-hidden="true">Reference</p>
       <div id="wave-ref" class="wave wave-ref" aria-hidden="true"></div>
       <div id="tl-host" class="tl-host"></div>
       <div id="wave" class="wave wave-you"></div>
       <div id="tl-tip" class="tl-tip" hidden></div>
     </div>
+      <button type="button" id="tl-more" class="text-btn tl-more" hidden></button>
       <p id="wave-msg" class="note"></p>
     </div>
   </div>

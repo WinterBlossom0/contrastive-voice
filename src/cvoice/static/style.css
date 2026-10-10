@@ -143,7 +143,9 @@ a:hover { text-decoration-color: var(--ink); }
 .hero h1 { font-size: 60px; line-height: 1.06; font-weight: 400; letter-spacing: -0.015em; max-width: 15em; text-wrap: balance; }
 /* lighter than --ink2: it sits on the sky, and keeps 4.5:1 down to the lilac band */
 .value-line { margin-top: 16px; color: #ddd5c9; font-size: 18px; line-height: 1.55; max-width: 62ch; }
-.horizon { position: relative; height: 136px; margin: 6px calc(50% - 50cqw) 0; pointer-events: none; overflow-x: clip; }
+/* --ridge-h: the ridges; --sky-gap: open sky between the value line and the ridges, where the clouds float */
+.horizon { --ridge-h: 136px; --sky-gap: 108px; position: relative; height: calc(var(--ridge-h) + var(--sky-gap)); margin: 6px calc(50% - 50cqw) 0;
+  pointer-events: none; overflow-x: clip; }
 /* The sky is taller than any hero; its top fades into the page ground, so the hero height can change freely. */
 .sky { position: absolute; z-index: -1; left: 0; right: 0; bottom: 20px; height: 1000px;
   background: linear-gradient(to top, var(--ember) 0, #7a5a6c 50px, var(--lilac) 110px, var(--dusk) 260px, var(--night) 500px, var(--base) 820px); }
@@ -163,7 +165,27 @@ a:hover { text-decoration-color: var(--ink); }
   transition: left 0.35s linear; }
 .glow::after { content: ""; position: absolute; left: 50%; top: 50%; width: 22px; height: 22px; margin: -11px 0 0 -11px; border-radius: 50%;
   background: #f6dcc4; box-shadow: 0 0 18px 4px rgba(246, 205, 170, 0.45); }
-.ridges { position: absolute; inset: 0; width: 100%; height: 100%; display: block; overflow: hidden; }
+.ridges { position: absolute; left: 0; bottom: 0; width: 100%; height: var(--ridge-h); display: block; overflow: hidden; }
+/* Clouds made of the reading's amplitude (app.js drawClouds). --tuck: how far the cloud image reaches behind the far
+   ridge. The mask keeps them off the headline and the value line: the band over the sky gap shows across the full
+   width, and on a wide screen the clouds rise higher only right of the text column (720 px of text after the gutter). */
+.clouds { --tuck: 44px; --gutter: max(16px, 50% - 680px); position: absolute; left: 0; right: 0; bottom: calc(var(--ridge-h) - var(--tuck)); height: 300px;
+  -webkit-mask-image: linear-gradient(to top, #000 calc(var(--tuck) + var(--sky-gap) - 10px), transparent calc(var(--tuck) + var(--sky-gap) + 14px)),
+    linear-gradient(to right, transparent calc(var(--gutter) + 740px), #000 calc(var(--gutter) + 880px));
+          mask-image: linear-gradient(to top, #000 calc(var(--tuck) + var(--sky-gap) - 10px), transparent calc(var(--tuck) + var(--sky-gap) + 14px)),
+    linear-gradient(to right, transparent calc(var(--gutter) + 740px), #000 calc(var(--gutter) + 880px)); }
+/* the image is 40 px wider on each side (CLOUD_PAD in app.js), so the sway never shows a cut edge */
+.drift { position: absolute; top: 0; bottom: 0; left: -40px; right: -40px; animation: sway 76s ease-in-out infinite alternate; will-change: transform; }
+.clouds-near .drift { animation-duration: 58s; animation-direction: alternate-reverse; }
+.drift img { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.drift img:not([src]) { visibility: hidden; }
+.clouds-far { opacity: 0.85; }
+@keyframes sway { from { transform: translateX(-16px); } to { transform: translateX(16px); } }
+/* While audio plays, the cloud over the playback position (--t) brightens with the live level (--level, 0 to 1). */
+.cloud-lit { opacity: min(0.85, var(--level, 0) * 2); transition: opacity 0.12s linear;
+  -webkit-mask-image: radial-gradient(ellipse 170px 80% at calc(40px + var(--t, 0.7) * (100% - 80px)) 72%, #000 0, rgba(0, 0, 0, 0.4) 55%, transparent 100%);
+          mask-image: radial-gradient(ellipse 170px 80% at calc(40px + var(--t, 0.7) * (100% - 80px)) 72%, #000 0, rgba(0, 0, 0, 0.4) 55%, transparent 100%); }
+.intro .clouds { animation: dawn 2.6s ease-out 0.3s both; }
 .ridge-far { fill: url(#g-far); }
 .ridge-near { fill: var(--base); stroke: rgba(240, 196, 170, 0.32); stroke-width: 1.2; vector-effect: non-scaling-stroke; }
 .ridge-far, .ridge-near { transition: d 1.4s cubic-bezier(0.3, 0.6, 0.2, 1); }
@@ -303,30 +325,55 @@ a:hover { text-decoration-color: var(--ink); }
 .tl-stage { position: relative; }
 .tl-host { position: relative; }
 .tl-host svg { display: block; width: 100%; overflow: visible; }
-.tl-label { font-size: 13px; font-weight: 700; fill: var(--ink2); }
-.tl-label.you { fill: var(--you-text); }
+/* Lane labels sit on their own rows, so the waveforms use the full width. */
+.lane-label { margin: 0 0 2px; font-size: 12px; font-weight: 700; color: var(--muted); line-height: 16px; }
+.tl-label { font-size: 12px; font-weight: 700; fill: var(--you-text); }
 .tl-word { cursor: pointer; }
-.tl-word rect { fill: rgba(149, 127, 208, 0.34); transition: fill 0.15s ease; }
-.tl-word.ref rect { fill: rgba(179, 172, 161, 0.22); }
-.tl-word:hover rect { fill: rgba(149, 127, 208, 0.6); }
-.tl-word.ref:hover rect { fill: rgba(179, 172, 161, 0.42); }
-.tl-align { stroke: rgba(237, 230, 218, 0.05); stroke-width: 1; }
+.tl-word rect { fill: rgba(149, 127, 208, 0.36); transition: fill 0.15s ease; }
+.tl-word.ref rect { fill: rgba(179, 172, 161, 0.16); }
+.tl-word:hover rect { fill: rgba(149, 127, 208, 0.62); }
+.tl-word.ref:hover rect { fill: rgba(179, 172, 161, 0.36); }
+/* A fault is one region on this recording: a wash whose strength follows the severity tier (as SEVERITY_ALPHA in app.js,
+   which the waveform regions below use) and a top edge in the severity line style (dotted, dashed, solid). */
 .tl-band { cursor: pointer; }
-.tl-band .wash { fill: var(--flag); fill-opacity: 0.18; }
-.tl-band .ribbon { fill: var(--flag); fill-opacity: 0.12; stroke: var(--flag); stroke-width: 1; }
-.tl-band.grp .wash, .tl-band.grp .ribbon { fill-opacity: 0.22; }
-.tl-band.sel .wash { fill-opacity: 0.34; }
-.tl-band.sel .ribbon { fill-opacity: 0.28; stroke-width: 1.75; }
-.tl-band:hover .ribbon { fill-opacity: 0.2; }
-.tl-band .wash, .tl-band .ribbon, .tl-mk rect { transition: fill-opacity 0.2s ease, stroke-width 0.2s ease, fill 0.2s ease; }
-.tl-diff .wash, .tl-diff .ribbon { fill: var(--neutral); fill-opacity: 0.25; stroke: var(--neutral); stroke-width: 1.5; }
+.tl-band .wash { fill: var(--flag); fill-opacity: 0.26; }
+.tl-band .wash.sev-dot { fill-opacity: 0.1; }
+.tl-band .wash.sev-dash { fill-opacity: 0.17; }
+.tl-band .edge { stroke: var(--flag-text); stroke-width: 1.5; }
+.tl-band.grp .wash { fill-opacity: 0.3; }
+.tl-band.sel .wash { fill-opacity: 0.36; }
+.tl-band.sel .edge, .tl-band.grp .edge { stroke: var(--you-text); stroke-width: 2; }
+/* the link to the reference span shows only for the hovered or selected fault */
+.tl-link { opacity: 0; transition: opacity 0.2s ease; pointer-events: none; }
+.tl-band.sel .tl-link, .tl-band.peek .tl-link { opacity: 1; }
+.tl-link .ref-span { fill: var(--flag); fill-opacity: 0.3; stroke: var(--flag-text); stroke-width: 1; }
+.tl-link .link { fill: none; stroke: var(--flag-text); stroke-opacity: 0.55; stroke-width: 1; }
+.tl-band .wash, .tl-band .edge, .tl-mk rect { transition: fill-opacity 0.2s ease, stroke-width 0.2s ease, fill 0.2s ease, stroke 0.2s ease; }
+.tl-diff .wash { fill: var(--neutral); fill-opacity: 0.25; }
+.tl-diff .edge { stroke: var(--neutral); }
+.tl-diff .tl-link { opacity: 1; }
+.tl-diff .tl-link .ref-span { fill: var(--neutral); stroke: var(--neutral); }
+.tl-diff .tl-link .link { stroke: var(--neutral); }
+.tl-stem { stroke: var(--flag-text); stroke-opacity: 0.28; stroke-width: 1; }
+.tl-stem.sel, .tl-stem.peek { stroke: var(--you-text); stroke-opacity: 0.8; }
+/* Fault labels: calm outlines in the severity line style; the costliest faults (the top cards) carry their points on a
+   tinted fill; the selected one is raised with a lavender ring. */
 .tl-mk { cursor: pointer; }
 .tl-mk:focus { outline: none; }
-.tl-mk rect { fill: var(--panel-3); stroke: var(--flag); stroke-width: 1; }
-.tl-mk text { font-size: 13px; fill: var(--flag-text); text-anchor: middle; dominant-baseline: central; }
-.tl-mk.sel rect { fill: var(--flag-text); stroke: var(--flag-text); }
-.tl-mk.sel text { fill: var(--on-flag); font-weight: 700; }
+.tl-mk rect { fill: var(--panel-2); stroke: var(--flag); stroke-width: 1; }
+.tl-mk text { font-size: 12.5px; fill: var(--ink2); dominant-baseline: central; }
+.tl-mk .n { font-weight: 700; fill: var(--flag-text); }
+.tl-mk .pts { font-weight: 700; fill: var(--flag-text); }
+.tl-mk.top rect { fill: #3b2834; stroke: var(--flag-text); }
+.tl-mk.top text { fill: var(--ink); }
+.tl-mk.grp rect { stroke: var(--you-text); }
+.tl-mk.sel rect { fill: var(--panel-3); stroke: var(--you-text); stroke-width: 2; stroke-dasharray: none; filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.5)); }
+.tl-mk.sel text { fill: var(--ink); }
+.tl-mk.sel .n { fill: var(--you-text); }
+.has-sel .tl-mk:not(.sel):not(.grp):not(.peek) { opacity: 0.72; }
+.tl-mk:hover rect { fill: var(--panel-3); }
 .tl-mk:focus-visible rect { stroke: var(--ink); stroke-width: 2.5; }
+.tl-more { display: block; margin: 6px 0 0 auto; font-size: 14px; }
 .tl-cursor { stroke: var(--ink); stroke-width: 2; }
 .wave-ref { min-height: 36px; }
 .wave-you { min-height: 56px; }
@@ -569,8 +616,8 @@ body::after { content: ""; position: fixed; inset: 0; z-index: 60; pointer-event
 @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(178, 73, 129, 0.55); } 100% { box-shadow: 0 0 0 14px rgba(178, 73, 129, 0); } }
 @keyframes pulse-svg { 0%, 100% { opacity: 1; } 40% { opacity: 0.45; } }
 .top-card.pulse, #flaws button.pulse { animation: pulse 0.9s ease-out 1; }
-.tl-band.pulse .ribbon, .tl-band.pulse .wash, .tl-mk.pulse rect { animation: pulse-svg 0.7s ease-in-out 1; }
-.peeking .tl-band:not(.peek), .peeking .tl-mk:not(.peek) { opacity: 0.35; }
+.tl-band.pulse .wash, .tl-mk.pulse rect { animation: pulse-svg 0.7s ease-in-out 1; }
+.peeking .tl-band:not(.peek), .peeking .tl-mk:not(.peek), .peeking .tl-stem:not(.peek) { opacity: 0.35; }
 .peeking .w.f-dot:not(.peek), .peeking .w.f-dash:not(.peek), .peeking .w.f-solid:not(.peek) { opacity: 0.45; }
 .peeking .top-card:not(.peek) { opacity: 0.7; }
 .w.peek { background: rgba(178, 73, 129, 0.2); color: var(--ink); }
@@ -585,13 +632,14 @@ body::after { content: ""; position: fixed; inset: 0; z-index: 60; pointer-event
 @keyframes slide-in { from { opacity: 0; transform: translateX(14px); } to { opacity: 1; transform: none; } }
 main { transition: opacity 0.14s ease; }
 main.fading { opacity: 0.25; }
-.intro .tl-band, .intro .tl-mk { animation: band-in 0.35s ease-out both; animation-delay: calc(1s + var(--seq, 0) * 0.16s); }
+.intro .tl-band, .intro .tl-mk, .intro .tl-stem { animation: band-in 0.35s ease-out both; animation-delay: calc(1s + var(--seq, 0) * 0.16s); }
 @keyframes band-in { from { opacity: 0; } 60% { opacity: 1; filter: brightness(1.6); } to { opacity: 1; } }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
   .mark { transform: none; }
   .ring-glow { opacity: 0; }
+  .drift .cloud-lit { display: none; }
 }
 @media (max-width: 1060px) {
   .main-grid, .hero-grid, #fix-all-body { grid-template-columns: minmax(0, 1fr); }
@@ -612,7 +660,11 @@ main.fading { opacity: 0.25; }
   .hero { margin-top: 20px; }
   .hero h1 { font-size: 36px; line-height: 1.1; }
   .value-line { font-size: 16px; margin-top: 12px; }
-  .horizon { height: 92px; }
+  .horizon { --ridge-h: 92px; --sky-gap: 90px; }
+  /* phone: the text spans the width, so only the band over the sky gap shows */
+  .clouds { --tuck: 30px; height: 200px;
+    -webkit-mask-image: linear-gradient(to top, #000 calc(var(--tuck) + var(--sky-gap) - 10px), transparent calc(var(--tuck) + var(--sky-gap) + 10px));
+            mask-image: linear-gradient(to top, #000 calc(var(--tuck) + var(--sky-gap) - 10px), transparent calc(var(--tuck) + var(--sky-gap) + 10px)); }
   .glow { --glow-y: 36px; width: 260px; height: 170px; }
   .glow::after { width: 16px; height: 16px; margin: -8px 0 0 -8px; }
   .sky { bottom: 14px; }

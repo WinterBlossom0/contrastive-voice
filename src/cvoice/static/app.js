@@ -14,12 +14,15 @@ const LABEL_PAD_PX = 3, LABEL_CHAR_PX = 7;   // a wash number's padding and its 
 const LABEL_GAP_PX = 4, LABEL_SHIFT_PX = 6;  // px between two wash numbers; px a number may move right past a wash narrower than that
 const POLL_MS = 500;
 const BOTH_GAP_MS = 350;                 // ms of silence between the two spans of "Play both"
-const TL_GUTTER_PX = 118;                // px; the timeline's track labels on a wide screen
-const TL_NARROW_PX = 620;                // px; below this width the track labels sit above and below the tracks
-const TL_TRACK_PX = 18, TL_LINK_PX = 74, TL_LABEL_PX = 20;   // px; word track, ribbon zone between the tracks, label row
+const TL_REF_TRACK_PX = 8, TL_TRACK_PX = 16;   // px; the reference word track (quiet) and this recording's word track
+const TL_LINK_GAP_PX = 10, TL_LABEL_PX = 20;  // px; gap under the reference track, and the row of the "This recording" label
 const TL_MIN_SPAN_PX = 4;                // px; a shorter span (a pause point) is widened to stay visible and clickable
-const TL_MARK_H = 22, TL_MARK_GAP = 3;   // px; height of a band number and the gap kept between two numbers
-const TL_MARK_FONT = 13;                 // px; must equal .tl-mk text in style.css
+const TL_MARK_H = 22, TL_MARK_GAP = 4;   // px; height of a fault label and the gap kept around it
+const TL_MARK_FONT = 12.5;               // px; must equal .tl-mk text in style.css
+const TL_MARK_ROWS = 3;                  // label rows above this recording's track; a label that fits in none is counted under the panel
+const TL_MARK_REACH_PX = 48;            // px a full label may move sideways off its region; a number alone may move three times as far
+const TL_JOIN_S = 0.5;                   // s; members of one finding group closer than this share one label
+const SEVERITY_ALPHA = { dot: 0.1, dash: 0.17, solid: 0.26 };   // flag wash per severity tier; selected: 0.36
 const SVG_NS = "http://www.w3.org/2000/svg";
 const RING_C = 2 * Math.PI * 52;         // circumference of the score ring (r 52 in index.html)
 const COUNT_MS = 1000;                   // ms of the score count-up on the first load
@@ -189,9 +192,9 @@ function svgEl(tag, attrs = {}, ...kids) {
 }
 
 let measureContext = null;
-function textWidth(text, px) {
+function textWidth(text, px, weight = 400) {
   if (!measureContext) measureContext = document.createElement("canvas").getContext("2d");
-  measureContext.font = `${px}px ${css("--sans")}`;
+  measureContext.font = `${weight} ${px}px ${css("--sans")}`;
   return measureContext.measureText(text).width;
 }
 
@@ -880,78 +883,130 @@ function referenceSpan(f) {
 }
 
 const SEVERITY_DASH = { dot: "1.5 2.5", dash: "5 3", solid: "none" };
+const severityTier = (f) => sevStyle(f.severity ?? 0)[1];
 
-/** The washes on both word tracks and the ribbon that joins them, for one local finding or difference. */
+/** One finding's region on this recording's track (a wash with a top edge in the severity style), and, with a reference,
+ *  its reference span and a thin link to it, which style.css shows only while the finding is hovered or selected. */
 function bandParts(f) {
   const g = S.tl, widen = (a, b) => b - a >= TL_MIN_SPAN_PX ? [a, b] : [(a + b) / 2 - TL_MIN_SPAN_PX / 2, (a + b) / 2 + TL_MIN_SPAN_PX / 2];
-  const [b0, b1] = widen(...referenceSpan(f).map(g.x)), [p0, p1] = widen(...f.p.map(g.x));
-  const mid = (g.refBot + g.youTop) / 2;
-  const ribbon = `M${b0},${g.refBot} C${b0},${mid} ${p0},${mid} ${p0},${g.youTop} L${p1},${g.youTop} C${p1},${mid} ${b1},${mid} ${b1},${g.refBot} Z`;
-  return { b0, b1, p0, p1, mid, parts: [
-    g.own ? "" : svgEl("rect", { class: "wash", x: b0, y: g.refTop, width: b1 - b0, height: TL_TRACK_PX }),
-    svgEl("path", { class: "ribbon", d: ribbon, "stroke-dasharray": SEVERITY_DASH[sevStyle(f.severity ?? 0)[1]] }),
-    svgEl("rect", { class: "wash", x: p0, y: g.youTop, width: p1 - p0, height: TL_TRACK_PX })] };
+  const [p0, p1] = widen(...f.p.map(g.x)), tier = severityTier(f);
+  const parts = [svgEl("rect", { class: `wash sev-${tier}`, x: p0, y: g.youTop, width: p1 - p0, height: TL_TRACK_PX }),
+    svgEl("line", { class: "edge", x1: p0, x2: p1, y1: g.youTop, y2: g.youTop, "stroke-dasharray": SEVERITY_DASH[tier] })];
+  if (!g.own) {
+    const [b0, b1] = widen(...referenceSpan(f).map(g.x)), bx = (b0 + b1) / 2, px = (p0 + p1) / 2, mid = (g.refBot + g.youTop) / 2;
+    parts.push(svgEl("g", { class: "tl-link" },
+      svgEl("rect", { class: "ref-span", x: b0, y: g.refTop, width: b1 - b0, height: TL_REF_TRACK_PX }),
+      svgEl("path", { class: "link", d: `M${bx},${g.refBot} C${bx},${mid} ${px},${mid} ${px},${g.youTop}` })));
+  }
+  return { p0, p1, parts };
 }
 
 /**
- * The reference reading above this recording, word by word on one time scale (the longer reading sets the scale), with each
- * local finding as a numbered band from its reference span to its recording span. The waveform below uses the same scale.
+ * The fault labels: members of one finding group that touch share one label ("×2"). Each label sits over its region,
+ * the most costly first, in the lowest of TL_MARK_ROWS rows where it touches no other label; a label that does not fit
+ * at full length tries its number alone; one that still does not fit is counted under the panel.
+ */
+function placeMarks(r, x, width) {
+  const top = new Map(topFindings(r).map(([, i], rank) => [i, rank]));
+  const marks = [];
+  r.flaws.forEach((f, i) => {
+    if (wholePassage(f)) return;
+    const joined = f.group && marks.find((m) => m.members.some((j) => f.group.includes(r.flaws[j].id))
+      && f.p[0] <= m.t1 + TL_JOIN_S && f.p[1] >= m.t0 - TL_JOIN_S);
+    if (joined) { joined.members.push(i); joined.t0 = Math.min(joined.t0, f.p[0]); joined.t1 = Math.max(joined.t1, f.p[1]); }
+    else marks.push({ members: [i], t0: f.p[0], t1: f.p[1] });
+  });
+  const cost = (i) => r.flaws[i].counted === false ? 0 : r.flaws[i].points_lost ?? 0;
+  for (const m of marks) {
+    m.main = m.members.reduce((best, i) => cost(i) > cost(best) ? i : best, m.members[0]);
+    m.rank = Math.min(...m.members.map((i) => top.get(i) ?? Infinity));
+    const f = r.flaws[m.main];
+    m.number = `#${m.main + 1}`;
+    m.title = `${findingText(f)}${m.members.length > 1 ? ` ×${m.members.length}` : ""}`;
+    m.points = Number.isFinite(m.rank) ? `−${num(f.points_lost, 2)}` : "";
+    m.cx = (x(m.t0) + x(m.t1)) / 2;
+  }
+  const rows = Array.from({ length: TL_MARK_ROWS }, () => []), hidden = [];
+  const order = [...marks].sort((a, b) => a.rank - b.rank || cost(b.main) - cost(a.main) || a.t0 - b.t0);
+  const fits = (row, x0, x1) => rows[row].every((o) => x1 + TL_MARK_GAP <= o.x0 || x0 >= o.x1 + TL_MARK_GAP);
+  for (const m of order) {
+    const full = textWidth(m.number, TL_MARK_FONT, 700) + textWidth(` ${m.title}`, TL_MARK_FONT)
+      + (m.points ? textWidth(` ${m.points}`, TL_MARK_FONT, 700) + 4 : 0) + 18;
+    const short = textWidth(m.number, TL_MARK_FONT, 700) + 16;
+    // a candidate costs its row and its sideways shift; a full label may move a little, a number alone further, with a leader
+    const candidates = (w, compact, reach) => rows.flatMap((_, row) => Array.from({ length: 2 * Math.floor(reach / 8) + 1 }, (__, k) => {
+      const shift = (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 8, x0 = Math.min(Math.max(m.cx - w / 2 + shift, 0), width - w);
+      return fits(row, x0, x0 + w) ? { row, x0, w, compact, cost: row * 24 + Math.abs(x0 + w / 2 - m.cx) } : null;
+    })).filter(Boolean).sort((a, b) => a.cost - b.cost)[0];
+    const spot = candidates(full, false, TL_MARK_REACH_PX) || candidates(short, true, 3 * TL_MARK_REACH_PX);
+    if (!spot) { hidden.push(m); continue; }
+    Object.assign(m, spot);
+    rows[spot.row].push({ x0: spot.x0, x1: spot.x0 + spot.w });
+  }
+  return { marks: marks.filter((m) => !hidden.includes(m)), hidden, rows: Math.max(1, ...marks.filter((m) => !hidden.includes(m)).map((m) => m.row + 1)) };
+}
+
+/**
+ * The reference reading above this recording, word by word on one time scale (the longer reading sets the scale). Each local
+ * finding is one region on this recording's track, labelled above it; the waveform below uses the same scale.
  */
 function drawTimeline() {
   const host = $("#tl-host"), r = S.result;
   S.tl = null;
   if (!r || !host.clientWidth) return;
-  const width = host.clientWidth, narrow = width < TL_NARROW_PX, gutter = narrow ? 0 : TL_GUTTER_PX;
-  const pxPerS = Math.max(width - gutter - PLOT_R, 1) / Math.max(r.participant.duration, r.baseline.duration);
-  const label = narrow ? TL_LABEL_PX : 0, own = isSelf(r);
-  // Without a reference reading the upper track is empty: the band numbers sit above this recording's track.
-  const refTop = label, refBot = refTop + (own ? 0 : TL_TRACK_PX), youTop = refBot + TL_LINK_PX, youBot = youTop + TL_TRACK_PX;
-  S.tl = { x: (t) => gutter + t * pxPerS, refTop, refBot, youTop, youBot, width, own };
+  const width = host.clientWidth, own = isSelf(r);
+  const pxPerS = Math.max(width - PLOT_R, 1) / Math.max(r.participant.duration, r.baseline.duration);
+  const x = (t) => t * pxPerS, layout = placeMarks(r, x, width - PLOT_R);
+  // rows from the top: reference track, gap, the "This recording" label, the fault labels, this recording's track
+  const refTop = 0, refBot = own ? 0 : TL_REF_TRACK_PX, labelMid = refBot + (own ? 0 : TL_LINK_GAP_PX) + TL_LABEL_PX / 2;
+  const marksTop = labelMid + TL_LABEL_PX / 2, youTop = marksTop + layout.rows * (TL_MARK_H + TL_MARK_GAP) + 2, youBot = youTop + TL_TRACK_PX;
+  S.tl = { x, refTop, refBot, youTop, youBot, width, own, chipOf: new Map() };
   const g = S.tl;
-  const svg = svgEl("svg", { width, height: youBot + label, viewBox: `0 0 ${width} ${youBot + label}`, role: "group",
+  const svg = svgEl("svg", { width, height: youBot, viewBox: `0 0 ${width} ${youBot}`, role: "group",
     "aria-label": own ? "This recording, word by word, with numbered flagged regions" : "Reference and this recording, word by word, with numbered flagged regions" });
-  const trackLabel = (text, who, y) => svgEl("text", { class: `tl-label ${who}`, x: 0, y, "dominant-baseline": "central", text });
-  if (!own) svg.append(trackLabel("Reference", "ref", narrow ? label / 2 - 1 : (refTop + refBot) / 2));
-  svg.append(trackLabel("This recording", "you", narrow ? youBot + label / 2 + 1 : (youTop + youBot) / 2));
-  const mid = (s) => (s[0] + s[1]) / 2;
-  // At phone width the word links are closer than 2 px apart and read as one grey block, so only the bands join the tracks.
-  if (!narrow && !own) svg.append(svgEl("g", { "aria-hidden": "true" }, ...r.words.filter((w) => w.b).map((w) =>
-    svgEl("line", { class: "tl-align", x1: g.x(mid(w.b)), y1: refBot, x2: g.x(mid(w.p)), y2: youTop }))));
-  const track = (who, key, top) => svgEl("g", { "aria-hidden": "true" }, ...r.words.filter((w) => w[key]).map((w) => {
+  $("#lane-ref").hidden = own;
+  svg.append(svgEl("text", { class: "tl-label you", x: 0, y: labelMid, "dominant-baseline": "central", text: "This recording" }));
+  const track = (who, key, top, height) => svgEl("g", { "aria-hidden": "true" }, ...r.words.filter((w) => w[key]).map((w) => {
     const x0 = g.x(w[key][0]), wide = Math.max(g.x(w[key][1]) - x0 - 1, 1);
     return svgEl("g", { class: `tl-word ${who}`, onclick: () => playSpan(who, [w[key][0], w[key][1] + 0.25]),
       onpointerenter: (e) => showTip(e.currentTarget, `${w.w}  ${span(w[key])}`), onpointerleave: hideTip },
-      svgEl("rect", { x: x0, y: top, width: wide, height: TL_TRACK_PX, rx: 4 }),
-      );
+      svgEl("rect", { x: x0, y: top, width: wide, height, rx: Math.min(4, height / 2) }));
   }));
-  svg.append(own ? "" : track("ref", "b", refTop), track("you", "p", youTop));
-  const bands = svgEl("g", {}), markers = svgEl("g", {}), placed = [];
+  svg.append(own ? "" : track("ref", "b", refTop, TL_REF_TRACK_PX), track("you", "p", youTop, TL_TRACK_PX));
+  const bands = svgEl("g", {}), stems = svgEl("g", { class: "tl-stems", "aria-hidden": "true" }), markers = svgEl("g", {});
   const order = r.flaws.map((f, i) => i).filter((i) => !wholePassage(r.flaws[i]));   // intro order: by time
+  const seq = (i) => `--seq:${Math.min(order.indexOf(i), BAND_STEPS)}`;
+  layout.marks.concat(layout.hidden).forEach((m, k) => m.members.forEach((i) => g.chipOf.set(i, k)));
   r.flaws.forEach((f, i) => {
-    if (wholePassage(f)) return;   // listed and explained in the whole-clip cards, not painted over both readings
-    const band = bandParts(f), text = findingText(f), w = textWidth(text, TL_MARK_FONT) + 16;
-    const cx = Math.min(Math.max((band.b0 + band.b1 + band.p0 + band.p1) / 4, gutter + w / 2), width - w / 2);
-    // A number takes the middle row of the ribbon zone, else the row above or below where it does not touch another number.
-    const rows = [band.mid - (TL_MARK_H + TL_MARK_GAP) / 2, band.mid + (TL_MARK_H + TL_MARK_GAP) / 2, band.mid - 1.5 * (TL_MARK_H + TL_MARK_GAP),
-      band.mid + 1.5 * (TL_MARK_H + TL_MARK_GAP)];
-    const free = (y) => !placed.some((m) => m.y === y && cx - w / 2 < m.x1 + TL_MARK_GAP && cx + w / 2 > m.x0 - TL_MARK_GAP);
-    const y = rows.find(free) ?? rows[0];
-    placed.push({ y, x0: cx - w / 2, x1: cx + w / 2 });
-    const pick = () => select(i, { scroll: true });
-    bands.append(svgEl("g", { class: "tl-band", "data-i": i, "data-peek": i, style: `--seq:${Math.min(order.indexOf(i), BAND_STEPS)}`, onclick: pick, "aria-hidden": "true" },
-      svgEl("title", { text: `#${i + 1} ${findingText(f)}` }), ...band.parts));
-    markers.append(svgEl("g", { class: "tl-mk", "data-i": i, "data-peek": i, style: `--seq:${Math.min(order.indexOf(i), BAND_STEPS)}`, tabindex: 0, role: "button", "aria-pressed": "false",
-      "aria-label": `#${i + 1} ${findingText(f)}: this recording ${span(f.p)}${f.b && !own ? `, reference ${span(f.b)}` : ""}`,
-      onclick: pick, onkeydown: (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(); } } },
-      svgEl("rect", { x: cx - w / 2, y: y - TL_MARK_H / 2, width: w, height: TL_MARK_H, rx: TL_MARK_H / 2 }),
-      svgEl("text", { x: cx, y, text })));
+    if (wholePassage(f)) return;   // listed and explained in the whole-clip cards, not painted over the readings
+    bands.append(svgEl("g", { class: "tl-band", "data-i": i, "data-chip": g.chipOf.get(i), "data-peek": i, style: seq(i), onclick: () => select(i, { scroll: true }), "aria-hidden": "true" },
+      svgEl("title", { text: `#${i + 1} ${findingText(f)}` }), ...bandParts(f).parts));
   });
-  svg.append(svgEl("g", { id: "tl-diff" }), bands, markers,
+  layout.marks.forEach((m) => {
+    const f = r.flaws[m.main], y = marksTop + (layout.rows - 1 - m.row) * (TL_MARK_H + TL_MARK_GAP) + TL_MARK_H / 2;
+    const pick = () => select(m.main, { scroll: true }), tier = severityTier(f), cx = m.x0 + m.w / 2;
+    const name = `${m.number} ${m.title}${m.points ? `, ${m.points} points` : ""}`;
+    // a label moved off its region keeps a leader from its own middle to the region
+    const from = Math.min(Math.max(m.cx, m.x0 + TL_MARK_H / 2), m.x0 + m.w - TL_MARK_H / 2);
+    stems.append(svgEl("line", { class: "tl-stem", "data-chip": g.chipOf.get(m.main), style: seq(m.main), x1: from, x2: m.cx, y1: y + TL_MARK_H / 2, y2: youTop }));
+    markers.append(svgEl("g", { class: `tl-mk${Number.isFinite(m.rank) ? " top" : ""}${m.compact ? " compact" : ""}`, "data-i": m.main, "data-members": m.members.join(","),
+      "data-chip": g.chipOf.get(m.main), "data-peek": m.main, style: seq(m.main), tabindex: 0, role: "button", "aria-pressed": "false",
+      "aria-label": `${name}: this recording ${span([m.t0, m.t1])}${f.b && !own ? `, reference ${span(referenceSpan(f))}` : ""}`,
+      onclick: pick, onkeydown: (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(); } },
+      onpointerenter: m.compact ? (e) => showTip(e.currentTarget, name) : null, onpointerleave: m.compact ? hideTip : null },
+      svgEl("rect", { x: m.x0, y: y - TL_MARK_H / 2, width: m.w, height: TL_MARK_H, rx: TL_MARK_H / 2, "stroke-dasharray": SEVERITY_DASH[tier] }),
+      svgEl("text", { x: m.compact ? cx : m.x0 + 9, y, "text-anchor": m.compact ? "middle" : "start" },
+        svgEl("tspan", { class: "n", text: m.number }),
+        ...(m.compact ? [] : [svgEl("tspan", { text: ` ${m.title}` }), m.points ? svgEl("tspan", { class: "pts", dx: 4, text: ` ${m.points}` }) : null]))));
+  });
+  svg.append(svgEl("g", { id: "tl-diff" }), bands, stems, markers,
     own ? "" : svgEl("line", { id: "tl-cur-ref", class: "tl-cursor", y1: refTop - 3, y2: refBot + 3, style: "display:none" }),
     svgEl("line", { id: "tl-cur-you", class: "tl-cursor", y1: youTop - 3, y2: youBot + 3, style: "display:none" }));
   host.replaceChildren(svg);
+  const more = layout.hidden.reduce((n, m) => n + m.members.length, 0);
+  $("#tl-more").hidden = !more;
+  $("#tl-more").textContent = `${more} more ${more === 1 ? "finding" : "findings"} in the list`;
   for (const [id, seconds] of [["#wave", r.participant.duration], ["#wave-ref", r.baseline.duration]]) {
-    $(id).style.marginLeft = `${gutter}px`;
     $(id).style.width = `${Math.max(seconds * pxPerS, 1)}px`;
   }
   if (S.ws) S.ws.setOptions(waveColors());
@@ -962,12 +1017,20 @@ function markTimeline() {
   const svg = $("#tl-host svg");
   if (!svg || !S.tl || !S.result) return;
   const f = selected(), flaw = S.selKind === "flaw";
-  svg.querySelectorAll(".tl-band[data-i], .tl-mk").forEach((band) => {
+  const inGroup = (i) => flaw && !!f?.group?.includes(S.result.flaws[i].id);
+  svg.classList.toggle("has-sel", flaw && S.sel != null && S.tl.chipOf.has(S.sel));
+  svg.querySelectorAll(".tl-band[data-i]").forEach((band) => {
     const i = +band.dataset.i, on = flaw && S.sel === i;
     band.classList.toggle("sel", on);
-    band.classList.toggle("grp", flaw && !on && !!f?.group?.includes(S.result.flaws[i].id));
-    if (band.classList.contains("tl-mk")) band.setAttribute("aria-pressed", String(on));
+    band.classList.toggle("grp", !on && inGroup(i));
   });
+  svg.querySelectorAll(".tl-mk").forEach((mk) => {
+    const members = mk.dataset.members.split(",").map(Number), on = flaw && members.includes(S.sel);
+    mk.classList.toggle("sel", on);
+    mk.classList.toggle("grp", !on && members.some(inGroup));
+    mk.setAttribute("aria-pressed", String(on));
+  });
+  svg.querySelectorAll(".tl-stem").forEach((stem) => stem.classList.toggle("sel", flaw && +stem.dataset.chip === S.tl.chipOf.get(S.sel)));
   const layer = svg.querySelector("#tl-diff");
   layer.replaceChildren();
   if (!flaw && f && !wholePassage(f)) layer.append(svgEl("g", { class: "tl-band tl-diff sel", "aria-hidden": "true" }, ...bandParts(f).parts));
@@ -993,7 +1056,8 @@ function peek(i) {
   if (!on) return;
   const f = S.result?.flaws[+i];
   if (!f) return;
-  document.querySelectorAll(`.tl-band[data-i="${i}"], .tl-mk[data-i="${i}"], .top-card[data-i="${i}"]`).forEach((n) => n.classList.add("peek"));
+  const chip = S.tl?.chipOf.get(+i);
+  document.querySelectorAll(`.tl-band[data-i="${i}"], .tl-mk[data-i="${i}"], .top-card[data-i="${i}"]${chip == null ? "" : `, [data-chip="${chip}"]`}`).forEach((n) => n.classList.add("peek"));
   if (!wholePassage(f)) for (let w = f.words[0]; w <= f.words[1]; w++) document.querySelector(`#transcript .w[data-i="${w}"]`)?.classList.add("peek");
 }
 
@@ -1329,7 +1393,7 @@ function updateWaveRegions() {
   const add = (f, i, kind) => {
     const p = mediaSpan(f, "you"), duration = S.ws.getDuration();
     const reg = S.regions.addRegion({ start: Math.min(p[0], duration), end: Math.min(Math.max(p[1], p[0] + 0.05), duration), drag: false, resize: false,
-      color: rgba(css(kind === "flaw" ? "--flag" : "--neutral"), 0.16) });   // the timeline bands above carry the numbers
+      color: rgba(css(kind === "flaw" ? "--flag" : "--neutral"), kind !== "flaw" ? 0.16 : S.selKind === "flaw" && S.sel === i ? 0.36 : SEVERITY_ALPHA[severityTier(f)]) });
     reg.findingIndex = i; reg.findingKind = kind;
   };
   S.result.flaws.forEach((f, i) => { if (!wholePassage(f)) add(f, i, "flaw"); });   // a whole-passage finding has no region to mark
@@ -1366,7 +1430,7 @@ function loadMedia(r, base) {
   }
   const current = () => token === S.mediaId && S.ws === ws;
   S.regions = ws.registerPlugin(WaveSurfer.Regions.create());
-  ws.registerPlugin(WaveSurfer.Timeline.create({ height: 16, style: { color: css("--ink2"), fontSize: "11px" } }));
+  ws.registerPlugin(WaveSurfer.Timeline.create({ height: 16, style: { color: css("--muted"), fontSize: "11px" } }));
   S.regions.on("region-clicked", (region, e) => { if (current()) { e.stopPropagation(); select(region.findingIndex, { scroll: true, kind: region.findingKind }); } });
   ws.on("ready", () => {
     if (!current()) return;
@@ -1395,8 +1459,8 @@ function loadMedia(r, base) {
 }
 
 /** This recording in the accent at moderate opacity; heard bars at full accent. */
-const waveColors = () => ({ waveColor: rgba(css("--you"), 0.5), progressColor: css("--you-text"), cursorColor: css("--ink") });
-const refWaveColors = () => ({ waveColor: rgba(css("--ink2"), 0.32), progressColor: rgba(css("--ink2"), 0.7) });   // the reference stays neutral
+const waveColors = () => ({ waveColor: rgba(css("--you"), 0.66), progressColor: css("--you-text"), cursorColor: css("--ink") });
+const refWaveColors = () => ({ waveColor: rgba(css("--ink2"), 0.22), progressColor: rgba(css("--ink2"), 0.7) });   // the reference stays neutral
 
 /** The analyser of the playing element, made once per element; null where Web Audio is missing or the element is taken. */
 function analyserFor(media) {
@@ -1497,6 +1561,96 @@ function drawHorizon(r) {
   // a narrow screen squeezes the 96 columns together, so the near ridge takes a longer mean to stay a hill line, not spikes
   $("#ridge-near").setAttribute("d", ridgePath(ridgeHeights(energy.p, innerWidth < 640 ? 5 : 2), 30, 112));
   $("#ridge-far").setAttribute("d", ridgePath(isSelf(r) ? ridgeHeights(energy.p, 9) : ridgeHeights(energy.b, 3), 6, 88));
+  drawClouds(energy, isSelf(r));
+}
+
+// ---------------------------------------------------------------------------------------------------- hero clouds
+const CLOUD_PAD = 40;           // px of cloud image beyond each side of the hero, so the sway never shows a cut edge
+const CLOUD_GAP = 0.1;          // columns quieter than this share of the loud level get no puff: a pause splits the clouds
+// Per layer; at phone width the sizes scale by 0.8 and the columns widen by 1.5, so the clouds keep a cloud shape. base: puff baseline in px above the image bottom; spacing: px per
+// time column; r: puff radius range in px; blur: body and haze blur in px; haze: haze opacity; colours from the lit
+// underside to the top.
+const CLOUD_LAYERS = {
+  far: { base: 34, spacing: 15, r: [4, 30], blur: [4.5, 13], haze: 0.6, lit: "#9a7a86", mid: "#5f5571", top: "#3b3851" },
+  near: { base: 66, spacing: 12, r: [5, 38], blur: [3.6, 12], haze: 0.55, lit: "#a97d7b", mid: "#6b5b7a", top: "#423b59" },
+  glow: { base: 66, spacing: 12, r: [5, 38], blur: [4, 12], haze: 0.6, lit: "#f2d4bf", mid: "#d9b6b8", top: "#a893c0" },
+};
+
+/** Amplitude per time column from a level contour (dB per 10 ms frame): the RMS of the linear amplitude, a moving mean,
+ *  then scaled so the 95th percentile is 1 and one loud word does not flatten the rest. */
+function cloudAmplitudes(frames, columns, smoothing) {
+  const per = frames.length / columns;
+  const rms = Array.from({ length: columns }, (_, k) => {
+    let power = 0, count = 0;
+    for (let i = Math.floor(k * per); i < Math.min(frames.length, Math.ceil((k + 1) * per)); i++) {
+      power += Number.isFinite(frames[i]) ? 10 ** (frames[i] / 10) : 0;
+      count += 1;
+    }
+    return count ? Math.sqrt(power / count) : 0;
+  });
+  const smooth = rms.map((_, k) => {
+    const window = rms.slice(Math.max(0, k - smoothing), k + smoothing + 1);
+    return window.reduce((a, v) => a + v, 0) / window.length;
+  });
+  const loud = [...smooth].sort((a, b) => a - b)[Math.floor(0.95 * (smooth.length - 1))] || 1;
+  return smooth.map((v) => Math.min(1.15, v / loud));
+}
+
+/** One cloud layer as an SVG document: a puff per time column, sized by the amplitude, lit from below, blurred. */
+function cloudSvg(amplitudes, layer, width, height, scale) {
+  const inner = width - 2 * CLOUD_PAD, spacing = inner / amplitudes.length;
+  const base = height - layer.base * scale, [rMin, rMax] = layer.r.map((v) => v * scale);
+  const jitter = (k, salt) => { const v = Math.sin(k * 12.9898 + salt * 78.233) * 43758.5453; return v - Math.floor(v); };
+  // the baseline rises and falls slowly, so the bank is a row of separate clouds, not beads on a line
+  const lift = (x) => scale * (7 * Math.sin(x / 173 + 1.3) + 4 * Math.sin(x / 61));
+  const puffs = [], rims = [];
+  amplitudes.forEach((a, k) => {
+    if (a < CLOUD_GAP) return;
+    const x = CLOUD_PAD + (k + 0.5) * spacing, y = base - lift(x), r = rMin + (rMax - rMin) * a ** 1.2;
+    puffs.push(`<ellipse cx="${x.toFixed(1)}" cy="${(y - 0.3 * r).toFixed(1)}" rx="${(1.45 * r + spacing * 0.4).toFixed(1)}" ry="${(0.8 * r).toFixed(1)}"/>`);
+    if (a < 0.45) return;
+    // a smaller billow on top, offset by a fixed pseudo-random amount, so the crest is cumulus, not a smooth curve
+    const billow = r * (0.5 + 0.3 * jitter(k, 2)), bx = x + (jitter(k, 1) - 0.5) * spacing * 2, by = y - 0.75 * r - 0.3 * billow;
+    puffs.push(`<circle cx="${bx.toFixed(1)}" cy="${by.toFixed(1)}" r="${billow.toFixed(1)}"/>`);
+    // the billow's underside catches the low light, so the crest reads as lobes in front of one another
+    rims.push(`<ellipse cx="${bx.toFixed(1)}" cy="${(by + 0.62 * billow).toFixed(1)}" rx="${(0.85 * billow).toFixed(1)}" ry="${(0.3 * billow).toFixed(1)}"/>`);
+  });
+  const [body, haze] = layer.blur.map((v) => (v * scale).toFixed(1));
+  const top = (base - 2.2 * rMax).toFixed(1), bottom = (base + 0.5 * rMax).toFixed(1);
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" preserveAspectRatio="none">`
+    + `<defs><linearGradient id="lit" gradientUnits="userSpaceOnUse" x1="0" y1="${bottom}" x2="0" y2="${top}">`
+    + `<stop offset="0" stop-color="${layer.lit}"/><stop offset="0.4" stop-color="${layer.mid}"/><stop offset="1" stop-color="${layer.top}"/></linearGradient>`
+    + `<linearGradient id="base" gradientUnits="userSpaceOnUse" x1="0" y1="${(base - 0.1 * rMax).toFixed(1)}" x2="0" y2="${bottom}">`
+    + `<stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>`
+    + `<mask id="fade"><rect width="${width}" height="${height}" fill="url(#base)"/></mask>`
+    + `<filter id="soft" x="-2%" y="-40%" width="104%" height="180%" color-interpolation-filters="sRGB">`
+    + `<feGaussianBlur stdDeviation="${body}" result="body"/><feGaussianBlur in="SourceGraphic" stdDeviation="${haze}"/>`
+    + `<feComponentTransfer result="haze"><feFuncA type="linear" slope="${layer.haze}"/></feComponentTransfer>`
+    + `<feMerge><feMergeNode in="haze"/><feMergeNode in="body"/></feMerge></filter></defs>`
+    + `<g filter="url(#soft)"><g mask="url(#fade)"><g fill="url(#lit)">${puffs.join("")}</g>`
+    + `<g fill="${layer.lit}" opacity="0.32">${rims.join("")}</g></g></g></svg>`;
+}
+
+/** The hero clouds are the reading's sound: the near bank is this recording's amplitude, the far bank the time-aligned
+ *  reference (or, with no reference, a long average of this recording). Each bank is an image, so its blur is drawn once. */
+function drawClouds(energy, self) {
+  const box = $(".clouds-near");
+  const width = Math.round(box.clientWidth) + 2 * CLOUD_PAD, height = Math.round(box.clientHeight);
+  if (!width || !height) return;
+  S.clouds = { energy, self, width };
+  const narrow = innerWidth < 640, scale = narrow ? 0.8 : 1;
+  const columns = (layer) => Math.max(16, Math.round((width - 2 * CLOUD_PAD) / (layer.spacing * (narrow ? 1.5 : 1))));
+  const near = cloudAmplitudes(energy.p, columns(CLOUD_LAYERS.near), 0);
+  const far = self ? cloudAmplitudes(energy.p, columns(CLOUD_LAYERS.far), 6) : cloudAmplitudes(energy.b, columns(CLOUD_LAYERS.far), 1);
+  const show = (id, amplitudes, layer) => {
+    const img = $(id);
+    if (img.dataset.url) URL.revokeObjectURL(img.dataset.url);
+    img.dataset.url = URL.createObjectURL(new Blob([cloudSvg(amplitudes, layer, width, height, scale)], { type: "image/svg+xml" }));
+    img.src = img.dataset.url;
+  };
+  show("#cloud-far", far, CLOUD_LAYERS.far);
+  show("#cloud-near", near, CLOUD_LAYERS.near);
+  show("#cloud-lit", near, CLOUD_LAYERS.glow);
 }
 
 function setPlaying(on) {
@@ -2223,7 +2377,9 @@ async function poll(id) {
 async function init() {
   $("#jump-upload").addEventListener("click", () => { $("#upload").open = true; });
   for (const fold of document.querySelectorAll(".fold")) fold.querySelector(".fold-toggle").addEventListener("click", () => setFold(fold, !fold.classList.contains("open")));
-  $("#see-all").addEventListener("click", () => { setFold($("#all-findings"), true); $("#all-findings").scrollIntoView({ block: "start" }); });
+  const openAllFindings = () => { setFold($("#all-findings"), true); $("#all-findings").scrollIntoView({ block: "start" }); };
+  $("#see-all").addEventListener("click", openAllFindings);
+  $("#tl-more").addEventListener("click", openAllFindings);
   const menu = $("#picker-menu");
   document.addEventListener("click", (e) => { if (menu.open && !menu.contains(e.target)) menu.open = false; });
   menu.addEventListener("keydown", (e) => { if (e.key === "Escape" && menu.open) { menu.open = false; menu.querySelector("summary").focus(); } });
@@ -2252,6 +2408,7 @@ async function init() {
     resizeTimer = setTimeout(() => {
       if (S.tl && $("#tl-host").clientWidth !== S.tl.width) drawTimeline();
       if (S.chart && $("#chart-host").clientWidth !== S.chart.width) drawChart();
+      if (S.clouds && $(".clouds-near").clientWidth + 2 * CLOUD_PAD !== S.clouds.width) drawClouds(S.clouds.energy, S.clouds.self);
     }, 150);
   });
   document.fonts?.ready.then(() => { if (S.result) drawTimeline(); });
