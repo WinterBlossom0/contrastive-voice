@@ -26,13 +26,16 @@ def reading():
 
 
 class StubNorms:
-    """The norms interface of norms.py with phone counts as expected durations and class names in its own words."""
-    def __init__(self):
+    """The norms interface of norms.py with phone counts as expected durations (plus speech_bump per word position for
+    the measure 'speech') and class names in its own words."""
+    def __init__(self, speech_bump=0.0):
         self.calls = []
+        self.speech_bump = speech_bump
 
-    def expected_word_log_duration(self, words, punct_after):
-        self.calls.append(list(words))
-        return np.log([S.phone_count(w) for w in words])
+    def expected_word_log_duration(self, words, punct_after, measure="speech"):
+        self.calls.append((measure, list(words)))
+        bump = self.speech_bump * np.arange(len(words)) if measure == "speech" else 0.0
+        return np.log([S.phone_count(w) for w in words]) + bump
 
     def pause_class(self, words, punct_after):
         names = []
@@ -116,12 +119,24 @@ def test_norms_text_model_uses_the_norms_object(reading):
     stub = StubNorms()
     phones = S.self_comparison(reading, S.make_model())
     learned = S.self_comparison(reading, S.make_model("norms"), stub)
-    assert stub.calls and stub.calls[0][0] == "we"  # lower-case vocabulary words
+    assert stub.calls and stub.calls[0][1][0] == "we"  # lower-case vocabulary words
     for k in ("D1", "D9"):
         assert np.allclose(phones.dims[k].x, learned.dims[k].x, equal_nan=True)
     classes = S.pause_classes(reading.tr, S.make_model("norms", options={"tight_pauses": True}), stub)
     assert classes[3] == "comma" and classes[7] == "end" and classes[16] == "tight" and classes[0] == "none"
     assert S.pause_classes(reading.tr, S.make_model("norms"), stub)[16] == "none"  # tight class only with the option
+
+
+def test_norms_d1_text_model_takes_the_norms_for_d1_only(reading):
+    stub = StubNorms(speech_bump=0.05)
+    phones = S.self_comparison(reading, S.make_model())
+    mixed = S.self_comparison(reading, S.make_model("norms_d1"), stub)
+    assert {measure for measure, _ in stub.calls} == {"speech"}
+    assert not np.allclose(phones.dims["D1"].x, mixed.dims["D1"].x, equal_nan=True)
+    for k in ("D2", "D3", "D5", "D6", "D9"):
+        assert np.allclose(phones.dims[k].x, mixed.dims[k].x, equal_nan=True), k
+    tight = S.make_model("norms_d1", options={"tight_pauses": True})
+    assert list(S.pause_classes(reading.tr, tight, stub)) == list(S.pause_classes(reading.tr, S.make_model(options={"tight_pauses": True})))
 
 
 def test_norms_text_model_needs_the_norms_file(tmp_path, monkeypatch):

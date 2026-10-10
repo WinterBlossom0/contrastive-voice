@@ -3,7 +3,8 @@
 Every measure is taken against the speaker's own typical value over the same reading, corrected for what the text
 predicts at that place:
   D1 pace, D9 speech tempo: window time against the window's expected time from the text model ('phones': the CMUdict
-         phone count of each word; 'norms': the learned word-duration norms of norms.py);
+         phone count of each word; 'norms': the learned word-duration norms of norms.py for both; 'norms_d1': the norms
+         for D1 and the phone count for D9);
   D2 pauses: each boundary against the speaker's own median pause of its class (sentence end, other punctuation, none,
          and with the option tight_pauses: none inside a tight phrase);
   D3 pitch range: window value against the speaker's median, less the offset of the window's quarter of the sentence
@@ -48,7 +49,11 @@ ENABLED = ("D1", "D2", "D3", "D5", "D6", "D9")
 ABSENT = ("D4", "D7", "D8")  # need a reference reading: the reference's stress words, word times or endings
 # R1 objective: the same truths count as in the reference modes, so a DEEMPHASIS edit is a miss here.
 EVALUATION_DIMS = ("D1", "D2", "D3", "D4", "D5", "D6", "D9")
-TEXT_MODELS = ("phones", "norms")
+TEXT_MODELS = ("phones", "norms", "norms_d1")
+# Tempo dimensions whose expected word time comes from the learned norms, with the norms measure. 'norms_d1' keeps phones
+# for D9: on the project train readings the norms raised the D9 window spread (build/work/norms/STATUS.md).
+NORMS_DIMS = {"phones": {}, "norms": {"D1": "speech", "D9": "speech"}, "norms_d1": {"D1": "speech"}}
+NORMS_PAUSE_MODELS = ("norms",)  # text models that take the pause classes of the norms instead of the punctuation rule
 
 PHONES_PER_LETTER = 0.86  # median phones per letter over the CMU dictionary: phone count of a word not in it
 POSITION_BINS = 4  # quarters of the sentence (relative position of the window's centre word)
@@ -76,7 +81,8 @@ LONG_PAUSE_S = 1.0
 def constants() -> dict:
     """The selfref constants inside the detector hash."""
     return {"NAME": NAME, "SCHEMA": SCHEMA, "ENABLED": list(ENABLED), "ABSENT": list(ABSENT), "EVALUATION_DIMS": list(EVALUATION_DIMS),
-            "TEXT_MODELS": list(TEXT_MODELS), "PHONES_PER_LETTER": PHONES_PER_LETTER, "POSITION_BINS": POSITION_BINS,
+            "TEXT_MODELS": list(TEXT_MODELS), "NORMS_DIMS": NORMS_DIMS,
+            "NORMS_PAUSE_MODELS": list(NORMS_PAUSE_MODELS), "PHONES_PER_LETTER": PHONES_PER_LETTER, "POSITION_BINS": POSITION_BINS,
             "POSITION_DIMS": list(POSITION_DIMS), "FINAL_BINS": FINAL_BINS, "FINAL_BINS_MIN_WORDS": FINAL_BINS_MIN_WORDS,
             "TEMPO_DIMS": list(TEMPO_DIMS), "MIN_CLASS_BOUNDARIES": MIN_CLASS_BOUNDARIES, "PAUSE_CLASSES": list(PAUSE_CLASSES),
             "TIGHT_HEADS": sorted(TIGHT_HEADS), "OPTIONS": dict(OPTIONS), "READING_RATE_SYLL_S": list(READING_RATE_SYLL_S),
@@ -93,9 +99,13 @@ def make_model(text_model: str = "phones", position: dict | None = None, options
     if unknown:
         raise ValueError(f"unknown selfref options {sorted(unknown)}")
     model = {"text_model": text_model, "position": dict(position or {}), "options": {**OPTIONS, **(options or {})}}
-    if text_model == "norms":
+    if uses_norms(text_model):
         model["norms_sha256"] = norms_sha256
     return model
+
+
+def uses_norms(text_model: str) -> bool:
+    return bool(NORMS_DIMS[text_model])
 
 
 def norms_available(path: Path = NORMS_PATH) -> bool:
@@ -113,8 +123,8 @@ def load_norms(path: str | None = None):
 
 
 def text_norms(model: dict, norms=None):
-    """The norms object of a 'norms' text model (the given one, else norms.load()); None for 'phones'."""
-    if model["text_model"] != "norms":
+    """The norms object of a text model that uses the norms (the given one, else norms.load()); None for 'phones'."""
+    if not uses_norms(model["text_model"]):
         return None
     return norms if norms is not None else load_norms()
 
@@ -131,13 +141,14 @@ def norm_words(tr: Transcript) -> tuple[list[str], list[str]]:
     return [w.lower() for w in tr.norm], list(tr.punct)
 
 
-def word_weights(tr: Transcript, model: dict, norms=None) -> np.ndarray:
-    """Expected relative time of each word: its phone count ('phones') or exp of the norms' expected log duration
-    ('norms'). Only ratios matter: the speaker's own rate is removed later."""
-    learned = text_norms(model, norms)
-    if learned is None:
+def word_weights(tr: Transcript, model: dict, norms=None, dim: str = "D1") -> np.ndarray:
+    """Expected relative time of each word in the window time of the tempo dimension `dim`: exp of the norms' expected
+    log duration where NORMS_DIMS names a norms measure for `dim`, else the phone count. Only ratios matter: the
+    speaker's own rate is removed later."""
+    measure = NORMS_DIMS[model["text_model"]].get(dim)
+    if measure is None:
         return np.array([phone_count(w) for w in tr.norm], float)
-    expected = np.asarray(learned.expected_word_log_duration(*norm_words(tr)), float)
+    expected = np.asarray(text_norms(model, norms).expected_word_log_duration(*norm_words(tr), measure=measure), float)
     if expected.shape != (len(tr),):
         raise ValueError(f"norms gave {expected.shape} word durations for {len(tr)} words")
     return np.exp(expected)
@@ -181,10 +192,10 @@ def norms_class(name: str) -> str:
 
 def pause_classes(tr: Transcript, model: dict | None = None, norms=None) -> np.ndarray:
     """Class of each word boundary: 'end' (a sentence ends), 'comma' (other punctuation), 'none', and with the option
-    tight_pauses 'tight' (no punctuation, inside a tight phrase). The 'norms' text model takes the norms' classes."""
+    tight_pauses 'tight' (no punctuation, inside a tight phrase). A text model of NORMS_PAUSE_MODELS takes the norms' classes."""
     n = len(tr)
     tight = bool(model and model["options"].get("tight_pauses"))
-    learned = text_norms(model, norms) if model else None
+    learned = text_norms(model, norms) if model and model["text_model"] in NORMS_PAUSE_MODELS else None
     if learned is not None:
         names = [norms_class(c) for c in learned.pause_class(*norm_words(tr))][:n - 1]
         if len(names) != n - 1:
@@ -282,10 +293,10 @@ def self_dims(P: Recording, model: dict, base: Comparison, norms=None) -> dict:
     """The self-relative Dim of every dimension; `base` (P against itself) gives the weights."""
     dims = dict(base.dims)
     options = model["options"]
-    weights = word_weights(P.tr, model, norms)
+    weights = {dim: word_weights(P.tr, model, norms, dim) for dim in TEMPO_DIMS}
     bins = position_bins(P.tr, model)
     for dim, measured in zip(TEMPO_DIMS, tempo_times(P)):
-        x, typical = _tempo(P, measured, weights, model["position"].get(dim), bins)
+        x, typical = _tempo(P, measured, weights[dim], model["position"].get(dim), bins)
         dims[dim] = dataclasses.replace(base.dims[dim], x=x, b=typical, p=np.asarray(measured, float), countable=np.isfinite(x), g=float("nan"))
     x, typical = _position(P, np.log(P.win_R + C.RANGE_REG_ST), model["position"].get("D3"), bins)
     dims["D3"] = dataclasses.replace(base.dims["D3"], x=x, b=np.exp(typical) - C.RANGE_REG_ST, p=np.asarray(P.win_R, float), g=float("nan"))
@@ -294,7 +305,7 @@ def self_dims(P: Recording, model: dict, base: Comparison, norms=None) -> dict:
     x, typical = _against_own(np.log(P.win_Q + 1e-6), np.zeros(len(P.win_Q)))
     dims["D6"] = dataclasses.replace(base.dims["D6"], x=x, b=np.exp(typical) - 1e-6, p=np.asarray(P.win_Q, float))
     classes = pause_classes(P.tr, model, norms)
-    measure = boundary_measure(P, classes, weights if options.get("boundary_strength") else None)
+    measure = boundary_measure(P, classes, weights["D9"] if options.get("boundary_strength") else None)  # D9: aligned word spans
     dims["D2"] = _pauses(P, base, classes, measure, bool(options.get("tight_pauses")))
     for dim in ABSENT:
         nan = np.full(len(base.dims[dim].x), np.nan)
@@ -321,7 +332,7 @@ def tempo_times(P: Recording) -> tuple[np.ndarray, np.ndarray]:
 def position_measure(P: Recording, dim: str, model: dict, norms=None) -> np.ndarray:
     if dim in TEMPO_DIMS:
         with np.errstate(divide="ignore", invalid="ignore"):
-            return np.log(tempo_times(P)[TEMPO_DIMS.index(dim)]) - np.log(window_sum(word_weights(P.tr, model, norms), P.win))
+            return np.log(tempo_times(P)[TEMPO_DIMS.index(dim)]) - np.log(window_sum(word_weights(P.tr, model, norms, dim), P.win))
     return np.log(P.win_R + C.RANGE_REG_ST) if dim == "D3" else np.asarray(P.win_E, float)
 
 
@@ -550,7 +561,7 @@ def load_detector(path: Path = DEFAULT_DETECTOR) -> dict:
     if det["selfref_sha256"] != detector_hash(det):
         raise ValueError(f"{path}: selfref hash mismatch (constants changed since calibration)")
     model = det["text_model"]
-    if model["text_model"] == "norms" and model.get("norms_sha256") and (not norms_available() or sha256_path(NORMS_PATH) != model["norms_sha256"]):
+    if uses_norms(model["text_model"]) and model.get("norms_sha256") and (not norms_available() or sha256_path(NORMS_PATH) != model["norms_sha256"]):
         raise ValueError(f"{path}: the norms file {NORMS_PATH} is missing or differs from the one used in calibration")
     return det
 
@@ -652,7 +663,7 @@ def calibrate(dataset: Path, cache: Path | None = None, workers: int | None = No
     pool = pool or PreparePool(workers=workers, devices=["cpu"], cache_dir=cache)
     try:
         ds = load_dataset(Path(dataset), cache, pool)
-        norms_sha = sha256_path(NORMS_PATH) if text_model == "norms" and norms is None else None
+        norms_sha = sha256_path(NORMS_PATH) if uses_norms(text_model) and norms is None else None
         bases, clips, null_inputs = _inputs(ds, ("train", "val"))
         model = fit_text_model(make_model(text_model, options=options, norms_sha256=norms_sha),
                                [P for b, P in bases.values() if b["split"] == "train"], norms)
@@ -714,10 +725,12 @@ def describe_flaw(entry: dict, region, comp: Comparison, P: Recording, reg: dict
         faster = sign < 0
         pct, pct_thr = (math.exp(abs(x)) - 1) * 100, (math.exp(theta) - 1) * 100
         what_measure = "speech time" if k == "D1" else "aligned word time (pauses not included)"
+        basis = ("from the usual timing of these words in read speech" if NORMS_DIMS[model["text_model"]].get(k)
+                 else "from their length in sounds")
         what = (f"{'Faster' if faster else 'Slower'} here than the rest of your reading: {where} ('{words}')." if k == "D1" else
                 f"The words themselves were spoken faster here than in the rest of your reading: {where} ('{words}').")
         how = (f"The word alignment measures {measured:.2f} s of {what_measure} in the five-word window at the peak; at your own "
-               f"typical pace these words take {typical:.2f} s (expected from their length in sounds), {pct:.0f}% "
+               f"typical pace these words take {typical:.2f} s (expected {basis}), {pct:.0f}% "
                f"{'faster' if faster else 'longer'} ({mult:.1f}x the threshold; flagged beyond {pct_thr:.0f}%).")
         fix = (f"Slow these words to about {typical:.1f} s, in step with the rest of your reading." if faster else
                f"Tighten these words to about {typical:.1f} s, in step with the rest of your reading.")

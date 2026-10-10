@@ -306,7 +306,7 @@
    "D9": 0.40024
   }
  },
- "selfref_sha256": "7dd8602be6a44d8ebfcc6efea0374285baba8b5c151a24cf17c953b768202fb0",
+ "selfref_sha256": "3768cdc0f8a9d2ad8f955d33128b4bc359c015afdf98a60ffec65eb4b74dd8c3",
  "text_model": {
   "options": {
    "boundary_strength": false,
