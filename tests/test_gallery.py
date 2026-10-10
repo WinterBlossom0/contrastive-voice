@@ -77,8 +77,8 @@ def test_showcase_description_counts_edits_and_states_each_outcome():
         return {"type": typ, "level": 3, "span": [0, 16000], "words": [0, 2], "evaluation_excluded": list(excluded)}
 
     def marker(typ, finding=None, difference=None, status="enabled", excluded=None):
-        return {"type": typ, "finding": finding, "difference": difference, "detector_status": status, "p": [0.0, 1.0],
-                **({"excluded": excluded} if excluded else {})}
+        return {"type": typ, "dimension": C.FLAW_REGISTRY[typ]["primary"], "words": [0, 2], "finding": finding, "difference": difference,
+                "detector_status": status, "p": [0.0, 1.0], **({"excluded": excluded} if excluded else {})}
     lab = {"flaws": [flaw("NATURAL_RUSH"), flaw("WORD_REPETITION"), flaw("WORD_REPETITION"), flaw("RISING_ENDING"),
                      flaw("LOW_EFFORT", ["realised change below half target or wrong sign"]), {**flaw("FADE"), "placebo": True}]}
     res = {"regime": "R1", "differences": [{"id": "x1", "status": "listed"}], "flaws": [],
@@ -91,11 +91,28 @@ def test_showcase_description_counts_edits_and_states_each_outcome():
     assert gallery.edits_text({"flaws": lab["flaws"][:1]}, {"regime": "R1", "differences": [], "flaws": [], "truth": res["truth"][:1]}) == (
         "1 edit injected; evaluated: natural rush (missed).")
     on_excluded = {**res, "truth": [*res["truth"][:4], {**res["truth"][4], "p": [1.0, 2.0], "on_edit": ["d5-001"]}],
-                   "flaws": [{"id": "d5-001", "context": "", "p": [1.5, 1.8], "points_lost": 1.25},
-                             {"id": "d3-001", "context": "", "p": [1.9, 3.0], "points_lost": 4.0}]}
+                   "flaws": [{"id": "d5-001", "dimension": "D5", "words": [5, 6], "delta": -6.0, "context": "", "p": [1.5, 1.8], "points_lost": 1.25},
+                             {"id": "d3-001", "dimension": "D3", "words": [7, 9], "delta": -1.0, "context": "", "p": [1.9, 3.0], "points_lost": 4.0}]}
     assert gallery.edits_text(lab, on_excluded).endswith(
         "1 finding lies on the excluded low effort edit and cost 1.25 points of the delivery index; the evaluation does not count them as false. "
         "1 finding matches no injected edit and cost 4.00 points of the delivery index.")
+
+
+def test_a_finding_on_a_missed_edit_is_named_and_not_counted_off_truth():
+    """A finding of the edit's dimension and direction that shares a word with a missed windowed edit lies on it; the
+    evaluation's overlap rule did not match it, so the description says why instead of calling it off-truth."""
+    lab = {"flaws": [{"type": "MONOTONE", "level": 3, "span": [0, 16000], "words": [30, 36]}]}
+    marker = {"type": "MONOTONE", "dimension": "D3", "words": [30, 36], "finding": None, "difference": None,
+              "detector_status": "enabled", "p": [9.11, 11.1]}
+    on_edit = {"id": "d3-001", "dimension": "D3", "type": "MONOTONE", "words": [32, 36], "delta": -1.76, "context": "",
+               "p": [10.16, 11.04], "points_lost": 0.96}
+    res = {"regime": "SELF", "differences": [], "flaws": [on_edit], "truth": [marker]}
+    assert gallery.edits_text(lab, res) == ("1 edit injected; evaluated: monotone (missed: a monotone finding lies on the edit but "
+                                            "overlaps it by less than the evaluation's 50% rule).")
+    assert gallery.off_truth(res) == []
+    wider = {**on_edit, "delta": 1.2}  # the other direction lies on the edit's words but is not the edit's change
+    assert gallery.off_truth({**res, "flaws": [wider]}) == [wider]
+    assert gallery.edits_text(lab, {**res, "flaws": [wider]}).startswith("1 edit injected; evaluated: monotone (missed).")
 
 
 def test_excluded_edits_get_unmatched_markers_with_their_reasons():
@@ -258,3 +275,28 @@ def test_consensus_result_gives_reference_times_on_the_exemplar_audio():
         w0, w1 = x["words"]
         lo, hi = (exemplar.end[w0], exemplar.start[w1]) if x["dimension"] == "D2" else (exemplar.start[w0], exemplar.end[w1])
         assert lo - 1e-3 <= x["b"][0] <= x["b"][1] <= hi + 1e-3 <= end + 1e-3, x
+
+
+def test_index_entries_of_the_build_match_the_shipped_index():
+    """The entries that build writes (items, self_description, index_entry) are the shipped gallery/index.json entries: the
+    SELF twin directly after its reference version, the two links, and a text exactly on the examples whose baseline the
+    index does not carry. Showcase entries take their selection (title, description, focus) from the shipped entry."""
+    import json
+    g = pipeline.ROOT / "gallery"
+    index = json.loads((g / "index.json").read_text())
+    specs = {o["id"]: o for o in gallery.items()}
+    assert [it["id"] for it in index["items"] if it["id"] in specs] == list(specs)
+    single, bank = index["baselines"]
+    bundled = {single["id"], *(r["id"] for r in bank["references"])}
+    for it in index["items"]:
+        res = json.loads((g / it["result"]).read_text())
+        spec = specs.get(it["id"], it)
+        if spec["regime"] == "SELF":
+            spec = {**spec, "description": gallery.self_description(spec, {"flaws": [{"type": t["type"]} for t in res["truth"]]}, res)}
+        assert gallery.index_entry(spec, res, it.get("text", "not bundled"), bundled) == it, it["id"]
+    items = {it["id"]: it for it in index["items"]}
+    assert items["L3A_self"]["text"] == single["text"] and items["L3A"]["self_version"] == "L3A_self"
+    manifest = pipeline.ROOT / "build/work/kaggle_runs/last_run/x/data/dataset/manifest.json"
+    if manifest.exists():
+        baselines = {b["id"]: b for b in json.loads(manifest.read_text())["baselines"]}
+        assert items["natural_rush"]["text"] == baselines[items["natural_rush"]["baseline"]]["text"]

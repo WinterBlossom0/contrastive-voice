@@ -18,7 +18,6 @@ import tarfile
 import urllib.request
 from pathlib import Path
 
-PAGE = "https://www.openslr.org/60/"
 MIRRORS = ("https://www.openslr.org/resources/60", "https://openslr.elda.org/resources/60",
            "https://openslr.trmal.net/resources/60")
 ATTEMPTS = 20

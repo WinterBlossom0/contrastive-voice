@@ -158,13 +158,13 @@ def test_inserted_pause_is_not_scaled_by_a_later_whole_clip_stretch(rec):
 def test_null_chain_of_gain_and_pause_operations_is_bit_identical(rec):
     out = repair.fix_all(result_of(rec, [finding("D5", (2, 6), -6.0), finding("D2", (9, 10), 0.55, id="d2-002", participant=0.75, baseline=0.2),
                                          finding("D2", (4, 5), -0.5, id="d2-003", participant=0.06, baseline=0.56)]), rec.wav)
-    assert np.array_equal(repair.placebo_audio(out), rec.wav)
+    assert np.array_equal(repair.null_chain_audio(out), rec.wav)
 
 
 def test_pitch_null_chain_is_bit_identical_and_a_whole_clip_pitch_edit_keeps_the_pauses(rec):
     out = repair.fix_all(result_of(rec, [finding("D3", (0, 15), -0.4, participant=4.0, baseline=6.0, context="whole passage")]), rec.wav)
     assert out.operations[0].whole_clip and not np.array_equal(out.audio, rec.wav)
-    assert np.array_equal(repair.placebo_audio(out), rec.wav)
+    assert np.array_equal(repair.null_chain_audio(out), rec.wav)
     pause0, pause1 = out.speaker.pause_spans[9]
     guard = repair.PITCH_SPLICE_PAD_S + C.SPLICE_FADE_S + C.HOP_S
     quiet = slice(int((pause0 + guard) * SR), int((pause1 - guard) * SR))
@@ -212,7 +212,7 @@ def test_second_round_stays_inside_the_hard_caps(rec):
     total = (second.to_edited(rec.al.end[6]) - second.to_edited(rec.al.start[2], "right")) / ((end - start) / SR)
     assert abs(total - repair.HARD_SLOW_FACTOR) < 0.05
     assert abs(len(second.audio) - len(rec.wav) - (repair.HARD_SLOW_FACTOR - 1) * (end - start)) < 0.03 * SR
-    assert len(repair.placebo_audio(second)) == len(rec.wav)
+    assert len(repair.null_chain_audio(second)) == len(rec.wav)
 
 
 def test_overlapping_fixes_of_one_round_share_the_hard_caps_and_never_reverse(rec):
@@ -266,7 +266,7 @@ def test_gallery_l3a_fix_all_removes_flags_within_the_caps_and_reproduces():
     assert status["d1-003"].status == repair.CAPPED and status["d5-005"].status == repair.CAPPED
     assert "d2-002" in check["removed"] and check["new_findings"] == []
     assert check["score"] > original["scores"]["overall"] + 8  # 86.11 -> 96.17 when written
-    assert check["placebo"]["within_tolerance"] and check["placebo"]["new_findings"] == [] and check["placebo"]["removed"] == []
+    assert check["null_chain"]["within_tolerance"] and check["null_chain"]["new_findings"] == [] and check["null_chain"]["removed"] == []
     assert check["alignment"]["word_middles_inside_aligned_word"] == 1.0
 
 
@@ -279,7 +279,7 @@ def test_gallery_r2_contour_widens_a_flat_reading_with_the_reference_melody():
     assert original["regime"] == "R2" and check["reproduced"]
     assert "d3-001" in check["removed"] and check["new_findings"] == []
     assert check["score"] > original["scores"]["overall"] + 20  # 73.6 -> 99.98 when written
-    assert check["placebo"]["within_tolerance"] and check["placebo"]["new_findings"] == []
+    assert check["null_chain"]["within_tolerance"] and check["null_chain"]["new_findings"] == []
     pitch = check["pitch_check"][0]
     assert pitch["agree"] and pitch["autocorrelation"]["change_st"] > 3 and out.peak_st[0] <= repair.MAX_FRAME_ST + 1e-9
 

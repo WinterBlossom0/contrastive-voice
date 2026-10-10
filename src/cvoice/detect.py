@@ -143,13 +143,13 @@ def decode_dim(dim: Dim, s: float, h: float, sentence: tuple[int, ...], signs: t
     trimmed by the half-maximum rule)."""
     z = dim.x / s
     out: list[Region] = []
-    if C.is_event(dim.key):  # single events
+    if C.is_event(dim.key):
         for i in np.flatnonzero(np.isfinite(z) & dim.countable):
             sign = 1 if z[i] > 0 else -1
             if sign not in signs or abs(z[i]) < h:
                 continue
             if dim.key == "D4" and not dim.p[i] < C.STRESS_P_MIN:
-                continue  # marker kept
+                continue  # the word is still stressed, so no emphasis is lost
             out.append(Region(dim.key, sign, int(i), int(i), int(i), float(z[i]), (int(i),)))
         return out
     n = len(z)

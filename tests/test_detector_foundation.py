@@ -20,7 +20,6 @@ from cvoice.dataset import Dataset
 from cvoice.explain import build, build_clip
 from cvoice.events import Run, eval_clip
 from cvoice.lab import measures
-from cvoice.lab.extract import character_spans
 from cvoice.r2pool import copy_audio, corpus_rows, find_mount, inventory, pair_ids, reader_id
 from cvoice.score import score
 from synth import label, recording, regime, with_x
@@ -81,7 +80,7 @@ def test_unit_kinds_and_unknown_explanations(base):
         build_clip('D99', None, base, base, {}, None)
 
 
-def test_alignment_cache_contains_decode_and_character_spans(tmp_path):
+def test_alignment_cache_keeps_the_decode_and_character_spans(tmp_path):
     tr = parse_transcript('Hello world.')
     lp, _ = planted_logp(tr.norm)
     wav = np.zeros(int(len(lp) * C.CTC_FRAME_S * C.SR))
@@ -96,9 +95,6 @@ def test_alignment_cache_contains_decode_and_character_spans(tmp_path):
     assert aligner.calls == 1
     assert a.decoded == b.decoded == greedy_words(lp)
     np.testing.assert_array_equal(a.char_spans, b.char_spans)
-    durations, chars = character_spans(lp, tr)
-    np.testing.assert_array_equal(durations, np.diff(b.char_spans, axis=1).ravel())
-    assert chars == list('HELLOWORLD')
     assert list(tmp_path.glob('align_*_v2.npz'))
 
 

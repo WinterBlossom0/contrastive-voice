@@ -6,12 +6,12 @@
     python -m cvoice.gallery site OUT_DIR [--gallery DIR]     one folder for GitHub Pages: the static page + the gallery data
     python -m cvoice.gallery evaluation RESULTS_JSON [--record F] [--first-final F] [--addendum F] [--gallery DIR]     only the evaluation panel
 
-Examples (one speech): identity, L1-L3 clips, G1 / G3 / G5, the unedited Greenman-vs-Reagan pair, one channel condition,
-and the stress-matrix table; then one example per new capability (SHOWCASE) and one R2 example with listed entries, chosen by
+Examples (one speech): identity, L1-L3 clips (L3A also without a reference reading: SELF), G1 / G3 / G5, the unedited
+Greenman-vs-Reagan pair, one channel condition, and the stress-matrix table; then one example per new capability (SHOWCASE) and one R2 example with listed entries, chosen by
 rule from the train and val clips. A second bundled text, the Gettysburg passage, carries a reference bank (`bank_readers`) and one
 R2 example in consensus mode: a check reader's edited clip against the median of five bank readings. A capability that no clip shows through an evaluator-matched finding is left out and
 named in index.json `left_out`; each shown example names the finding it opens on (`focus`). A bundled dataset clip against
-its own baseline is R1; anything else is R2. Each truth marker carries the finding that the evaluation's own matching
+its own baseline is R1, the SELF twin has no baseline, and anything else is R2. Each truth marker carries the finding that the evaluation's own matching
 assigns to it; an edit that the evaluation excludes has a marker with its exclusion reasons and no match.
 """
 from __future__ import annotations
@@ -25,13 +25,13 @@ from pathlib import Path
 
 import numpy as np
 
-from . import audio, patterns, stress
+from . import audio, patterns, selfref, stress
 from . import config as C
 from .dataset import GETTYSBURG_REFERENCE, load_dataset, sha256_file
-from .detect import key, load_detector
+from .detect import decode, key, load_detector
 from .evaluate import cross_matches, languages_above_budget, listed_rank, pre_registered, speaker_stress_rows
 from .events import Run, f1, match, on_shortfall, run_pair, truth_changes, truths, whole_passage
-from .pipeline import ROOT, analyze, detector_status, device_class, dumps
+from .pipeline import ROOT, analyze, detector_status, device_class, dumps, self_detector_status
 from .pool import PreparePool
 from .r2pool import reader_id
 from .reference import select_reference
@@ -46,6 +46,9 @@ BANK_TITLE = "Gettysburg Address (passage)"
 BANK_LICENCE = "LibriVox public domain"
 # Check readers' clips carry the split "check": the development R2 evaluation, never the test split.
 CONSENSUS_SPLITS = (*SHOWCASE_SPLITS, "check")
+SELF_EXAMPLE = "L3A"  # the example that the gallery also shows graded without a reference reading
+SELF_LIMITS = ("Without a reference, some flagged spots may be natural phrasing, and a problem that runs through the whole "
+               "reading is not found.")
 
 
 def _family(name: str) -> set[str]:
@@ -102,12 +105,29 @@ def truth_markers(lab: dict, B, P, det: dict, regime: str, res: dict, clean=None
     difference of the edit: for a whole-clip truth or a whole-passage edit the whole-passage difference of its dimension and
     direction, else the one that evaluate.listed_rank ranks. with_excluded appends excluded_markers with the findings on them."""
     reg = det["regimes"][regime]
-    tr = truths(lab, enabled=reg["enabled"])
     run = run_pair(B, P, det, regime)
     if clean is None:
         regions, clips = run.regions, set(run.clip)
     else:
-        regions, _, clips = cross_matches(run_pair(B, clean, det, regime), run, tr, reg)
+        regions, _, clips = cross_matches(run_pair(B, clean, det, regime), run, truths(lab, enabled=reg["enabled"]), reg)
+    return run_markers(lab, run, regions, clips, reg, res, lambda dim: detector_status(dim, reg), with_excluded)
+
+
+def self_truth_markers(lab: dict, P, res: dict, with_excluded: bool = False) -> list[dict]:
+    """Truth markers of a SELF result: the matching of truth_markers on the shipped SELF detector's run. No listed entry is
+    linked, because a SELF listed entry is context of the reading, not a difference from a reference."""
+    det = selfref.load_default()
+    reg = det["regime"]
+    comp = selfref.self_comparison(P, det["text_model"])
+    regions = decode(comp, reg, P.tr.sentence)
+    return run_markers(lab, selfref.self_run(P, comp, regions), regions, set(), reg, {**res, "differences": []},
+                       lambda dim: self_detector_status(dim, reg), with_excluded)
+
+
+def run_markers(lab: dict, run: Run, regions: list, clips: set, reg: dict, res: dict, status, with_excluded: bool) -> list[dict]:
+    """The markers of truth_markers from a run, its matched regions, its whole-clip flag dimensions `clips` and the regime's
+    status of a dimension, status(dim)."""
+    tr = truths(lab, enabled=reg["enabled"])
     pairs = match(tr, run.with_regions(regions))
     same_change, duplicates = truth_changes(run.with_regions(regions), tr, pairs)
     ids = finding_ids(run, regions, reg, res["flaws"])
@@ -126,7 +146,7 @@ def truth_markers(lab: dict, B, P, det: dict, regime: str, res: dict, clean=None
         target = key(t["dim"], t["sign"]) if t["sign"] else None
         shared = sorted({ids[d["index"]] for d in duplicates if d["change"] == target and d["index"] in ids
                          and patterns.within_half_window(regions[d["index"]], t["words"])})
-        clip_truth = whole_passage(t, len(P.tr))
+        clip_truth = whole_passage(t, len(run.P.tr))
         if finding is None and clip_truth and t["dim"] in clips and t["sign"] in (0, int(np.sign(run.clip[t["dim"]]))):
             finding = whole_clip.get(t["dim"])
         difference = whole_passage_difference(res["differences"], t) if clip_truth else None
@@ -134,22 +154,23 @@ def truth_markers(lab: dict, B, P, det: dict, regime: str, res: dict, clean=None
             rank = listed_rank(res["differences"], t)
             difference = None if rank is None else res["differences"][rank - 1]["id"]
         out.append({"type": t["type"], "dimension": t["dim"], "level": t["level"], "available": bool(t["available"]),
-                    "detector_status": detector_status(t["dim"], reg),
+                    "detector_status": status(t["dim"]),
                     "p": [round(float(t["span"][0]), 3), round(float(t["span"][1]), 3)], "words": [int(w) for w in t["label_words"]],
                     "finding": finding, "same_change": i in same_change and i not in pairs and not by_clip, "duplicate_findings": shared,
                     "difference": difference})
     if with_excluded:
-        out += excluded_markers(lab, reg, regions, ids)
+        out += excluded_markers(lab, reg, regions, ids, status)
     return out
 
 
-def excluded_markers(lab: dict, reg: dict, regions: list = (), ids: dict[int, str] | None = None) -> list[dict]:
+def excluded_markers(lab: dict, reg: dict, regions: list = (), ids: dict[int, str] | None = None, status=None) -> list[dict]:
     """Markers of the injected edits that the evaluation excludes (their realised change failed the label checks), with the
     reasons in `excluded`. They match nothing; they show where an edit changed the recording, so a flag there is explained.
     `on_edit` names the findings (ids: finding_ids of `regions`) that events.on_shortfall, the evaluation's rule, puts on the edit."""
     ids = ids or {}
+    status = status or (lambda dim: detector_status(dim, reg))
     return [{"type": t["type"], "dimension": t["dim"], "level": t["level"], "available": bool(t["available"]),
-             "detector_status": detector_status(t["dim"], reg), "p": [round(float(t["span"][0]), 3), round(float(t["span"][1]), 3)],
+             "detector_status": status(t["dim"]), "p": [round(float(t["span"][0]), 3), round(float(t["span"][1]), 3)],
              "words": [int(w) for w in t["label_words"]], "finding": None, "difference": None, "excluded": list(t["exclusion_reasons"]),
              "on_edit": sorted(ids[j] for j, r in enumerate(regions) if j in ids and on_shortfall(r, [t]))}
             for t in truths(lab, excluded=True, enabled=reg["enabled"])]
@@ -278,6 +299,9 @@ def items() -> list[dict]:
             {"id": "G5", "group": "Ladder", "label": "G5", "title": "Ladder G5 (botched)", "description": "Whole-passage rush and flat pitch, dropped pauses, fades.", "clip": f"{GALLERY_BASELINE}__G5"}]
     for o in out:
         o["regime"] = "R1"
+    reference = next(o for o in out if o["id"] == SELF_EXAMPLE)
+    reference["self_version"] = f"{SELF_EXAMPLE}_self"
+    out.insert(out.index(reference) + 1, self_item(reference))
     out.append({"id": "greenman", "group": "Other performance", "label": "Greenman", "title": "Unedited Greenman reading vs the Reagan recording",
                 "description": "A different performance of the same text: regime R2, no injected recipe edits; the flags are reference departures.",
                 "clip": None, "regime": "R2", "wav": ("readers", "greenman_reagan")})
@@ -292,17 +316,66 @@ def items() -> list[dict]:
     return out
 
 
+def self_item(reference: dict) -> dict:
+    """The SELF twin of a reference example: the same recording graded without a reference reading. Each of the two names
+    the other (self_version, reference_version), and the twin shares the reference version's audio."""
+    name = reference["label"][:1].lower() + reference["label"][1:]
+    return {"id": reference["self_version"], "group": reference["group"], "label": f"{reference['label']}, no reference",
+            "title": f"{reference['title']}, without a reference", "clip": reference["clip"], "regime": selfref.NAME,
+            "reference_version": reference["id"],
+            "description": f"The {name} recording graded without a reference reading, against the reader's own typical delivery; "
+                           f"{name} shows the same recording graded against the reference."}
+
+
+def item_audio(item: dict) -> str:
+    """A SELF twin plays the audio of its reference version."""
+    return f"audio/{item.get('reference_version', item['id'])}.wav"
+
+
+def self_description(item: dict, lab: dict, res: dict) -> str:
+    return f"{item['description']} {edits_text(lab, res)} {SELF_LIMITS}"
+
+
+def index_entry(item: dict, res: dict, text: str, bundled: set[str]) -> dict:
+    """The index.json entry of a written example. bundled: the baselines whose text the index carries (the single baseline
+    and the bank's readings); an example against any other baseline, or without one (SELF), carries its own text."""
+    b = res["baseline"].get("id")
+    return {"id": item["id"], "group": item["group"], "label": item["label"], "title": item["title"], "description": item["description"],
+            "regime": item["regime"], "result": f"results/{item['id']}.json", "audio": item_audio(item),
+            "overall": res["scores"]["overall"], "n_flaws": len(res["flaws"]), "truth": len(res["truth"]),
+            **({"baseline": b} if b is not None else {}), **({"text": text} if b not in bundled else {}),
+            **{k: item[k] for k in ("focus", "self_version", "reference_version") if item.get(k)}}
+
+
 # Points are shown at 2 decimals, so a loss below half a hundredth would show as 0.00.
 MIN_SHOWN_POINTS = 0.005
 
 
-def marker_outcome(t: dict, differences: dict[str, dict]) -> str:
-    """What the result shows for one evaluated truth marker."""
+def marker_outcome(t: dict, res: dict, linked: set[str]) -> str:
+    """What the result shows for one evaluated truth marker; linked: linked_findings(res)."""
     if t["finding"]:
         return "found"
     if t["difference"]:
+        differences = {d["id"]: d for d in res["differences"]}
         return "listed entry" if differences[t["difference"]]["status"] == "listed" else "unscored difference"
-    return "not scored" if t["detector_status"] != "enabled" else "missed"
+    if t["detector_status"] != "enabled":
+        return "not scored"
+    near = near_misses(t, res, linked)
+    if near:
+        return (f"missed: a {near[0]['type'].replace('_', ' ').lower()} finding lies on the edit but overlaps it by less than "
+                f"the evaluation's {C.IOU_MIN:.0%} rule")
+    return "missed"
+
+
+def near_misses(t: dict, res: dict, linked: set[str]) -> list[dict]:
+    """Findings that lie on a missed windowed edit (its dimension and direction, a shared word) but that the evaluation's
+    overlap rule (events.match) does not match to it and no other marker links."""
+    if t["finding"] or t["difference"] or t.get("excluded") or t["detector_status"] != "enabled" or C.is_event(t["dimension"]):
+        return []
+    sign = C.FLAW_REGISTRY[t["type"]]["sign"]
+    w0, w1 = t["words"]
+    return [f for f in res["flaws"] if f["id"] not in linked and f["dimension"] == t["dimension"] and f["words"]
+            and f["words"][0] <= w1 and f["words"][1] >= w0 and sign in (0, int(np.sign(f["delta"] or 0)))]
 
 
 def edits_text(lab: dict, res: dict) -> str:
@@ -310,11 +383,11 @@ def edits_text(lab: dict, res: dict) -> str:
     type with several truth markers (several edits, or the boundaries of one edit) gets the count of each outcome."""
     edits = [f for f in lab["flaws"] if not f.get("placebo", False)]
     excluded = [f for f in edits if f.get("evaluation_excluded")]
-    differences = {d["id"]: d for d in res["differences"]}
+    linked = linked_findings(res)
     outcomes: dict[str, list[str]] = {}
     for t in res["truth"]:
         if not t.get("excluded"):
-            outcomes.setdefault(t["type"].replace("_", " ").lower(), []).append(marker_outcome(t, differences))
+            outcomes.setdefault(t["type"].replace("_", " ").lower(), []).append(marker_outcome(t, res, linked))
     parts = []
     for name, seen in outcomes.items():
         counts = {o: seen.count(o) for o in dict.fromkeys(seen)}
@@ -342,10 +415,16 @@ def edits_text(lab: dict, res: dict) -> str:
     return text
 
 
+def linked_findings(res: dict) -> set[str]:
+    """Findings that a truth marker names: as its finding, a same-change duplicate or a finding on an excluded edit."""
+    return {t["finding"] for t in res["truth"]} | {d for t in res["truth"] for d in [*t.get("duplicate_findings", []), *t.get("on_edit", [])]}
+
+
 def off_truth(res: dict) -> list[dict]:
-    """Findings that no truth marker names (as its finding, a same-change duplicate or a finding on an excluded edit)."""
-    linked = {t["finding"] for t in res["truth"]} | {d for t in res["truth"] for d in [*t.get("duplicate_findings", []), *t.get("on_edit", [])]}
-    return [f for f in res["flaws"] if f["id"] not in linked]
+    """Findings that no truth marker links and that lie on no missed edit (near_misses)."""
+    linked = linked_findings(res)
+    near = {f["id"] for t in res["truth"] for f in near_misses(t, res, linked)}
+    return [f for f in res["flaws"] if f["id"] not in linked | near]
 
 
 def showcase_item(id_: str, label: str, title: str, clip: dict, ds, res: dict, focus: str | None, group: str = SHOWCASE_GROUP,
@@ -382,6 +461,8 @@ def build(dataset: Path, models: Path, cache: Path | None, eval_dir: Path, out: 
     det = load_detector(models)
     device = device_class(pool)
     base = ds.entry("baselines", GALLERY_BASELINE)
+    bank = bank_readers(ds.manifest)
+    bundled = {base["id"], *(r["id"] for r in bank)}
     gallery_dir = out / "gallery"
     (gallery_dir / "results").mkdir(parents=True, exist_ok=True)
     (gallery_dir / "audio").mkdir(parents=True, exist_ok=True)
@@ -396,9 +477,14 @@ def build(dataset: Path, models: Path, cache: Path | None, eval_dir: Path, out: 
     def analyse(item: dict, P, tr_p, clip: dict | None, refs: list | None = None) -> dict:
         """refs: the analysed bank readings (exemplar first); the truth markers then use the reference and regime of the
         mode that the pipeline selects for the bank."""
+        meta = {"id": item["id"], "title": item["title"], "audio": item_audio(item)}
+        if item["regime"] == selfref.NAME:
+            res = analyze(P, tr_p, alignment_device=device, participant_meta=meta)
+            res["truth"] = self_truth_markers(ds.labels(clip), P, res, with_excluded=True)
+            return res
         b = ds.any_entry(clip["baseline"]) if clip else base
         res = analyze(P, tr_p, ds.rec(b), regime=item["regime"], detector=det, alignment_device=device, baseline_meta=baseline_meta(b),
-                      participant_meta={"id": item["id"], "title": item["title"], "audio": f"audio/{item['id']}.wav"}, references=refs)
+                      participant_meta=meta, references=refs)
         if clip:
             clean = ds.rec(ds.parent_entry(clip)) if item["regime"] == "R2" else None
             B, mode_det = mode_detector(refs, det) if refs else (ds.rec(b), det)
@@ -406,41 +492,44 @@ def build(dataset: Path, models: Path, cache: Path | None, eval_dir: Path, out: 
             res["truth"] = truth_markers(lab, B, P, mode_det, item["regime"], res, clean, with_excluded=True)
         return res
 
-    def write(item: dict, wav, res: dict) -> None:
-        b = res["baseline"]["id"]
-        if b not in written_baselines:
+    def write(item: dict, wav, res: dict, text: str) -> None:
+        """text: the transcript of the example."""
+        b = res["baseline"].get("id")  # None: a SELF result has no reference reading
+        if b is not None and b not in written_baselines:
             audio.write_wav(gallery_dir / "audio" / f"{b}.wav", ds.wav(ds.any_entry(b)))
             written_baselines.add(b)
-        audio.write_wav(gallery_dir / "audio" / f"{item['id']}.wav", wav)
-        res = {**res, "participant": {**res["participant"], "id": item["id"], "title": item["title"], "audio": f"audio/{item['id']}.wav"}}
+        if "reference_version" not in item:
+            audio.write_wav(gallery_dir / item_audio(item), wav)
+        res = {**res, "participant": {**res["participant"], "id": item["id"], "title": item["title"], "audio": item_audio(item)}}
         (gallery_dir / "results" / f"{item['id']}.json").write_text(dumps(res) + "\n")
-        index["items"].append({"id": item["id"], "group": item["group"], "label": item["label"], "title": item["title"], "description": item["description"],
-                               "regime": item["regime"], "baseline": b, "result": f"results/{item['id']}.json", "audio": f"audio/{item['id']}.wav",
-                               "overall": res["scores"]["overall"], "n_flaws": len(res["flaws"]), "truth": len(res["truth"]),
-                               **({"focus": item["focus"]} if item.get("focus") else {})})
+        index["items"].append(index_entry(item, res, text, bundled))
 
-    todo = []  # (item, wav, transcript, clip of the labels)
+    todo = []  # (item, wav, transcript, text, clip of the labels)
     for item in items():
         clip = None
         if item["clip"]:
             clip = next(c for c in ds.manifest["clips"] if c["id"] == item["clip"])
-            wav, tr_p = upload_samples(ds.wav(clip)), ds.clip_transcript(clip)
+            wav, tr_p, text = upload_samples(ds.wav(clip)), ds.clip_transcript(clip), ds.parent_entry(clip)["text"]
         elif item["wav"][0] == "readers":
             e = ds.entry("readers", item["wav"][1])
-            wav, tr_p = upload_samples(ds.wav(e)), ds.transcript(e)
+            wav, tr_p, text = upload_samples(ds.wav(e)), ds.transcript(e), e["text"]
         else:
             source = next(c for c in ds.manifest["clips"] if c["id"] == item["wav"][1])
-            wav, tr_p = upload_samples(stress.apply(stress.mp3, ds.wav(source), 1)), ds.clip_transcript(source)  # the stress matrix's MP3 round trip
-        todo.append((item, wav, tr_p, clip))
+            # the stress matrix's MP3 round trip
+            wav, tr_p, text = upload_samples(stress.apply(stress.mp3, ds.wav(source), 1)), ds.clip_transcript(source), ds.parent_entry(source)["text"]
+        todo.append((item, wav, tr_p, text, clip))
     r1_pool = [c for c in showcase_clips(ds.manifest, "R1") if c["baseline"] == base["id"]]
     r2_pool = [c for c in showcase_clips(ds.manifest, "R2") if c["baseline"] == base["id"]]
-    parents = [ds.parent_entry(c) for c in [*(clip for item, _, _, clip in todo if clip and item["regime"] == "R2"), *r2_pool]]
+    parents = [ds.parent_entry(c) for c in [*(clip for item, _, _, _, clip in todo if clip and item["regime"] == "R2"), *r2_pool]]
     log(f"analysing {len(todo)} examples and {len(r1_pool) + len(r2_pool)} showcase candidates")
     ds.load(entries=[base, *parents])
-    recs = ds.prepare_many([(w, tr) for _, w, tr, _ in todo])
-    for (item, wav, tr_p, clip), P in zip(todo, recs):
+    recs = ds.prepare_many([(w, tr) for _, w, tr, _, _ in todo])
+    for (item, wav, tr_p, text, clip), P in zip(todo, recs):
         log(f"{item['id']} ({item['regime']})")
-        write(item, wav, analyse(item, P, tr_p, clip))
+        res = analyse(item, P, tr_p, clip)
+        if item["regime"] == selfref.NAME:
+            item = {**item, "description": self_description(item, ds.labels(clip), res)}
+        write(item, wav, res, text)
 
     def prepared(clips: list[dict]) -> list:
         return ds.prepare_many([(upload_samples(ds.wav(c)), ds.clip_transcript(c)) for c in clips])
@@ -465,18 +554,18 @@ def build(dataset: Path, models: Path, cache: Path | None, eval_dir: Path, out: 
             left_out.append({"id": spec["id"], "label": spec["label"], "reason": reason})
             continue
         clip, res = chosen[spec["id"]]
-        write(showcase_item(spec["id"], spec["label"], spec["title"], clip, ds, res, shown(spec, res)[0]["id"]), upload_samples(ds.wav(clip)), res)
+        write(showcase_item(spec["id"], spec["label"], spec["title"], clip, ds, res, shown(spec, res)[0]["id"]), upload_samples(ds.wav(clip)), res,
+              ds.parent_entry(clip)["text"])
     listed = pick_listed(candidates(r2_pool, "R2"))
     if listed:
         clip, res = listed
         log(f"r2_listed: {clip['id']} (candidate label: {listed_rank_key(res)[0]})")
         write(showcase_item("r2_listed", "Listed entries", "Edited reading vs the reference: listed, not scored entries", clip, ds, res,
-                            listed_focus(res), group="Other performance"), upload_samples(ds.wav(clip)), res)
+                            listed_focus(res), group="Other performance"), upload_samples(ds.wav(clip)), res, ds.parent_entry(clip)["text"])
     else:
         reason = "no train or val R2 clip has a listed entry"
         log(f"r2_listed: {reason} with this detector; example left out")
         left_out.append({"id": "r2_listed", "label": "Listed entries", "reason": reason})
-    bank = bank_readers(ds.manifest)
     for r in bank:
         if r["id"] not in written_baselines:
             audio.write_wav(gallery_dir / "audio" / f"{r['id']}.wav", ds.wav(r))
@@ -495,7 +584,7 @@ def build(dataset: Path, models: Path, cache: Path | None, eval_dir: Path, out: 
                 f"{res['detection']['references_available']} bank readings (reference mode {res['detection']['reference_mode']}); the truth markers "
                 "name the finding that the evaluation matches to each edit.")
         write(showcase_item(spec["id"], spec["label"], spec["title"], clip, ds, res, shown(spec, res)[0]["id"], group="Other performance",
-                            note=note), upload_samples(ds.wav(clip)), res)
+                            note=note), upload_samples(ds.wav(clip)), res, ds.parent_entry(clip)["text"])
     else:
         reason = "no check-reader clip has an injected edit that the evaluation matches to a finding against the bank"
         log(f"r2_consensus: {reason} with this detector; example left out")

@@ -192,6 +192,11 @@ def detector_status(dim: str, reg: dict) -> str:
     return 'enabled' if dim in reg['enabled'] else 'unscored' if dim in listed_dims(reg) else 'no detector'
 
 
+def self_detector_status(dim: str, reg: dict) -> str:
+    """detector_status of the SELF regime: a dimension that it does not measure needs a reference reading."""
+    return 'enabled' if dim in reg['enabled'] else 'absent'
+
+
 def detection_block(det, reg):
     listed = listed_dims(reg)
     return {'enabled': list(reg['enabled']),
@@ -580,7 +585,7 @@ def analyze_self(participant, transcript, *, detector: dict | None = None, parti
                  "reference_mode": "none", "reference_count": 0, "references_available": 0, "listed_entries": len(listed),
                  "show_listed": bool(listed), "absent": list(selfref.ABSENT)}
     truth_rows = [{**t, "available": t.get("dim", t.get("dimension")) in reg["enabled"],
-                   "detector_status": "enabled" if t.get("dim", t.get("dimension")) in reg["enabled"] else "absent"} for t in truth or []]
+                   "detector_status": self_detector_status(t.get("dim", t.get("dimension")), reg)} for t in truth or []]
     words = [{"w": tr.disp[i], "b": [round(float(P.al.start[i]), 3), round(float(P.al.end[i]), 3)],
               "p": [round(float(P.al.start[i]), 3), round(float(P.al.end[i]), 3)]} for i in range(len(tr))]
     return {

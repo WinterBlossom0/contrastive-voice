@@ -8,7 +8,7 @@ import traceback
 import numpy as np
 
 from cvoice import config as C
-from cvoice.align import (Alignment, Transcript, align_emissions, load_aligner, parse_transcript)
+from cvoice.align import (Alignment, Transcript, load_aligner, parse_transcript)
 from cvoice.audio import read_wav
 from cvoice.features import Recording, WordStats, make_recording, window_word_time
 from cvoice.features import recording_arrays as recording_arrays
@@ -45,11 +45,6 @@ class Capture:
                 parts.append(lp[f:f+keep])
             self.logp = np.concatenate(parts)
         return self.logp
-
-
-def character_spans(logp, tr):
-    al = align_emissions(logp, tr.norm)
-    return np.diff(al.char_spans, axis=1).ravel(), [c for w in tr.norm for c in w]
 
 
 def extract_one(row, cache, local=False):

@@ -80,7 +80,6 @@ IA_ITEMS = {
 }
 EXISTING_READERS = {"amb", "dl", "fb", "jn", "wt", "dj", "sa", "tg", "pc"}
 EARS_SPEAKERS = tuple(f"p{i:03d}" for i in range(1, 108))
-EARS_STYLES = ("regular", "fast", "slow", "loud", "whisper")
 AVID_SPEAKERS = tuple(range(1, 51))
 AVID_TEXT = {1: "We think differently.", 2: "He spoke soothingly.", 3: "They despised foreigners.",
              4: "That is your headache.", 5: "Nevertheless, it's true."}

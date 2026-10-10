@@ -91,8 +91,8 @@ def test_select_passage_finds_the_best_window_forces_alignment_and_cuts_the_clip
 
 def test_two_recordings_share_the_window_and_restrict_to_sentences_anchored_in_both():
     official = parse_transcript(official_text())
-    wavA, tA, fakeA = make_fake(official)
-    wavB, tB, fakeB = make_fake(official, drop=set(range(0, 100)), t0=5.0)  # the second reading starts at sentence 5
+    wavA, _, fakeA = make_fake(official)
+    wavB, _, fakeB = make_fake(official, drop=set(range(0, 100)), t0=5.0)  # the second reading starts at sentence 5
     anchors = []
     for wav, fake in ((wavA, fakeA), (wavB, fakeB)):
         anchors.append(locate(fake, wav, official))

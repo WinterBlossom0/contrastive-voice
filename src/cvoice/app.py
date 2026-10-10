@@ -82,7 +82,7 @@ CAUSE_WORDS = {
 }
 STILL_FLAGGED_WORDS = "The edit changed this spot, but it is still flagged."
 FLOOR_WORDS = "The pause is now shorter than the shortest pause the analysis measures, so it is no longer compared."
-# What an edit of each kind cannot change (fix_your_speech.md; docs/PAPERS.md #69 for effort).
+# What each kind of edit leaves unchanged; vocal effort is not gain: docs/PAPERS.md #69.
 LIMIT_WORDS = {
     "gain": "A level change does not restore vocal effort, so these words can still sound weak.",
     "pause_insert": "An added silence has no slowing or pitch fall before it, so the break can sound abrupt.",
@@ -413,7 +413,7 @@ def covering_finding(fix: repair.Fix, result: dict) -> str | None:
 def fix_checks(report: dict) -> list[dict]:
     """The checks of the re-analysis, each {name, passed, label}. "reproduced" holds the unedited recording and the null
     chain (repair.verify); "pitch_trackers" is present only when an edit changed the pitch."""
-    null_chain, alignment = report.get("placebo") or {}, report.get("alignment") or {}
+    null_chain, alignment = report.get("null_chain") or {}, report.get("alignment") or {}
     passed = {"reproduced": bool(report.get("reproduced")) and bool(null_chain.get("within_tolerance", True)),
               "alignment": not alignment.get("words_off")}
     if report.get("pitch_check"):

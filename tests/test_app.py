@@ -149,7 +149,7 @@ def fake_repair(monkeypatch, gate: threading.Event | None = None) -> list:
         first = out.fixes[0].finding
         return {"score_before": 90.0, "score": 95.0, "reproduced": True, "removed": [first], "new_findings": [],
                 "remaining": [{"id": f["id"], "now": []} for f in result["flaws"] if f["id"] != first],
-                "placebo": {"within_tolerance": True}, "pitch_check": [], "alignment": {"words_off": []}}
+                "null_chain": {"within_tolerance": True}, "pitch_check": [], "alignment": {"words_off": []}}
 
     monkeypatch.setattr(appmod.repair, "fix_finding", fix_finding)
     monkeypatch.setattr(appmod.repair, "fix_all", fix_all)
@@ -563,7 +563,7 @@ def test_fix_summary_contract(monkeypatch):
              repair.Fix("d5-003", "D5", "FADE", repair.CAPPED, "gain", 12.0, 6.0, "partial fix: ...", 0.5, cause=repair.CAP),
              repair.Fix("d4-004", "D4", "FADE", repair.COVERED, None, None, None, "its penalty is charged to d5-003; ...")]
     report = {"score_before": 80.0, "score": 90.0, "reproduced": True, "removed": ["d2-002", "d5-003", "d4-004"], "new_findings": [],
-              "remaining": [{"id": "d3-001", "now": []}], "placebo": {"within_tolerance": True},
+              "remaining": [{"id": "d3-001", "now": []}], "null_chain": {"within_tolerance": True},
               "pitch_check": [{"agree": True}], "alignment": {"words_off": []}, "result": after}
     fix = summary_of(monkeypatch, fixes, report, result)
     by = {f["finding"]: f for f in fix["fixes"]}
@@ -579,7 +579,7 @@ def test_fix_summary_contract(monkeypatch):
     unreproduced = summary_of(monkeypatch, fixes, {**report, "reproduced": False}, result)
     assert unreproduced["score_change"] is None and unreproduced["score_change_note"] == appmod.NOT_REPRODUCED_WORDS
     assert not unreproduced["checks"][0]["passed"] and not unreproduced["checks_passed"]
-    drifted = summary_of(monkeypatch, fixes, {**report, "placebo": {"within_tolerance": False}}, result)
+    drifted = summary_of(monkeypatch, fixes, {**report, "null_chain": {"within_tolerance": False}}, result)
     assert drifted["score_change"] is None   # the null chain is part of the reproduction check
     own = summary_of(monkeypatch, fixes, report, result, mode="self")
     assert own["score_change"] is None and own["caution"] == appmod.SELF_CAUTION

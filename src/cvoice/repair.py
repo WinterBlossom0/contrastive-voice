@@ -10,9 +10,9 @@ controls determinism and settings, not processing artefacts), a second pitch tra
 alignment of the edited audio against the time map. The detector that sets the targets also judges the result, so a
 removed flag shows detector consistency, not a perceived improvement.
 
-The caps are chosen limits, extrapolated from whole-utterance listening tests (build/work/research_new/fix_your_speech.md,
-Q2): Praat PSOLA loses about 0.2-0.4 MOS at x1.5 duration or +-3 st and 1.1-1.4 MOS at x2 (Choi et al. 2021, NANSY,
-Tables 6-7). No listening test of local word-level edits was found.
+The caps are chosen limits, extrapolated from whole-utterance listening tests: Praat PSOLA loses about 0.2-0.4 MOS at
+x1.5 duration or +-3 st and 1.1-1.4 MOS at x2 (Choi et al. 2021, NANSY, Tables 6-7). No listening test of local
+word-level edits was found.
 """
 from __future__ import annotations
 
@@ -59,7 +59,7 @@ PITCH_SPLICE_MIN_ST = 0.01
 PITCH_SPLICE_PAD_S = C.PSOLA_STEP_S + 1 / C.PSOLA_F0[0]
 MAX_ROUNDS = 3
 
-PLACEBO_TOLERANCE = 0.5  # index points: the null-parameter chain of the reproduction check must not move the score more than this
+NULL_CHAIN_TOLERANCE = 0.5  # index points: the null-parameter chain of the reproduction check must not move the score more than this
 TRACKER_TOLERANCE_LN = math.log(1.25)  # two pitch trackers agree when their range changes differ by less than a factor 1.25
 BOUNDARY_TOLERANCE_S = 2 * C.CTC_FRAME_S  # the aligner resolves word edges to one CTC frame on each side
 
@@ -814,7 +814,7 @@ def analyse(x: np.ndarray, original_result: dict, analyze_kwargs: dict) -> dict:
     return analyze(x, **kwargs)
 
 
-def placebo_audio(outcome: FixOutcome) -> np.ndarray:
+def null_chain_audio(outcome: FixOutcome) -> np.ndarray:
     """The same chain of operations with null parameters (stretch 1.0, gain 0 dB, pitch scale 1.0, no pause change): the
     audio of the reproduction check. Every null operation returns its input (the pitch splice covers no changed tier
     point), so the chain controls determinism, not processing artefacts."""
@@ -968,11 +968,11 @@ def verify(outcome: FixOutcome, original_result: dict, analyze_kwargs: dict) -> 
     """Analyse the edited audio and the null chain with the settings of the original result. analyze_kwargs: the
     pipeline.analyze arguments other than the participant (transcript, baseline, detector, references, aligner, cache_dir,
     ...); the regime defaults to the original's. `reproduced` is False when the unedited audio does not give the original
-    score again, i.e. the settings differ from the original analysis and the comparison is not valid. The report key
-    "placebo" holds the null-chain re-analysis (a reproduction check; the key name is kept for the validation scripts)."""
+    score again, i.e. the settings differ from the original analysis and the comparison is not valid. "null_chain" holds the
+    re-analysis of the null chain (part of the reproduction check)."""
     before = analyse(outcome.source, original_result, analyze_kwargs)
     after = analyse(outcome.audio, original_result, analyze_kwargs)
-    null_chain = analyse(placebo_audio(outcome), original_result, analyze_kwargs)
+    null_chain = analyse(null_chain_audio(outcome), original_result, analyze_kwargs)
     score0 = original_result["scores"]["overall"]
     null_part = compare_findings(original_result, null_chain)
     delta = None if null_chain["scores"]["overall"] is None or score0 is None else round(null_chain["scores"]["overall"] - score0, 2)
@@ -980,7 +980,7 @@ def verify(outcome: FixOutcome, original_result: dict, analyze_kwargs: dict) -> 
         "score_before": score0,
         "reproduced": before["scores"]["overall"] == score0 and len(before["flaws"]) == len(original_result["flaws"]),
         **compare_findings(original_result, after),
-        "placebo": {**null_part, "score_delta": delta, "within_tolerance": delta is not None and abs(delta) <= PLACEBO_TOLERANCE},
+        "null_chain": {**null_part, "score_delta": delta, "within_tolerance": delta is not None and abs(delta) <= NULL_CHAIN_TOLERANCE},
         "pitch_check": pitch_check(outcome),
         "alignment": alignment_check(outcome, original_result, after),
         "fixes": [dataclasses.asdict(fx) for fx in outcome.fixes],

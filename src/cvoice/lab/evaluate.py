@@ -82,7 +82,7 @@ def event_metrics(predicted, labelled, tolerance=EVENT_TOLERANCE_S):
 def reader(row):
     speaker = row.get('speaker_id')
     if row['source'] == 'poetry' and speaker:
-        # IA takes sometimes suffix a repeat number to the same reader's initials.
+        # Internet Archive item names sometimes add a repeat number to the same reader's initials.
         import re
         speaker = re.sub(r'\d+$','',speaker)
     return speaker

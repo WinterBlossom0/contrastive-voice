@@ -127,7 +127,7 @@ def test_score_gates_and_pmax_fit():
     assert any("ladder" in v for v in gate_violations(rows(0.3, 0.05, 0.6), C.PMAX_START))
     assert any("L1-only" in v for v in gate_violations(rows(0.03, 0.2, 0.6, l1=1.0), C.PMAX_START))
     impossible = rows(0.03, 0.2, 0.0)  # G5 cannot score below 50 with zero penalty at any Pmax
-    pmax2, f2, bad2 = fit_pmax(impossible)
+    _, f2, bad2 = fit_pmax(impossible)
     assert bad2 and f2 in C.PMAX_FACTOR_GRID
 
 
