@@ -112,7 +112,7 @@ const SELF_COPY = {
   "#hero-wave@aria-label": "Your reading over time",
   "#key-ref": "Your typical delivery",
 };
-const SELF_LIMIT = "Your reading is graded against itself. A second reading of the same text, by you or someone else, catches more.";
+const SELF_LIMIT = "A rough check: your reading is graded against itself. For better results, use a reference reading of the same text.";
 // What a fix did to one finding, in the words the page shows (app.plain_outcome gives the reason).
 const FIX_HEAD = { fixed: "Fixed: this spot is no longer flagged", partly: "Partly fixed", unfixable: "Can't be fixed by editing" };
 const FIX_STAGES = ["edit", "check"];   // app.FIX_STAGES (tests/test_app.py compares them)
@@ -1943,7 +1943,7 @@ function baselineText(b) {
 }
 
 const NO_REFERENCE = "none";   // the picker value of an upload without a reference reading
-const NO_REFERENCE_NOTE = "Without a reference, your reading is graded against itself: each stretch is compared with how you read the rest. A reference reading of the same text catches more.";
+const NO_REFERENCE_NOTE = "Without a reference, your reading is graded against itself: each stretch is compared with how you read the rest. This is a rough check; for better results, use a reference reading of the same text.";
 const OWN_REFERENCE_NOTE = "Add up to five readings of the same text by different people. With five, the comparison catches far more timing problems.";
 
 /** The note under the reference field when the user uploads their own references: the advice, then what the chosen files give. */
