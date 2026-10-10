@@ -9,7 +9,7 @@
 <link rel="icon" href="data:,">
 <link rel="preload" href="vendor/fonts/AtkinsonHyperlegibleNext-Regular.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="vendor/fonts/Sora-Bold.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="style.css?v=2026-10-09a">
+<link rel="stylesheet" href="style.css?v=2026-10-10a">
 <script defer src="https://cdn.jsdelivr.net/npm/plotly.js-cartesian-dist-min@4.1.1/plotly-cartesian.min.js"
         integrity="sha384-zc4SwKObGL/W0M3RUI09UPWjlgIZHfbwMgcZO6713mRh78tfUmIQKhzCyE2LIiUg" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/wavesurfer.js@8.0.1/dist/wavesurfer.min.js"
@@ -18,7 +18,7 @@
         integrity="sha384-Tk81r51AIztO5k+iOj/eOq9ZEGD2XVkPnZR8QVxzq1dkyEmsBSCjYpdCoeD/AZQ9" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/wavesurfer.js@8.0.1/dist/plugins/timeline.min.js"
         integrity="sha384-2l5/6KGTIt5kr+AcoXrcOzSiDUedbqv1LlHsFtQ5/ABj0cbzhpA2w6bCvc4Ns2vk" crossorigin="anonymous"></script>
-<script defer src="app.js?v=2026-10-09a"></script>
+<script defer src="app.js?v=2026-10-10a"></script>
 </head>
 <body class="intro">
 <svg width="0" height="0" class="defs" aria-hidden="true" focusable="false">
@@ -70,7 +70,7 @@
 <main>
 <section class="hero" aria-labelledby="hero-title">
   <h1 id="hero-title">Hear where your reading drifts from the reference.</h1>
-  <p class="value-line">Read a speech against a reference reading (your best take, a coach's, or a well-known speaker's), hear both side by side, and fix the words that cost you the most first.</p>
+  <p class="value-line" id="value-line">Read a speech against a reference reading (your best take, a coach's, or a well-known speaker's), hear both side by side, and fix the words that cost you the most first.</p>
   <div class="hero-grid">
     <div id="ledger" class="sum-head" aria-labelledby="summary-line">
       <div class="ring-wrap">
@@ -89,9 +89,12 @@
         <p id="summary-line" class="summary-line">Comparing your reading with the reference</p>
         <p class="sub" id="reference-mode" hidden><span class="badge"></span></p>
         <p class="sub limit-line" id="detect-limit" hidden></p>
+        <div id="fix-all" class="fix-all" hidden>
+          <button type="button" id="fix-all-btn" class="fix-btn">Fix everything and listen</button>
+        </div>
       </div>
     </div>
-    <div class="hero-wave panel" aria-label="Your reading against the reference, over time">
+    <div class="hero-wave panel" id="hero-wave" aria-label="Your reading against the reference, over time">
       <div class="tl-stage">
       <div id="wave-ref" class="wave wave-ref" aria-hidden="true"></div>
       <div id="tl-host" class="tl-host"></div>
@@ -101,6 +104,7 @@
       <p id="wave-msg" class="note"></p>
     </div>
   </div>
+  <div id="fix-all-body" class="fix-all-body" aria-live="polite" aria-label="Your reading with every fix applied"></div>
 </section>
 
 <section class="fixes" aria-labelledby="fixes-title">
@@ -166,7 +170,7 @@
         <span><i class="sw sw-tol"></i>Tolerance band</span>
         <span><i class="sw sw-flag"></i>Flagged region (dotted, dashed, solid by severity)</span>
         <span id="key-difference" hidden><i class="sw sw-difference"></i>Selected difference (not scored)</span>
-        <span><i class="sw sw-stress"></i>Stress point</span>
+        <span id="key-stress"><i class="sw sw-stress"></i>Stress point</span>
         <span id="key-group" hidden><i class="sw sw-group"></i>Finding group (shared penalty)</span>
         <span id="key-subword" hidden><i class="sw sw-subword"></i>Sub-word evidence span (hatched)</span>
       </div>
@@ -192,13 +196,13 @@
         <label id="own-baseline" hidden>Your reference recordings (one to five, chosen together)
           <input type="file" name="baseline_audio" id="f-baseline-audio" accept="audio/*,.wav,.mp3,.m4a,.ogg,.oga,.webm,.flac" multiple aria-describedby="baseline-note">
         </label>
-        <label class="wide">Transcript: the exact words both recordings read
+        <label class="wide"><span id="text-label">Transcript: the exact words both recordings read</span>
           <textarea id="f-text" rows="6" maxlength="20000" required></textarea>
         </label>
         <label>or load the transcript from a text file
           <input type="file" id="f-text-file" accept=".txt,text/plain">
         </label>
-        <p class="note wide">Your recording is compared as a different speaker from the reference reading. Upload limits: <span id="limits"></span>.</p>
+        <p class="note wide"><span id="compare-note">Your recording is compared as a different speaker from the reference reading.</span> Upload limits: <span id="limits"></span>.</p>
         <button type="submit" id="submit">Analyse</button>
       </fieldset>
     </form>
@@ -210,7 +214,7 @@
 
 <footer>
   <p><a id="report-link" href="https://github.com/WinterBlossom0/contrastive-voice/blob/main/docs/technical.md">Technical report (method, evaluation, limits)</a></p>
-  <p>Scores are relative to the reference reading. Typefaces: Sora and Atkinson Hyperlegible Next (SIL Open Font License, vendor/fonts).</p>
+  <p><span id="footer-scope">Scores are relative to the reference reading.</span> Typefaces: Sora and Atkinson Hyperlegible Next (SIL Open Font License, vendor/fonts).</p>
 </footer>
 
 </body>

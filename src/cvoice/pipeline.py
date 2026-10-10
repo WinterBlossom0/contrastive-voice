@@ -353,7 +353,7 @@ def _load(x) -> np.ndarray:
         return audio.load_audio(Path(x), C.MAX_UPLOAD_BYTES, C.MAX_UPLOAD_S)[0]
 
 
-def analyze(participant, transcript, baseline, *, regime: str, detector: dict | None = None,
+def analyze(participant, transcript, baseline=None, *, regime: str | None = None, detector: dict | None = None,
             baseline_meta: dict | None = None, participant_meta: dict | None = None, truth: list | None = None,
             aligner=None, cache_dir: Path | None = None, progress: Callable[[str], None] = lambda stage: None,
             refuse_mismatch: bool = False, alignment_device: str = "cpu", references: list | None = None) -> dict:
@@ -361,7 +361,13 @@ def analyze(participant, transcript, baseline, *, regime: str, detector: dict | 
     transcript: text or a parsed Transcript (the words both recordings read). regime: "R1" (participant derived from the
     baseline performance) or "R2" (another performance). progress(stage) is called with "align", "features", "compare" and
     "detect" as the stages begin. refuse_mismatch (uploads): refuse a recording that does not match the transcript.
-    alignment_device: device class that aligned the recordings, recorded in the result. references: optional complete ordered bank of same-text readings; the first is the display exemplar and single-reference fallback. Returns the result dict (see `dumps`)."""
+    alignment_device: device class that aligned the recordings, recorded in the result. references: optional complete ordered bank of same-text readings; the first is the display exemplar and single-reference fallback. Returns the result dict (see `dumps`).
+    baseline None: no reference reading, regime "SELF" (analyze_self); regime may then be None or "SELF"."""
+    if baseline is None and references is None:
+        if regime not in (None, "SELF"):
+            raise ValueError(f"a reading without a reference reading takes regime SELF, got {regime!r}")
+        return analyze_self(participant, transcript, detector=detector, participant_meta=participant_meta, truth=truth, aligner=aligner,
+                            cache_dir=cache_dir, progress=progress, refuse_mismatch=refuse_mismatch, alignment_device=alignment_device)
     if regime not in C.REGIMES:
         raise ValueError(f"regime must be one of {C.REGIMES}, got {regime!r}")
     det = detector or load_detector(DEFAULT_DETECTOR)
@@ -528,16 +534,162 @@ def notices(det: dict, regime: str, reg: dict, B: Recording, P: Recording, flaws
     return out
 
 
+# ============================================================================================ no reference reading (SELF)
+def analyze_self(participant, transcript, *, detector: dict | None = None, participant_meta: dict | None = None,
+                 truth: list | None = None, aligner=None, cache_dir: Path | None = None,
+                 progress: Callable[[str], None] = lambda stage: None, refuse_mismatch: bool = False,
+                 alignment_device: str = "cpu", norms=None) -> dict:
+    """The result (schema 2) of one reading graded against its own typical delivery (selfref): reference_mode "none".
+    detector: a SELF detector (selfref.load_detector); any other detector is replaced by the shipped SELF detector, so
+    that a caller that always passes the reference detector still gets the SELF thresholds. norms: test hook for the
+    'norms' text model."""
+    from . import selfref  # selfref imports compare and explain; calibrate imports this module
+    det = detector if detector is not None and detector.get("name") == selfref.NAME else selfref.load_default()
+    tr = transcript if isinstance(transcript, Transcript) else parse_transcript(transcript)
+    progress("align")
+    try:
+        part = participant if isinstance(participant, Recording) else align_wav(_load(participant), tr, aligner, cache_dir)
+        if refuse_mismatch and not isinstance(part, Recording):
+            require_match(part[1])
+    except TranscriptMismatch as e:
+        raise TranscriptMismatch(f"participant recording: {e}") from e
+    progress("features")
+    P = part if isinstance(part, Recording) else make_recording(part[0], tr, part[1])
+    model, reg = det["text_model"], det["regime"]
+    progress("compare")
+    comp = selfref.self_comparison(P, model, norms)
+    progress("detect")
+    regions = decode(comp, reg, tr.sentence)
+    scored = score(comp, regions, reg, det["score"]["pmax"])
+    info = patterns.annotate(comp, regions, P, P, {}, {})
+    counted = patterns.counted(comp, regions, scored.masses, {})
+    local_flaws = [selfref.describe_flaw(explain.build(r, comp, P, P, reg, scored.masses[i], scored, '', info[i], i in counted), r, comp,
+                                         P, reg, model, norms) for i, r in enumerate(regions)]
+    flaws = sorted(local_flaws, key=lambda f: (f["p"][0], f["dimension"], f["type"]))
+    for i, f in enumerate(flaws):
+        f["id"] = f"{f['dimension'].lower()}-{i + 1:03d}"
+    for g in patterns.groups(comp, regions, {}):
+        members = sorted(local_flaws[j]["id"] for j in g.members)
+        for j in g.members:
+            local_flaws[j]["group"] = members
+            local_flaws[j]["group_pattern"] = g.pattern
+    listed = selfref.listed_context(P, det)
+    detection = {"enabled": list(reg["enabled"]),
+                 "flag_keys": [flag_key(d, sign) for d in reg["enabled"] for sign in C.FLAG_SIGNS[d] if threshold(reg, d, sign) is not None],
+                 "listed_keys": [], "clip_keys": [], "listed_clip_keys": [], "calibrated": bool(det.get("report", {}).get("calibrated", True)),
+                 "reference_mode": "none", "reference_count": 0, "references_available": 0, "listed_entries": len(listed),
+                 "show_listed": bool(listed), "absent": list(selfref.ABSENT)}
+    truth_rows = [{**t, "available": t.get("dim", t.get("dimension")) in reg["enabled"],
+                   "detector_status": "enabled" if t.get("dim", t.get("dimension")) in reg["enabled"] else "absent"} for t in truth or []]
+    words = [{"w": tr.disp[i], "b": [round(float(P.al.start[i]), 3), round(float(P.al.end[i]), 3)],
+              "p": [round(float(P.al.start[i]), 3), round(float(P.al.end[i]), 3)]} for i in range(len(tr))]
+    return {
+        "schema": 2,
+        "detection": detection,
+        "pipeline": {"version": __version__, "config_sha256": det["selfref_sha256"], "alignment_device": alignment_device},
+        "regime": selfref.NAME,
+        "baseline": {"duration": round(P.duration, 3)},
+        "participant": {**(participant_meta or {}), "duration": round(P.duration, 3)},
+        "words": words,
+        "map": {"b": _arr(comp.map_b, 3), "p": _arr(comp.map_p, 3)},
+        "hop": C.HOP_S,
+        "rows": self_rows(comp, P, reg),
+        "stress": {"b": comp.stress_b, "p": comp.stress_p},
+        "flaws": flaws,
+        "differences": listed,
+        "truth": truth_rows,
+        "scores": self_scores_block(scored, reg),
+        "notices": self_notices(det, P, flaws, tr),
+    }
+
+
+def self_rows(comp: Comparison, P: Recording, reg: dict) -> list[dict]:
+    """rows() for a reading without a reference: frame rows against the speaker's own median (b = 0 where p exists),
+    then one row per dimension with the self-relative x; status 'absent' for the dimensions that need a reference."""
+    out = []
+    for key, label, unit, values in (("pitch", "Pitch re median", "st", P.fr.S), ("energy", "Level re voiced median", "dB", P.fr.E)):
+        own = np.where(np.isfinite(values), 0.0, np.nan)
+        out.append({"key": key, "label": label, "unit": unit, "kind": "frame", "b": _arr(own, 2), "p": _arr(values, 2), "tol": None})
+    for dim in C.DIMS:
+        key, label = _ROWS[dim]
+        enabled = dim in reg["enabled"]
+        hs = [threshold(reg, dim, sign) if enabled else None for sign in (-1, 1)]
+        out.append({"key": key, "label": label, "unit": C.DIM_UNIT[dim], "kind": "boundary" if dim == "D2" else "word",
+                    "status": "scored" if enabled else "absent", "coverage": round(comp.coverage[dim], 4), "b": [],
+                    "p": _arr(comp.dims[dim].x, 2),
+                    "tol": [None if h is None else round(float(h * scale(reg, dim, sign)), 6) for sign, h in zip((-1, 1), hs)]})
+    return out
+
+
+def self_scores_block(scored: Scored, reg: dict) -> dict:
+    from .selfref import DIM_NOTE_ABSENT
+    dims = []
+    for k in C.DIMS:
+        s = scored.S[k]
+        partial = scored.coverage[k] < C.MIN_MEASUREMENT_COVERAGE
+        if k not in reg["enabled"]:
+            note = DIM_NOTE_ABSENT
+        elif s is None:
+            note = "not scored: too little measurable speech" if partial else "flags disabled for this dimension: no calibrated threshold"
+        else:
+            note = f"scored on partial coverage ({100 * scored.coverage[k]:.0f} %)" if partial else ""
+        dims.append({"key": k, "label": C.DIM_LABEL[k], "brief_word": C.DIM_BRIEF[k], "score": None if s is None else round(s, 2),
+                     "scored": s is not None, "note": note, "coverage": round(scored.coverage[k], 4)})
+    parts = []
+    for k in reg["enabled"]:
+        hs = {sign: threshold(reg, k, sign) for sign in C.FLAG_SIGNS[k]}
+        ln = C.DIM_UNIT[k] == "ln"
+        parts.append(C.DIM_LABEL[k] + " " + ("flags disabled" if all(h is None for h in hs.values()) else
+                     " / ".join(f"×{np.exp(sign * h * scale(reg, k, sign)):.2f}" if ln else f"{'+' if sign > 0 else '−'}{h * scale(reg, k, sign):.3g}"
+                                for sign, h in hs.items() if h is not None) + ("" if ln else f" {C.DIM_UNIT[k]}")))
+    return {"overall": None if scored.overall is None else round(scored.overall, 2), "dims": dims,
+            "label": "Delivery index relative to your own reading",
+            "detection_note": "Flag thresholds for departures from your own typical delivery: " + "; ".join(parts) + "."}
+
+
+def self_notices(det: dict, P: Recording, flaws: list, tr: Transcript) -> list[str]:
+    out = ["No second reading of the text: each stretch of this reading is compared with your own typical delivery over the same "
+           "reading, corrected for what the text predicts there (the length of the words in sounds, the kind of boundary, the "
+           "place in the sentence).",
+           "Emphasis, word time and endings are not measured in this mode: they need a second reading of the same text.",
+           "Flags are acoustic departures from your own typical delivery; pattern names describe the measured evidence, not a "
+           "diagnosis. A delivery that is the same all through (for example fast everywhere) has no local departure and is not "
+           "flagged. This mode finds fewer changes than a comparison with a second reading of the same text."]
+    if not det.get("report", {}).get("calibrated", True):
+        out.append("Uncalibrated detector (pinned threshold): for tests and fixtures only.")
+    low = int((P.al.compat < C.LOW_COMPAT_NOTICE).sum())
+    if low > 0:
+        out.append(f"{low} word(s) have low aligner confidence (common in rushed or unclear speech); their timing is less certain.")
+    if P.fr.f0_fallback:
+        out.append("Too few voiced frames for the two-pass F0 range; the fallback range was used.")
+    heur = int(sum(tr.syll_heuristic))
+    if heur:
+        out.append(f"{heur} word(s) use a heuristic syllable count (not in the pronunciation dictionary).")
+    covered = len({i for f in flaws if f["context"] != "whole passage" for i in range(f["words"][0], f["words"][1] + 1)})
+    if covered / len(tr) > C.COVERAGE_CAP:
+        out.append(f"Flags cover {covered / len(tr):.0%} of the words; localisation is validated only up to {C.COVERAGE_CAP:.0%} edited-word coverage.")
+    return out
+
+
 # ============================================================================================ CLI
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(prog="python -m cvoice.pipeline", description=__doc__.splitlines()[0])
     parser.add_argument("--participant", required=True, type=Path)
-    parser.add_argument("--baseline", required=True, type=Path)
+    parser.add_argument("--baseline", type=Path, help="reference reading; without it the reading is graded against itself (SELF)")
     parser.add_argument("--transcript", required=True, type=Path, help="text file with the words both recordings read")
-    parser.add_argument("--regime", required=True, choices=C.REGIMES)
+    parser.add_argument("--regime", choices=(*C.REGIMES, "SELF"), help="R1 or R2 with --baseline; SELF (the default) without")
     parser.add_argument("--detector", type=Path, default=DEFAULT_DETECTOR)
     parser.add_argument("--out", type=Path, required=True)
     args = parser.parse_args(argv)
+    if args.baseline is None:
+        res = analyze(args.participant, args.transcript.read_text(), regime=args.regime,
+                      participant_meta={"id": args.participant.stem, "audio": args.participant.name})
+        args.out.parent.mkdir(parents=True, exist_ok=True)
+        args.out.write_text(dumps(res) + "\n")
+        print(f"{args.out}: {res['scores']['label'].lower()} {res['scores']['overall']}, {len(res['flaws'])} departure(s)")
+        return
+    if args.regime not in C.REGIMES:
+        parser.error("--baseline needs --regime R1 or R2")
     res = analyze(args.participant, args.transcript.read_text(), args.baseline, regime=args.regime, detector=load_detector(args.detector),
                   baseline_meta={"id": args.baseline.stem, "audio": args.baseline.name},
                   participant_meta={"id": args.participant.stem, "audio": args.participant.name})

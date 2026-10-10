@@ -39,8 +39,8 @@ const LIBS = [  // [is it loaded?, fallback file]; the wavesurfer core must come
   [() => typeof WaveSurfer === "function" && WaveSurfer.Timeline, "vendor/timeline.min.js"],
 ];
 const ROWS = {  // heading (wide, narrow), dimension, kind of drawing
-  pitch: { t: "Pitch, semitones from each speaker's median", s: "Pitch (st)", h: 120, frame: true },
-  energy: { t: "Level, dB from each speaker's median voiced level", s: "Level (dB)", h: 100, frame: true },
+  pitch: { t: "Pitch, semitones from each speaker's median", own: "Pitch, semitones from your median", s: "Pitch (st)", h: 120, frame: true },
+  energy: { t: "Level, dB from each speaker's median voiced level", own: "Level, dB from your median voiced level", s: "Level (dB)", h: 100, frame: true },
   pace: { t: "Pace: ln ratio of speech time, below 0 is faster", s: "Pace (ln)", h: 84, dim: "D1" },
   pauses: { t: "Pauses: length difference, below 0 is shorter", s: "Pauses (s)", h: 76, dim: "D2", bars: true },
   pitch_range: { t: "Pitch range: ln ratio at your overall range, below 0 is flatter", s: "Pitch range (ln)", h: 84, dim: "D3" },
@@ -100,6 +100,24 @@ const TICK_MS = 380;                     // ms of the points tick when an exampl
 const BAND_STEPS = 7;                    // intro: at most this many band steps (style.css .intro .tl-band: 1 s, then 0.16 s each)
 const FIX_COUNT_WORDS = ["", "Your biggest fix", "Your two biggest fixes", "Your three biggest fixes"];
 const reducedMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;   // the evidence row that holds the finding's own measured difference
+// A reading graded without a reference reading (pipeline SELF mode): its words compare with the reader's own typical delivery.
+const SELF_MODE = "none";
+const isSelf = (r = S.result) => r?.detection?.reference_mode === SELF_MODE;
+const TYPICAL = "your typical delivery";
+// Page copy that names the reference, with its no-reference wording; the reference wording is read from the page at start.
+const SELF_COPY = {
+  "#hero-title": "Hear where your reading drifts from your typical delivery.",
+  "#value-line": "Your reading is graded against itself: each stretch is compared with how you read the rest of it. Hear the spots that stand out, and fix the ones that cost you the most first.",
+  "#footer-scope": "Scores are relative to your own typical delivery in this reading.",
+  "#hero-wave@aria-label": "Your reading over time",
+  "#key-ref": "Your typical delivery",
+};
+const SELF_LIMIT = "Your reading is graded against itself. A second reading of the same text, by you or someone else, catches more.";
+// What a fix did to one finding, in the words the page shows (app.plain_outcome gives the reason).
+const FIX_HEAD = { fixed: "Fixed: this spot is no longer flagged", partly: "Partly fixed", unfixable: "Can't be fixed by editing" };
+const FIX_STAGES = ["edit", "check"];   // app.FIX_STAGES (tests/test_app.py compares them)
+const FIX_STAGE_TEXT = { edit: "Editing your recording…", check: "Checking the result…" };
+const LISTEN_SIDES = [["yours", "Yours"], ["fixed", "Fixed"], ["target", "Target"]];
 
 // ---------------------------------------------------------------------------------------------------- helpers
 const $ = (s) => document.querySelector(s);
@@ -198,15 +216,16 @@ function showAlert(msg) {
 }
 
 // ---------------------------------------------------------------------------------------------------- state
-const S = { result: null, sel: null, filter: null, rid: 0, limits: null, flagLimits: null, ws: null, regions: null, ref: new Audio(),
+const S = { fix: { info: null, source: null, jobs: new Map(), busy: null, player: null }, copy: null, result: null, sel: null, filter: null, rid: 0, limits: null, flagLimits: null, ws: null, regions: null, ref: new Audio(),
   refTimer: null, bothTimer: null, tl: null, chart: null, hasLibs: false, selKind: "flaw", allDimensions: false, openId: 0,
   mediaId: 0, youReady: false, refReady: false, inSpan: new Set(), listenAt: null, audio: null, sources: new WeakMap(), levelOn: false, countId: 0, counted: false, side: "you", wsRef: null, playId: 0, priority: null, pattern: null };
 
-function differences() { return S.result.regime === "R2" && Array.isArray(S.result.differences) ? S.result.differences : []; }
+function differences() { return (S.result.regime === "R2" || isSelf()) && Array.isArray(S.result.differences) ? S.result.differences : []; }
 function selected() { return (S.selKind === "difference" ? differences() : S.result.flaws)[S.sel]; }
 function mediaSpan(f, who) { return f[who === "you" ? "p" : "b"] || [0, S.result[who === "you" ? "participant" : "baseline"].duration]; }
 
 function noRegions(r) {
+  if (isSelf(r)) return "Nothing stands out from your typical delivery.";
   return r.regime === "R2" ? "Nothing crosses the threshold set for a different speaker." : "Nothing crosses its threshold: this reading matches the reference.";
 }
 
@@ -256,6 +275,7 @@ function showScore(o) {
 
 /** The regime and reference mode as a short badge beside the example name. */
 function regimeBadge(r) {
+  if (isSelf(r)) return "Graded on its own";
   return r.regime === "R1" ? "Same speaker as the reference" : "Different speaker from the reference";
 }
 
@@ -295,10 +315,13 @@ function tickPoints(nodes) {
 function plainLine(f) {
   if (unevenTempo(f)) return `Typical word-to-word factor ${spreadFactor(f)}`;
   const q = WHOLE_RATIO[f.dimension];
-  if (wholeRatio(f) && q) return `Your ${q[0]} is ${ratioWords(f.participant)} the reference's${f.participant === 1 ? "" : `: ${f.participant < 1 ? q[1] : q[2]}`}`;
+  if (listedContext(f)) return f.text || "";
+  const theirs = isSelf() ? "your typical" : "the reference's";
+  if (wholeRatio(f) && q) return `Your ${q[0]} is ${ratioWords(f.participant)} ${theirs}${f.participant === 1 ? "" : `: ${f.participant < 1 ? q[1] : q[2]}`}`;
   // Levels in dB are relative to each speaker's median, so the stored difference says more than the two levels.
-  if (f.unit === "dB" && f.delta != null) return `About ${num(Math.abs(f.delta), 1)} dB ${f.delta < 0 ? "quieter" : "louder"} than the reference`;
+  if (f.unit === "dB" && f.delta != null) return `About ${num(Math.abs(f.delta), 1)} dB ${f.delta < 0 ? "quieter" : "louder"} than ${isSelf() ? "your typical level" : "the reference"}`;
   const v = (x) => withUnit(x, valUnit(f));
+  if (isSelf()) return `${v(f.participant)} here, ${v(f.baseline)} is typical for you`;
   return `${v(f.participant)} in your reading, ${v(f.baseline)} in the ${referenceText(f)}`;
 }
 
@@ -307,7 +330,7 @@ function quotedWords(r, f) {
 }
 
 function renderSummary(r) {
-  const top = topFindings(r), mode = r.detection?.reference_mode, against = MODE_TEXT[mode] && mode !== "single" ? `the ${MODE_TEXT[mode]}` : "the reference reading";
+  const top = topFindings(r), mode = r.detection?.reference_mode, against = isSelf(r) ? TYPICAL : MODE_TEXT[mode] && mode !== "single" ? `the ${MODE_TEXT[mode]}` : "the reference reading";
   $("#summary-line").textContent = !r.flaws.length ? noRegions(r)
     : top.length === 1 ? `Compared with ${against}, one finding costs you the most points.`
     : top.length ? `Compared with ${against}, these ${top.length} findings cost you the most points.`
@@ -322,7 +345,10 @@ function renderSummary(r) {
     el("p", { class: "card-line", text: plainLine(f) }),
     rank ? null : thresholdGauge(f),
     f.fix ? el("p", { class: "card-fix", text: f.fix }) : null,
-    el("button", { type: "button", class: "listen-btn", "data-audio": "both", "data-listen": i, onclick: () => listen(i) }, "Listen", el("span", { class: "sub-h", text: " yours, then the reference" })))));
+    el("div", { class: "card-actions" },
+      el("button", { type: "button", class: "listen-btn", "data-audio": listenAudio(), "data-listen": i, onclick: () => listen(i) }, "Listen",
+        el("span", { class: "sub-h", text: isSelf(r) ? " this spot" : " yours, then the reference" })),
+      fixButton(f, i, { scroll: true })))));
   tickPoints(document.querySelectorAll("#top-cards .card-pts"));
   const n = r.flaws.length + differences().length;
   $("#see-all").hidden = !n;
@@ -353,6 +379,7 @@ function limitWords(tol) {
 
 /** The reference mode used and the smallest changes it flags, from the result's own row thresholds; null when no row has one. */
 function limitLine(r) {
+  if (isSelf(r)) return SELF_LIMIT;
   const tol = Object.fromEntries((r.rows || []).filter((row) => LIMIT_ROWS.includes(row.key)).map((row) => [row.key, row.tol]));
   const parts = limitWords(tol);
   if (!parts.length) return null;
@@ -378,7 +405,9 @@ function renderLedger(r) {
   const consensus = r.detection?.reference_mode === "consensus5";
   $("#reference-mode").hidden = !consensus;
   $("#reference-mode .badge").textContent = consensus ? `Compared with ${r.detection.reference_count} readings of the same text` : "";
-  $("#key-ref").textContent = r.detection?.reference_mode === "consensus5" ? `Reference: median of ${r.detection.reference_count} readings` : "Reference rendition";
+  applyCopy(r);
+  if (!isSelf(r)) $("#key-ref").textContent = r.detection?.reference_mode === "consensus5" ? `Reference: median of ${r.detection.reference_count} readings` : "Reference rendition";
+  $("#key-stress").hidden = isSelf(r);
   renderSummary(r);
   renderLimit(r);
   const cards = $("#cards");
@@ -512,11 +541,11 @@ function renderFlawList() {
 
 function renderDifferenceList() {
   const items = differences(), detection = S.result.detection;
-  $("#differences-wrap").hidden = S.result.regime !== "R2";
+  $("#differences-wrap").hidden = S.result.regime !== "R2";   // a reading graded on its own has listed context only
   $("#listed-wrap").hidden = !items.some((f) => f.status === "listed");
   $("#listed-count").textContent = `(${items.filter((f) => f.status === "listed" && matchesFilter(f)).length})`;
   const dimLabel = (key) => S.result.scores.dims.find((d) => d.key === key.replace(/[+-]$/, ""))?.label || key;
-  $("#listed-note").textContent = [...detection.listed_keys.map((k) => `${dimLabel(k)} (${k})`),
+  $("#listed-note").textContent = isSelf() ? "Context for your reading from published reading norms; it does not change the score." : [...detection.listed_keys.map((k) => `${dimLabel(k)} (${k})`),
     ...detection.listed_clip_keys.map((k) => `${dimLabel(k)}, whole clip (${k})`)].join(", ") +
     ". Departures are shown without flags or point penalties. " +
     [...new Set(detection.listed_keys.map((k) => k.replace(/[+-]$/, "")))].map((k) => S.result.scores.dims.find((d) => d.key === k))
@@ -556,13 +585,16 @@ function wholeRatio(f) {
 }
 
 // The reference value of D7 is carried to this recording's overall tempo; its evidence also lists the measured value.
-const referenceText = (f) => f.dimension === "D7" ? "reference at this recording's tempo" : "reference";
+const referenceText = (f) => isSelf() ? TYPICAL : f.dimension === "D7" ? "reference at this recording's tempo" : "reference";
+// A no-reference result lists context against published norms, not against the reader: its own unit and text say what it is.
+const listedContext = (f) => isSelf() && f.status === "listed";
 
 function diffLine(f) {
   if (unevenTempo(f)) return `Whole passage: typical word-to-word factor ${spreadFactor(f)}${f.status === "listed" ? "; listed, not scored" : ""}.`;
+  if (listedContext(f)) return `${wholePassage(f) ? "Whole passage" : span(f.p)}: ${num(f.participant, 2)} ${f.unit} in this reading`;
   const valueUnit = valUnit(f), v = (x) => withUnit(x, valueUnit);
   // A ratio value already states the factor, so the ln difference is not repeated as a second factor.
-  const by = f.delta == null || valueUnit === "×" || REGULARISED.has(f.dimension) ? "" : f.unit === "ln" ? ` (${factor(f.delta)} the reference)`
+  const by = f.delta == null || valueUnit === "×" || REGULARISED.has(f.dimension) ? "" : f.unit === "ln" ? ` (${factor(f.delta)} ${isSelf() ? "your typical" : "the reference"})`
     : ` (${signed(f.delta)} ${UNIT[f.unit] || f.unit || ""})`;
   const values = wholeRatio(f) || `${referenceText(f)} ${v(f.baseline)}, this recording ${v(f.participant)}${by}`;
   return `${wholePassage(f) ? "Whole passage" : span(f.p)}: ${values}`;
@@ -621,6 +653,8 @@ function renderExplain() {
   if (unevenTempo(f)) {
     fact(dl, "Typical word-to-word factor", spreadFactor(f));
     fact(dl, "Robust spread", `${num(f.participant, 2)} ln`);
+  } else if (listedContext(f)) {
+    fact(dl, "This reading", `${num(f.participant, 2)} ${f.unit}`);
   } else {
     const whole = wholeRatio(f);
     if (whole) fact(dl, "This recording", whole);
@@ -639,7 +673,7 @@ function renderExplain() {
     fact(dl, "Flag threshold", f.threshold == null ? "-" : unevenTempo(f) ? thresholdFactor(f) : `${f.delta < 0 ? "−" : "+"}${num(f.threshold, 2)} ${deltaUnit}`);
   }
   const pts = diff ? null : f.counted === false ? "shared" : findingPts(f);
-  const why = diff ? "Shown for comparison with the reference; it does not change the score."
+  const why = diff ? (isSelf() ? "Shown as context; it does not change the score." : "Shown for comparison with the reference; it does not change the score.")
     : f.tolerance_multiple != null ? `It counts because it is ${multipleText(f.tolerance_multiple)} the flag threshold for this measure.` : "";
   box.append(
     el("div", { class: "ex-head" },
@@ -652,8 +686,11 @@ function renderExplain() {
     el("p", { class: "ex-what", text: plainLine(f) }),
     why ? el("p", { class: "ex-why", text: why }) : "",
     diff ? "" : thresholdGauge(f) ?? "",
-    el("button", { type: "button", class: "listen-btn", "data-audio": "both", ...(diff ? {} : { "data-listen": S.sel }), onclick: () => listen(S.sel, S.selKind) }, "Listen",
-      el("span", { class: "sub-h", text: ` yours ${span(f.p)}, then the reference ${span(f.b)}` })));
+    el("div", { class: "card-actions" },
+      el("button", { type: "button", class: "listen-btn", "data-audio": listenAudio(), ...(diff ? {} : { "data-listen": S.sel }), onclick: () => listen(S.sel, S.selKind) }, "Listen",
+        el("span", { class: "sub-h", text: isSelf() ? (f.p ? ` this spot ${span(f.p)}` : " from the start") : ` yours ${span(f.p)}, then the reference ${span(f.b)}` })),
+      diff ? null : fixButton(f, S.sel)),
+    diff ? "" : fixerView(f));
   if (!diff && f.fix) box.append(el("p", { class: "fix" }, el("b", { text: "How to fix" }), f.fix));
   tickPoints(box.querySelectorAll(".ex-pts"));
   if (f.candidate) box.append(el("p", { class: "candidate-note", text: CANDIDATE_TEXT }));
@@ -664,7 +701,7 @@ function renderExplain() {
         onclick: () => select(r.flaws.indexOf(member)), text: `#${r.flaws.indexOf(member) + 1} ${findingText(member)}` }))));
   }
   const detail = el("details", { class: "measure-details" }, el("summary", { text: "Details" }), dl,
-    el("p", { class: "what", text: (f.candidate ? f.text.replace(CANDIDATE_TEXT, "").trim() : f.text) || "" }));
+    listedContext(f) ? null : el("p", { class: "what", text: (f.candidate ? f.text.replace(CANDIDATE_TEXT, "").trim() : f.text) || "" }));
   if (f.evidence?.length) {
     const evidence = el("dl", { class: "facts evidence" });
     // The finding's own measure shows the Difference row's factor: a second rounding of the stored value can differ by 0.01.
@@ -825,7 +862,7 @@ function bandParts(f) {
   const mid = (g.refBot + g.youTop) / 2;
   const ribbon = `M${b0},${g.refBot} C${b0},${mid} ${p0},${mid} ${p0},${g.youTop} L${p1},${g.youTop} C${p1},${mid} ${b1},${mid} ${b1},${g.refBot} Z`;
   return { b0, b1, p0, p1, mid, parts: [
-    svgEl("rect", { class: "wash", x: b0, y: g.refTop, width: b1 - b0, height: TL_TRACK_PX }),
+    g.own ? "" : svgEl("rect", { class: "wash", x: b0, y: g.refTop, width: b1 - b0, height: TL_TRACK_PX }),
     svgEl("path", { class: "ribbon", d: ribbon, "stroke-dasharray": SEVERITY_DASH[sevStyle(f.severity ?? 0)[1]] }),
     svgEl("rect", { class: "wash", x: p0, y: g.youTop, width: p1 - p0, height: TL_TRACK_PX })] };
 }
@@ -840,18 +877,19 @@ function drawTimeline() {
   if (!r || !host.clientWidth) return;
   const width = host.clientWidth, narrow = width < TL_NARROW_PX, gutter = narrow ? 0 : TL_GUTTER_PX;
   const pxPerS = Math.max(width - gutter - PLOT_R, 1) / Math.max(r.participant.duration, r.baseline.duration);
-  const label = narrow ? TL_LABEL_PX : 0;
-  const refTop = label, refBot = refTop + TL_TRACK_PX, youTop = refBot + TL_LINK_PX, youBot = youTop + TL_TRACK_PX;
-  S.tl = { x: (t) => gutter + t * pxPerS, refTop, refBot, youTop, youBot, width };
+  const label = narrow ? TL_LABEL_PX : 0, own = isSelf(r);
+  // Without a reference reading the upper track is empty: the band numbers sit above this recording's track.
+  const refTop = label, refBot = refTop + (own ? 0 : TL_TRACK_PX), youTop = refBot + TL_LINK_PX, youBot = youTop + TL_TRACK_PX;
+  S.tl = { x: (t) => gutter + t * pxPerS, refTop, refBot, youTop, youBot, width, own };
   const g = S.tl;
   const svg = svgEl("svg", { width, height: youBot + label, viewBox: `0 0 ${width} ${youBot + label}`, role: "group",
-    "aria-label": "Reference and this recording, word by word, with numbered flagged regions" });
+    "aria-label": own ? "This recording, word by word, with numbered flagged regions" : "Reference and this recording, word by word, with numbered flagged regions" });
   const trackLabel = (text, who, y) => svgEl("text", { class: `tl-label ${who}`, x: 0, y, "dominant-baseline": "central", text });
-  if (narrow) svg.append(trackLabel("Reference", "ref", label / 2 - 1), trackLabel("This recording", "you", youBot + label / 2 + 1));
-  else svg.append(trackLabel("Reference", "ref", (refTop + refBot) / 2), trackLabel("This recording", "you", (youTop + youBot) / 2));
+  if (!own) svg.append(trackLabel("Reference", "ref", narrow ? label / 2 - 1 : (refTop + refBot) / 2));
+  svg.append(trackLabel("This recording", "you", narrow ? youBot + label / 2 + 1 : (youTop + youBot) / 2));
   const mid = (s) => (s[0] + s[1]) / 2;
   // At phone width the word links are closer than 2 px apart and read as one grey block, so only the bands join the tracks.
-  if (!narrow) svg.append(svgEl("g", { "aria-hidden": "true" }, ...r.words.filter((w) => w.b).map((w) =>
+  if (!narrow && !own) svg.append(svgEl("g", { "aria-hidden": "true" }, ...r.words.filter((w) => w.b).map((w) =>
     svgEl("line", { class: "tl-align", x1: g.x(mid(w.b)), y1: refBot, x2: g.x(mid(w.p)), y2: youTop }))));
   const track = (who, key, top) => svgEl("g", { "aria-hidden": "true" }, ...r.words.filter((w) => w[key]).map((w) => {
     const x0 = g.x(w[key][0]), wide = Math.max(g.x(w[key][1]) - x0 - 1, 1);
@@ -860,7 +898,7 @@ function drawTimeline() {
       svgEl("rect", { x: x0, y: top, width: wide, height: TL_TRACK_PX, rx: 4 }),
       );
   }));
-  svg.append(track("ref", "b", refTop), track("you", "p", youTop));
+  svg.append(own ? "" : track("ref", "b", refTop), track("you", "p", youTop));
   const bands = svgEl("g", {}), markers = svgEl("g", {}), placed = [];
   const order = r.flaws.map((f, i) => i).filter((i) => !wholePassage(r.flaws[i]));   // intro order: by time
   r.flaws.forEach((f, i) => {
@@ -877,13 +915,13 @@ function drawTimeline() {
     bands.append(svgEl("g", { class: "tl-band", "data-i": i, "data-peek": i, style: `--seq:${Math.min(order.indexOf(i), BAND_STEPS)}`, onclick: pick, "aria-hidden": "true" },
       svgEl("title", { text: `#${i + 1} ${findingText(f)}` }), ...band.parts));
     markers.append(svgEl("g", { class: "tl-mk", "data-i": i, "data-peek": i, style: `--seq:${Math.min(order.indexOf(i), BAND_STEPS)}`, tabindex: 0, role: "button", "aria-pressed": "false",
-      "aria-label": `#${i + 1} ${findingText(f)}: this recording ${span(f.p)}${f.b ? `, reference ${span(f.b)}` : ""}`,
+      "aria-label": `#${i + 1} ${findingText(f)}: this recording ${span(f.p)}${f.b && !own ? `, reference ${span(f.b)}` : ""}`,
       onclick: pick, onkeydown: (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(); } } },
       svgEl("rect", { x: cx - w / 2, y: y - TL_MARK_H / 2, width: w, height: TL_MARK_H, rx: TL_MARK_H / 2 }),
       svgEl("text", { x: cx, y, text })));
   });
   svg.append(svgEl("g", { id: "tl-diff" }), bands, markers,
-    svgEl("line", { id: "tl-cur-ref", class: "tl-cursor", y1: refTop - 3, y2: refBot + 3, style: "display:none" }),
+    own ? "" : svgEl("line", { id: "tl-cur-ref", class: "tl-cursor", y1: refTop - 3, y2: refBot + 3, style: "display:none" }),
     svgEl("line", { id: "tl-cur-you", class: "tl-cursor", y1: youTop - 3, y2: youBot + 3, style: "display:none" }));
   host.replaceChildren(svg);
   for (const [id, seconds] of [["#wave", r.participant.duration], ["#wave-ref", r.baseline.duration]]) {
@@ -965,6 +1003,7 @@ function rowDefs(r) {
   if (f) dims.add(f.dimension);
   for (const x of differences()) dims.add(x.dimension);   // a listed difference earns its row
   for (const row of r.rows) {
+    if (row.status === "absent") continue;   // a measure this mode does not take (no reference reading)
     if (!S.allDimensions && !ROWS[row.key]?.frame && !dims.has(ROWS[row.key]?.dim)) continue;
     if (row.key === "emphasis" && r.stress) defs.push({ key: "stress", row: { key: "stress", unit: "" } });
     if (ROWS[row.key]) defs.push({ key: row.key, row });
@@ -1031,14 +1070,14 @@ function chartModel(r) {
     const yaxis = { domain: [lo, hi], fixedrange: true, gridcolor: c.rule, showline: false, zeroline: false, nticks: 4,
       tickfont: { color: c.ink2, size: 10.5 }, automargin: false };
     const unit = UNIT[row.unit] || row.unit;
-    let head = narrow ? spec.s : spec.t;
+    let head = narrow ? spec.s : isSelf(r) && spec.own ? spec.own : spec.t;
     if (spec.frame) {
       const times = (a) => a.map((_, i) => i * r.hop).filter((_, i) => i % stride === 0);
       const thin = (a) => a.filter((_, i) => i % stride === 0);
       const x = times(row.p);
-      for (const [name, vals, color] of [["Reference", row.b, c.ref], ["This recording", row.p, c.you]]) {
+      for (const [name, vals, color, dash] of [[isSelf(r) ? "Your typical" : "Reference", row.b, c.ref, "dash"], ["This recording", row.p, c.you, "solid"]]) {
         traces.push({ type: "scatter", mode: "lines", name: `${name}, ${spec.s.split(" (")[0].toLowerCase()}`, x, y: thin(vals), yaxis: ax, connectgaps: false,
-          line: { color, width: 2, dash: name === "Reference" ? "dash" : "solid" }, hovertemplate: `%{y:.1f} ${unit}<extra></extra>` });
+          line: { color, width: 2, dash }, hovertemplate: `%{y:.1f} ${unit}<extra></extra>` });
       }
     } else if (d.key === "stress") {
       const mid = (i) => (r.words[i].p[0] + r.words[i].p[1]) / 2;
@@ -1052,7 +1091,7 @@ function chartModel(r) {
       const [below, above] = row.tol || [null, null];   // flag thresholds per direction, null where never flagged
       const m = Math.max(below || 0, above || 0, ...finite.map(Math.abs), 1e-6) * 1.2;
       Object.assign(yaxis, { range: [-m, m], zeroline: true, zerolinecolor: c.muted });
-      const name = `${spec.s.split(" (")[0]} vs reference`;
+      const name = `${spec.s.split(" (")[0]} vs ${isSelf(r) ? "your typical" : "reference"}`;
       if (spec.markers) {
         const points = eventBars(r.words, vals, false);
         traces.push({ type: "scatter", mode: "markers", name, x: points.x, y: points.y, yaxis: ax, customdata: points.c,
@@ -1236,6 +1275,9 @@ function moveCursor(tp) {
 }
 
 // ---------------------------------------------------------------------------------------------------- audio
+/** The audio a Listen button needs: both readings, or this recording only when there is no reference reading. */
+function listenAudio() { return isSelf() ? "you" : "both"; }
+
 function updatePlayback() {
   $("#play-all").disabled = !(S.side === "you" ? S.youReady : S.refReady);
   const ready = { you: S.youReady, ref: S.refReady, both: S.youReady && S.refReady };
@@ -1271,25 +1313,30 @@ function loadMedia(r, base) {
   invalidateMedia();
   const token = S.mediaId;
   $("#wave-msg").textContent = "";
+  showSide("you");
   const ref = S.ref = new Audio();
+  const own = !r.baseline?.audio;   // no reference reading: nothing to load or draw in the reference lane
   const refCurrent = () => token === S.mediaId && S.ref === ref;
   ref.addEventListener("canplay", () => { if (refCurrent()) { S.refReady = true; updatePlayback(); } });
   ref.addEventListener("play", () => { if (refCurrent()) setPlaying(true); });
   ref.addEventListener("pause", () => { if (refCurrent()) setPlaying(false); });
   ref.addEventListener("error", () => { if (refCurrent()) { S.refReady = false; updatePlayback(); $("#wave-msg").textContent = "The reference audio could not be loaded."; } });
   ref.preload = "auto";
-  ref.src = base + r.baseline.audio;
+  if (!own) ref.src = base + r.baseline.audio;
   if (!S.hasLibs) { $("#clock").textContent = "Recording playback unavailable"; return; }
   if (S.ws) S.ws.destroy();
   if (S.wsRef) S.wsRef.destroy();
+  S.wsRef = null;
   S.ws = WaveSurfer.create({ container: "#wave", height: 72, normalize: true, cursorWidth: 2, barWidth: 2, barGap: 1, barRadius: 2,
     ...waveColors() });
   const ws = S.ws;
   // The reference waveform is drawn only; the reference audio element plays it, and setTime shows its progress.
-  S.wsRef = WaveSurfer.create({ container: "#wave-ref", height: 44, normalize: true, cursorWidth: 0, barWidth: 2, barGap: 1, barRadius: 2,
-    interact: false, ...refWaveColors() });
-  S.wsRef.on("error", () => {});
-  S.wsRef.load(base + r.baseline.audio).catch(() => {});
+  if (!own) {
+    S.wsRef = WaveSurfer.create({ container: "#wave-ref", height: 44, normalize: true, cursorWidth: 0, barWidth: 2, barGap: 1, barRadius: 2,
+      interact: false, ...refWaveColors() });
+    S.wsRef.on("error", () => {});
+    S.wsRef.load(base + r.baseline.audio).catch(() => {});
+  }
   const current = () => token === S.mediaId && S.ws === ws;
   S.regions = ws.registerPlugin(WaveSurfer.Regions.create());
   ws.registerPlugin(WaveSurfer.Timeline.create({ height: 16, style: { color: css("--ink2"), fontSize: "11px" } }));
@@ -1420,6 +1467,7 @@ function setSide(side) {
 }
 
 function stopAll() {
+  S.fix.player?.stop();
   S.playId += 1;
   S.listenAt = null;
   clearTimeout(S.refTimer);
@@ -1437,7 +1485,8 @@ function padSpan([a, b]) {
 /** Select a finding and play it in the player: your span, then the reference span. */
 function listen(i, kind = "flaw") {
   if (S.sel !== i || S.selKind !== kind) select(i, { kind });
-  playBoth(selected()).then(() => { S.listenAt = `${kind}:${i}`; markListening(); });
+  const played = isSelf() ? playSpan("you", mediaSpan(selected(), "you")) : playBoth(selected());
+  played.then(() => { S.listenAt = `${kind}:${i}`; markListening(); });
 }
 
 /** The Listen button of the finding that plays shows playing bars instead of its arrow. */
@@ -1499,6 +1548,265 @@ function setFold(fold, open) {
   fold.querySelector(".fold-body").inert = !open;
 }
 
+// ---------------------------------------------------------------------------------------------------- copy per mode
+function copyTarget(key) { const [selector, attr] = key.split("@"); return [$(selector), attr]; }
+function readCopy(key) { const [node, attr] = copyTarget(key); return attr ? node.getAttribute(attr) : node.textContent; }
+function writeCopy(key, text) { const [node, attr] = copyTarget(key); if (attr) node.setAttribute(attr, text); else node.textContent = text; }
+
+/** The page copy that names the reference, in the wording of the result's mode; the reference lane and switch only with a reference. */
+function applyCopy(r) {
+  const own = isSelf(r);
+  if (!S.copy) S.copy = Object.fromEntries(Object.keys(SELF_COPY).map((key) => [key, readCopy(key)]));
+  for (const [key, text] of Object.entries(SELF_COPY)) writeCopy(key, own ? text : S.copy[key]);
+  $("#wave-ref").hidden = own;
+  $(".ab-toggle").hidden = own;
+}
+
+// ---------------------------------------------------------------------------------------------------- fix your speech
+/** Where a fix of the open result runs (an upload's analysis job or a bundled example), or null where this page cannot fix it. */
+function fixSource() {
+  const info = S.fix.info, source = S.fix.source;
+  if (!info?.available || !source || !S.result?.flaws.length) return null;
+  return source.kind === "job" || info.examples.includes(source.id) ? source : null;
+}
+
+/** The finding's index in the stored result: render() orders the findings by time. */
+const storedIndex = (f) => S.rawIds.indexOf(f.id);
+const findingNumber = (id) => S.result.flaws.findIndex((f) => f.id === id) + 1;
+
+function fixButton(f, i, { scroll = false } = {}) {
+  if (!fixSource()) return null;
+  const button = el("button", { type: "button", class: "fix-btn", "data-fix": f.id, onclick: () => hearFixed(i, scroll) }, "Hear it fixed");
+  button.disabled = !!S.fix.busy;
+  return button;
+}
+
+/** Starts the fix job of key (a finding id or "all") once per result; its entry holds the state, the summary and the player. */
+function startFix(key, body) {
+  const known = S.fix.jobs.get(key);
+  if (known && known.state !== "error") return known;
+  const source = fixSource(), rid = S.rid, entry = { state: "running", stage: FIX_STAGES[0], fix: null, audio: null, error: null, player: null };
+  if (!source || S.fix.busy) return null;
+  S.fix.jobs.set(key, entry);
+  S.fix.busy = key;
+  const url = source.kind === "job" ? `api/jobs/${source.id}/fix` : `api/gallery/${encodeURIComponent(source.id)}/fix`;
+  entry.done = (async () => {
+    try {
+      const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      const made = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(failText(res.status, made.detail));
+      for (;;) {
+        const poll = await fetch(`api/jobs/${made.job_id}`), job = await poll.json().catch(() => ({}));
+        if (!poll.ok) throw new Error(failText(poll.status, job.detail));
+        if (job.state === "error") throw new Error(job.error);
+        if (job.state === "done") { Object.assign(entry, { state: "done", fix: job.fix, audio: job.audio }); break; }
+        if (job.stage !== entry.stage) { entry.stage = job.stage; refreshFix(); }
+        await new Promise((resolve) => setTimeout(resolve, POLL_MS));
+      }
+    } catch (e) {
+      Object.assign(entry, { state: "error", error: e.message });
+    } finally {
+      S.fix.busy = null;
+      refreshFix();   // also after another result opened: its buttons were disabled while this job ran
+    }
+    return rid === S.rid && entry.state === "done";
+  })();
+  refreshFix();
+  return entry;
+}
+
+/** "Hear it fixed": select the finding, fix it on the server, then loop the fixed region. */
+async function hearFixed(i, scroll = false) {
+  if (S.sel !== i || S.selKind !== "flaw") select(i, { scroll });
+  const f = S.result.flaws[i], entry = startFix(f.id, { finding: storedIndex(f) });
+  if (!entry || !(await entry.done) || selected()?.id !== f.id) return;
+  entry.player?.play("fixed");
+}
+
+async function fixEverything() {
+  const entry = startFix("all", { all: true });
+  if (entry && (await entry.done)) entry.player?.play("fixed");
+}
+
+/** Redraws what the fix state changes: the buttons, the selected finding's fix and the whole-reading panel. */
+function refreshFix() {
+  document.querySelectorAll("[data-fix]").forEach((b) => { b.disabled = !!S.fix.busy; });
+  const f = selected(), box = document.querySelector("#explain .fixer");
+  if (box && f && S.selKind === "flaw" && box.dataset.fixer === f.id) box.replaceWith(fixerView(f));
+  renderFixAll();
+}
+
+/** Place on the original time axis of a track time, and back; a region track uses the share of its span instead. */
+function regionTrack(url, span) {
+  const [a, b] = span, w = Math.max(b - a, 1e-3);
+  return { url, span, toCommon: (t) => (t - a) / w, fromCommon: (c) => a + c * w };
+}
+
+/** Original -> edited time through the edited regions (listen pairs): pieces between regions keep their length. */
+function editMap(pairs, originalS, editedS) {
+  const xs = [0], ys = [0];
+  for (const p of [...pairs].sort((a, b) => a.original[0] - b.original[0])) {
+    for (const k of [0, 1]) if (p.original[k] > xs[xs.length - 1] && p.edited[k] > ys[ys.length - 1]) { xs.push(p.original[k]); ys.push(p.edited[k]); }
+  }
+  xs.push(Math.max(originalS, xs[xs.length - 1])); ys.push(Math.max(editedS, ys[ys.length - 1]));
+  return { xs, ys };
+}
+
+/**
+ * Plays one of several recordings over its span, looped or once; switching keeps the place (the same share of a region,
+ * or the same moment of the reading). A start stops every other playback on the page.
+ */
+class LoopPlayer {
+  constructor(tracks, loop, onchange) {
+    Object.assign(this, { tracks, loop, onchange, side: "fixed", playing: false, token: 0, media: {} });
+  }
+
+  element(side) {
+    if (!this.media[side]) this.media[side] = Object.assign(new Audio(this.tracks[side].url), { preload: "auto" });
+    return this.media[side];
+  }
+
+  async play(side = this.side) {
+    const at = this.playing ? this.tracks[this.side].toCommon(this.element(this.side).currentTime) : null;
+    stopAll();
+    S.fix.player = this;
+    this.side = side;
+    const token = ++this.token, track = this.tracks[side], media = this.element(side), [a, b] = track.span;
+    this.playing = true;
+    this.onchange();
+    const current = () => token === this.token;
+    try {
+      if (media.readyState < 1) await new Promise((resolve, reject) => { media.addEventListener("loadedmetadata", resolve, { once: true }); media.addEventListener("error", reject, { once: true }); });
+      if (!current()) return;
+      media.currentTime = at == null ? a : Math.min(Math.max(track.fromCommon(at), a), b);
+      await media.play();
+    } catch {
+      if (current()) { this.playing = false; this.onchange(); }
+      return;
+    }
+    const tick = () => {
+      if (!current()) return;
+      // A seek can fail before the audio is seekable (a server without range requests): the region start is set again.
+      if (media.currentTime < a - 0.25) media.currentTime = a;
+      else if (media.currentTime >= b - 0.02 || media.ended) {
+        if (!this.loop) { this.stop(); return; }
+        media.currentTime = a;
+        if (media.paused) media.play().catch(() => {});
+      }
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }
+
+  stop() {
+    this.token += 1;
+    Object.values(this.media).forEach((m) => m.pause());
+    if (!this.playing) return;
+    this.playing = false;
+    this.onchange();
+  }
+
+  toggle() { if (this.playing) this.stop(); else this.play(); }
+}
+
+/** The side switch and the play button of a player; their state follows the player. */
+function playerControls(player, sides, note) {
+  const buttons = sides.filter(([side]) => player.tracks[side]).map(([side, label]) => el("button", { type: "button", class: "ab-opt", "data-side": side,
+    "aria-pressed": "false", onclick: () => player.play(side) }, label));
+  const play = el("button", { type: "button", class: "loop-btn", onclick: () => player.toggle() });
+  const show = () => {
+    buttons.forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.side === player.side)));
+    play.classList.toggle("playing", player.playing);
+    play.textContent = player.playing ? "Stop" : player.loop ? "Play, looping" : "Play";
+  };
+  player.onchange = show;
+  show();
+  return el("div", { class: "abc" }, el("div", { class: "ab-toggle", role: "group", "aria-label": "Listen to" }, ...buttons), play,
+    note ? el("p", { class: "note", text: note }) : null);
+}
+
+/** The fix of one finding in plain words, and its three-way player once the server has fixed it. */
+function fixerView(f) {
+  const entry = fixSource() ? S.fix.jobs.get(f.id) : null;
+  if (!entry) return el("div", { class: "fixer", "data-fixer": f.id, hidden: "" });
+  const box = el("div", { class: "fixer", "data-fixer": f.id });
+  if (entry.state !== "done") {
+    box.append(entry.state === "running" ? progressLine(entry) : el("p", { class: "fix-error", text: entry.error }));
+    return box;
+  }
+  const done = entry.fix, fx = done.fixes.find((x) => x.finding === f.id), outcome = fx?.outcome || "unfixable";
+  box.classList.add(`is-${outcome}`);
+  box.append(el("p", { class: "fix-head", text: outcome === "unfixable" ? `${FIX_HEAD.unfixable}: ${fx?.reason || ""}` : FIX_HEAD[outcome] }));
+  if (outcome === "partly" && fx.reason) box.append(el("p", { class: "fix-reason", text: fx.reason }));
+  if (outcome !== "unfixable") box.append(el("p", { class: "fix-score" }, "Score ", el("b", { text: scoreText(done.score_before) }), " → ", el("b", { text: scoreText(done.score_after) })));
+  box.append(...fixNotes(done));
+  const pair = done.listen.find((p) => p.finding === f.id);
+  if (!pair || outcome === "unfixable") return box;
+  if (!entry.player) {
+    const r = S.result, context = Math.max(pair.original[0] - pair.original_context[0], pair.original_context[1] - pair.original[1]);
+    const tracks = { yours: regionTrack(S.base + r.participant.audio, pair.original_context), fixed: regionTrack(entry.audio, pair.edited_context) };
+    if (!isSelf(r) && r.baseline.audio && f.b) tracks.target = regionTrack(S.base + r.baseline.audio, [Math.max(0, f.b[0] - context), Math.min(r.baseline.duration, f.b[1] + context)]);
+    entry.player = new LoopPlayer(tracks, true, () => {});
+  }
+  box.append(playerControls(entry.player, LISTEN_SIDES, "Loops these words with a second before and after."));
+  return box;
+}
+
+function progressLine(entry) {
+  return el("p", { class: "fix-progress", role: "status" }, el("span", { class: "spin", "aria-hidden": "true" }), FIX_STAGE_TEXT[entry.stage] || FIX_STAGE_TEXT.edit);
+}
+
+/** Cautions under a fix: spots the edit made stand out, and a check of the edited recording that did not pass. */
+function fixNotes(done) {
+  return [done.new_findings ? el("p", { class: "note", text: done.new_findings === 1 ? "The edit made one other spot stand out." : `The edit made ${done.new_findings} other spots stand out.` }) : null,
+    done.checks_passed ? null : el("p", { class: "note", text: "Listen before you rely on this: one check of the edited recording did not pass." })].filter(Boolean);
+}
+
+/** A repair reason names findings by id; the page numbers them. */
+const numbered = (text) => text.replace(/\b(d\d-\d{3})\b/g, (id) => `#${findingNumber(id)}`);
+
+function fixAllLine(fix) {
+  const n = (k) => fix.fixes.filter((x) => x.outcome === k).length, parts = [];
+  if (n("fixed")) parts.push(`${n("fixed")} ${n("fixed") === 1 ? "spot" : "spots"} fixed`);
+  if (n("partly")) parts.push(`${n("partly")} partly fixed`);
+  if (n("unfixable")) parts.push(`${n("unfixable")} can't be fixed by editing`);
+  return parts.join(", ") + ".";
+}
+
+/** "Fix everything and listen": the button, then the score before and after, the whole reading as yours or fixed, and each fix. */
+function renderFixAll() {
+  const wrap = $("#fix-all"), body = $("#fix-all-body"), r = S.result;
+  wrap.hidden = !fixSource();
+  if (wrap.hidden) return;
+  const entry = S.fix.jobs.get("all");
+  $("#fix-all-btn").hidden = entry?.state === "done";
+  $("#fix-all-btn").disabled = !!S.fix.busy;
+  body.replaceChildren();
+  if (!entry) return;
+  if (entry.state !== "done") {
+    body.append(entry.state === "running" ? progressLine(entry) : el("p", { class: "fix-error", text: entry.error }));
+    return;
+  }
+  const fix = entry.fix;
+  if (!entry.player) {
+    const map = editMap(fix.listen, r.participant.duration, fix.duration);
+    entry.player = new LoopPlayer({ yours: { url: S.base + r.participant.audio, span: [0, r.participant.duration], toCommon: (t) => t, fromCommon: (t) => t },
+      fixed: { url: entry.audio, span: [0, fix.duration], toCommon: (t) => interp(t, map.ys, map.xs), fromCommon: (t) => interp(t, map.xs, map.ys) } }, false, () => {});
+  }
+  const items = r.flaws.map((f, i) => [f, i, fix.fixes.find((x) => x.finding === f.id)]).filter(([, , x]) => x);
+  body.append(
+    el("p", { class: "fix-all-score", "aria-label": `Score ${scoreText(fix.score_before)} before the edits, ${scoreText(fix.score_after)} after` },
+      el("span", { class: "from", text: scoreText(fix.score_before) }), el("span", { class: "arrow", text: "→" }), el("span", { class: "to", text: scoreText(fix.score_after) })),
+    el("p", { class: "note", text: `Your whole reading with every fix applied. ${fixAllLine(fix)}` }),
+    playerControls(entry.player, LISTEN_SIDES.slice(0, 2), null),
+    ...fixNotes(fix),
+    el("details", { class: "fix-list" }, el("summary", { text: "What each fix did" }),
+      el("ul", {}, ...items.map(([f, i, x]) => el("li", { class: `is-${x.outcome}` },
+        el("button", { type: "button", class: "plain", onclick: () => select(i, { scroll: true }), text: `#${i + 1} ${findingText(f)}` }),
+        el("span", { text: x.covered_by && x.outcome !== "unfixable" ? `${FIX_HEAD[x.outcome]}, with #${findingNumber(x.covered_by)}` :
+          x.outcome === "unfixable" ? `${FIX_HEAD.unfixable}: ${numbered(x.reason)}` : x.reason ? `${FIX_HEAD[x.outcome]}: ${x.reason}` : FIX_HEAD[x.outcome] }))))));
+}
+
 // ---------------------------------------------------------------------------------------------------- render
 /**
  * [index, kind, focused] of the item a page opens on: the gallery item's `focus` id, else the costliest finding, else
@@ -1512,10 +1820,16 @@ function initialSelection(r, focus) {
   return [differences().length ? 0 : null, "difference", false];
 }
 
-function render(r, base, focus = null) {
+/** source: where a fix of this result runs ({kind: "gallery" | "job", id}). */
+function render(r, base, focus = null, source = null) {
   stopAll();
+  S.rawIds = r.flaws.map((f) => f.id);   // a fix request names a finding by its index in the stored result
   // Temporal numbers are stable even when the highest-impact whole-passage finding leads the list.
   r = { ...r, flaws: [...r.flaws].sort((a, b) => (a.p?.[0] ?? 0) - (b.p?.[0] ?? 0)) };
+  S.base = base;
+  S.fix.source = source;
+  S.fix.jobs = new Map();
+  S.fix.player = null;
   S.result = r; S.sel = null; S.selKind = "flaw"; S.filter = null; S.chart = null; S.rid += 1;
   S.allDimensions = false;
   S.pattern = null;
@@ -1528,6 +1842,7 @@ function render(r, base, focus = null) {
   $("#listed-wrap").open = false;   // one panel element and one list column serve every example
   for (const box of [$(".side"), $("#flaws"), $("#differences"), $("#listed")]) box.scrollTop = 0;
   renderLedger(r);
+  renderFixAll();
   renderFilters(r);
   renderFlawList();
   renderDifferenceList();
@@ -1602,7 +1917,7 @@ async function openExample(it) {
     document.querySelectorAll(".chip").forEach((c) => c.setAttribute("aria-pressed", String(c.dataset.id === it.id)));
     showPicked(exampleName(it));
     showAlert("");
-    await crossFade(() => render(r, "gallery/", it.focus));
+    await crossFade(() => render(r, "gallery/", it.focus, { kind: "gallery", id: it.id }));
   } catch (e) {
     if (request === S.openId) { $("#clock").textContent = "Audio unavailable"; showAlert(`The example could not be loaded: ${e.message}`); }
   }
@@ -1627,6 +1942,8 @@ function baselineText(b) {
       : `Compared with the first of ${refs.length} readings, by ${refs[0].reader}: five are needed to combine them.` };
 }
 
+const NO_REFERENCE = "none";   // the picker value of an upload without a reference reading
+const NO_REFERENCE_NOTE = "Without a reference, your reading is graded against itself: each stretch is compared with how you read the rest. A reference reading of the same text catches more.";
 const OWN_REFERENCE_NOTE = "Add up to five readings of the same text by different people. With five, the comparison catches far more timing problems.";
 
 /** The note under the reference field when the user uploads their own references: the advice, then what the chosen files give. */
@@ -1642,12 +1959,14 @@ async function setupUpload(index) {
   const sel = $("#f-baseline");
   const bundled = index.baselines || [index.baseline];
   sel.replaceChildren(...bundled.map((b) => el("option", { value: b.id, text: baselineText(b).label })),
-    el("option", { value: "", text: "Upload my own reference recordings" }));
+    el("option", { value: "", text: "Upload my own reference recordings" }), el("option", { value: NO_REFERENCE, text: "No reference: grade my reading on its own" }));
   const prefill = () => {
-    const own = sel.value === "", b = bundled.find((x) => x.id === sel.value);
+    const own = sel.value === "", none = sel.value === NO_REFERENCE, b = bundled.find((x) => x.id === sel.value);
     $("#own-baseline").hidden = !own;
-    $("#baseline-note").textContent = own ? ownReferenceNote($("#f-baseline-audio").files) : baselineText(b).note;
-    if (!own && !$("#f-text").dataset.edited) $("#f-text").value = b.text || "";
+    $("#baseline-note").textContent = none ? NO_REFERENCE_NOTE : own ? ownReferenceNote($("#f-baseline-audio").files) : baselineText(b).note;
+    $("#text-label").textContent = none ? "Transcript: the exact words you read" : "Transcript: the exact words both recordings read";
+    $("#compare-note").textContent = none ? "Your recording is graded against itself." : "Your recording is compared as a different speaker from the reference reading.";
+    if (b && !$("#f-text").dataset.edited) $("#f-text").value = b.text || "";
   };
   sel.addEventListener("change", prefill);
   $("#f-baseline-audio").addEventListener("change", prefill);
@@ -1668,6 +1987,9 @@ async function setupUpload(index) {
   }
   S.limits = health.limits;
   S.flagLimits = health.flag_limits || {};
+  S.fix.info = health.fix || null;
+  sel.querySelector(`option[value="${NO_REFERENCE}"]`).disabled = health.self?.available === false;
+  if (S.result) { renderSummary(S.result); renderFixAll(); if (selected()) renderExplain(); }   // an example opened before the server answered gains its fix buttons
   if (S.result) renderLimit(S.result);   // an example that loaded before the server answered gains its five-reading line
   const mb = (bytes) => Math.round(bytes / 2 ** 20);
   $("#limits").textContent = `${mb(health.limits.max_bytes)} MB per file` + (health.limits.max_total_bytes ? `, ${mb(health.limits.max_total_bytes)} MB in all` : "")
@@ -1692,18 +2014,20 @@ async function submitUpload(ev) {
   ev.preventDefault();
   const msg = $("#stage-msg");
   msg.className = "note"; msg.textContent = "";
-  const audio = $("#f-audio").files[0], own = $("#f-baseline").value === "", ownFiles = own ? [...$("#f-baseline-audio").files] : [];
+  const audio = $("#f-audio").files[0], own = $("#f-baseline").value === "", none = $("#f-baseline").value === NO_REFERENCE;
+  const ownFiles = own ? [...$("#f-baseline-audio").files] : [];
   if (!audio) return fail("Choose your recording.");
   if (own && !ownFiles.length) return fail("Choose your reference recordings, or pick a bundled one.");
   if (ownFiles.length > (S.limits?.max_references || 5)) return fail("Choose at most five reference recordings.");
-  if (!$("#f-text").value.trim()) return fail("Enter the transcript: the exact words both recordings read.");
+  if (!$("#f-text").value.trim()) return fail(none ? "Enter the transcript: the exact words you read." : "Enter the transcript: the exact words both recordings read.");
   const files = [audio, ...ownFiles];
   if (S.limits && files.some((f) => f.size > S.limits.max_bytes)) return fail(`A file is larger than ${Math.round(S.limits.max_bytes / 2 ** 20)} MB.`);
   if (S.limits?.max_total_bytes && files.reduce((sum, f) => sum + f.size, 0) > S.limits.max_total_bytes) return fail(`The files together are larger than ${Math.round(S.limits.max_total_bytes / 2 ** 20)} MB.`);
   const fd = new FormData();
   fd.append("audio", audio);
   fd.append("transcript", $("#f-text").value);
-  if (own) for (const f of ownFiles) fd.append("baseline_audio", f); else fd.append("baseline_id", $("#f-baseline").value);
+  if (own) for (const f of ownFiles) fd.append("baseline_audio", f);
+  else if (!none) fd.append("baseline_id", $("#f-baseline").value);
   $("#submit").disabled = true;
   document.body.classList.add("busy");
   showStages(["decode", "align", "features", "compare", "detect"], "decode");
@@ -1737,7 +2061,7 @@ async function poll(id) {
       S.openId += 1;
       document.querySelectorAll(".chip").forEach((c) => c.setAttribute("aria-pressed", "false"));
       showPicked("Your analysis");
-      render(r, "");
+      render(r, "", null, { kind: "job", id });
       $("#ledger").scrollIntoView({ block: "start" });
       return;
     }
@@ -1760,6 +2084,7 @@ async function init() {
   linkPeek();
   $("#ab-you").addEventListener("click", () => setSide("you"));
   $("#ab-ref").addEventListener("click", () => setSide("ref"));
+  $("#fix-all-btn").addEventListener("click", fixEverything);
   setTimeout(() => document.body.classList.remove("intro"), INTRO_MS);
   if (reducedMotion()) document.body.classList.remove("intro");
   // The page keeps room for the fixed player bar, whose height changes when it wraps at phone width.

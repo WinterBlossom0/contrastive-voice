@@ -8,12 +8,13 @@ import time
 import urllib.error
 import urllib.request
 import uuid
+from types import SimpleNamespace
 
 import numpy as np
 import pytest
 import uvicorn
 
-from cvoice import app as appmod, audio, config as C, gallery
+from cvoice import app as appmod, audio, config as C, gallery, repair
 
 TEXT = "we hold these truths to be self evident. That all men are created equal."
 BANK_TEXT = "We are met on a great battlefield of that war. We have come to dedicate a portion of that field."
@@ -39,15 +40,20 @@ def server(tmp_path, monkeypatch):
     det.write_text("{}")
     seen = {}
 
-    def fake_analyze(mine, tr, ref, *, regime, detector, baseline_meta, participant_meta, progress, refuse_mismatch, references):
+    def fake_analyze(mine, tr, ref=None, *, regime, participant_meta, progress, refuse_mismatch, cache_dir, detector=None, baseline_meta=None,
+                     references=None):
         for stage in ("align", "features", "compare", "detect"):
             progress(stage)
-        seen.update(regime=regime, words=len(tr), mine=len(mine), baseline=baseline_meta["id"], refuse=refuse_mismatch, ref=len(ref),
-                    references=None if references is None else [len(x) for x in references])
-        mode = "consensus5" if references and len(references) >= C.CONSENSUS_K else "single"
-        detection = {"reference_mode": mode, "reference_count": C.CONSENSUS_K if mode == "consensus5" else 1,
-                     "references_available": len(references or [ref])}
-        return {"schema": 2, "regime": regime, "participant": participant_meta, "baseline": baseline_meta, "detection": detection}
+        seen.update(regime=regime, words=len(tr), mine=len(mine), baseline=(baseline_meta or {}).get("id"), refuse=refuse_mismatch,
+                    ref=None if ref is None else len(ref), references=None if references is None else [len(x) for x in references])
+        if regime == "SELF":
+            detection = {"reference_mode": "none", "reference_count": 0, "references_available": 0}
+        else:
+            mode = "consensus5" if references and len(references) >= C.CONSENSUS_K else "single"
+            detection = {"reference_mode": mode, "reference_count": C.CONSENSUS_K if mode == "consensus5" else 1,
+                         "references_available": len(references or [ref])}
+        return {"schema": 2, "regime": regime, "participant": participant_meta, "baseline": baseline_meta or {"duration": 2.0}, "detection": detection,
+                "flaws": [{"id": "d1-001", "dimension": "D1"}, {"id": "d5-002", "dimension": "D5"}], "scores": {"overall": 90.0}}
 
     monkeypatch.setattr(appmod, "analyze", fake_analyze)
     monkeypatch.setattr(appmod, "load_detector", lambda path: {})
@@ -107,6 +113,58 @@ def wait_done(base, jid):
             return job
         time.sleep(0.05)
     raise AssertionError("job did not finish")
+
+
+def post_json(url, body):
+    req = urllib.request.Request(url, data=json.dumps(body).encode(), headers={"Content-Type": "application/json"})
+    try:
+        with urllib.request.urlopen(req) as r:
+            return r.status, json.loads(r.read())
+    except urllib.error.HTTPError as e:
+        return e.code, json.loads(e.read())
+
+
+def fake_repair(monkeypatch, gate: threading.Event | None = None) -> list:
+    """Replaces the repair calls of app.run_fix with fast stand-ins: the first finding of a fix is applied and removed, any
+    other one is unfixable. gate: the fix waits for it, so a test can hold a fix job running. Returns the calls made."""
+    calls = []
+
+    def outcome(result, wav, flaws):
+        fixes = [repair.Fix(f["id"], f["dimension"], "RUSH", repair.APPLIED, "stretch", 0.8, 0.8, share=1.0) if k == 0 else
+                 repair.Fix(f["id"], f["dimension"], "FADE", repair.UNFIXABLE, None, None, None, "record these words again.") for k, f in enumerate(flaws)]
+        return SimpleNamespace(audio=wav[: len(wav) // 2], fixes=fixes)
+
+    def fix_finding(result, wav, index, *, pitch_method, transcript):
+        if gate is not None:
+            gate.wait(10)
+        calls.append(("one", index, pitch_method, transcript))
+        return outcome(result, wav, [result["flaws"][index]])
+
+    def fix_all(result, wav, *, pitch_method, transcript):
+        calls.append(("all", None, pitch_method, transcript))
+        return outcome(result, wav, result["flaws"])
+
+    def verify(out, result, kwargs):
+        calls.append(("verify", sorted(k for k, v in kwargs.items() if v is not None)))
+        first = out.fixes[0].finding
+        return {"score_before": 90.0, "score": 95.0, "reproduced": True, "removed": [first], "new_findings": [],
+                "remaining": [{"id": f["id"], "now": []} for f in result["flaws"] if f["id"] != first],
+                "placebo": {"within_tolerance": True}, "pitch_check": [], "alignment": {"words_off": []}}
+
+    monkeypatch.setattr(appmod.repair, "fix_finding", fix_finding)
+    monkeypatch.setattr(appmod.repair, "fix_all", fix_all)
+    monkeypatch.setattr(appmod.repair, "verify", verify)
+    monkeypatch.setattr(appmod.repair, "listen_pairs", lambda out, context_s: [
+        {"finding": out.fixes[0].finding, "original": [0.5, 1.0], "edited": [0.5, 0.8], "original_context": [0, 1.5], "edited_context": [0, 1.3]}])
+    return calls
+
+
+def finished_analysis(base, tmp, **fields):
+    s, body, _ = call(f"{base}/api/analyze", {"audio": ("a.wav", wav_bytes(tmp)), "transcript": TEXT, **fields})
+    assert s == 200, body
+    jid = json.loads(body)["job_id"]
+    assert wait_done(base, jid)["state"] == "done"
+    return jid
 
 
 def test_health_static_and_gallery(server):
@@ -226,7 +284,7 @@ def test_index_without_a_baselines_list_offers_its_one_baseline(tmp_path):
     ({"audio": ("a.m3u", b"#EXTM3U\nhttp://example.com/x\n"), "transcript": TEXT, "baseline_id": "base"}, 415),   # sniffed, never named
     ({"audio": ("a.wav", b"RIFF"), "transcript": "  ", "baseline_id": "base"}, 422),                               # empty transcript
     ({"audio": ("a.wav", b"RIFF"), "transcript": "meet at 10:30 am", "baseline_id": "base"}, 422),             # cannot be spelled (10:30)
-    ({"audio": ("a.wav", b"RIFF"), "transcript": TEXT}, 422),                                                      # no baseline
+    ({"audio": ("a.wav", b"RIFF"), "transcript": TEXT, "baseline_id": "base", "baseline_audio": ("b.wav", b"RIFF")}, 422),  # both
     ({"audio": ("a.wav", b"RIFF"), "transcript": TEXT, "baseline_id": "other"}, 422),                              # unknown baseline
     ({"audio": ("a.wav", b"RIFF"), "baseline_id": "base"}, 422),                                                   # no transcript at all
 ])
@@ -320,3 +378,175 @@ def test_dashboard_script_copies_of_python_strings():
     assert json.loads(rows) == list(appmod.LIMIT_ROWS.values())
     stages = re.search(r"showStages\((\[[^\]]*\]), \"decode\"\)", script).group(1)
     assert tuple(json.loads(stages)) == appmod.STAGES
+    fix_stages = re.search(r"^const FIX_STAGES = (\[.*\]);", script, re.M).group(1)
+    assert tuple(json.loads(fix_stages)) == appmod.FIX_STAGES
+    assert re.search(r'^const SELF_MODE = "([^"]*)";', script, re.M).group(1) == "none"   # pipeline.analyze_self reference_mode
+
+
+def test_upload_without_a_reference_runs_the_self_mode(server):
+    base, seen, tmp = server
+    s, body, _ = call(f"{base}/api/analyze", {"audio": ("a.wav", wav_bytes(tmp)), "transcript": TEXT})
+    assert s == 200, body
+    jid = json.loads(body)["job_id"]
+    job = wait_done(base, jid)
+    assert job["state"] == "done" and job["kind"] == "analysis" and seen["regime"] == "SELF" and seen["ref"] is None and seen["baseline"] is None
+    assert job["reference"] == {"reference_mode": "none", "reference_count": 0, "references_available": 0}
+    res = json.loads(call(f"{base}/{job['result']}")[1])
+    assert res["regime"] == "SELF" and res["participant"]["audio"] == f"api/jobs/{jid}/participant.wav"
+    assert call(f"{base}/api/jobs/{jid}/baseline.wav")[0] == 404   # no reference audio to serve
+    h = json.loads(call(f"{base}/api/health")[1])
+    assert h["self"]["available"] and h["fix"] == {"available": True, "examples": []}
+
+
+@pytest.mark.parametrize("body,kind", [({"finding": 1}, "one"), ({"all": True}, "all")])
+def test_fix_job_lifecycle(server, monkeypatch, body, kind):
+    base, _, tmp = server
+    calls = fake_repair(monkeypatch)
+    jid = finished_analysis(base, tmp, baseline_id="base")
+    s, made = post_json(f"{base}/api/jobs/{jid}/fix", body)
+    assert s == 200, made
+    job = wait_done(base, made["job_id"])
+    assert job["state"] == "done" and job["kind"] == "fix" and job["stages"] == list(appmod.FIX_STAGES), job
+    assert calls[0] == (kind, 1 if kind == "one" else None, "own", TEXT)
+    assert calls[1] == ("verify", ["baseline", "cache_dir", "detector", "transcript"])   # the analysis's own inputs
+    fix = job["fix"]
+    assert fix["score_before"] == 90.0 and fix["score_after"] == 95.0 and fix["checks_passed"] and fix["new_findings"] == 0
+    assert fix["target"] == ("d5-002" if kind == "one" else "all")
+    outcomes = {f["finding"]: (f["outcome"], f["reason"]) for f in fix["fixes"]}
+    if kind == "one":
+        assert outcomes == {"d5-002": ("fixed", "")}
+    else:
+        assert outcomes == {"d1-001": ("fixed", ""), "d5-002": ("unfixable", "Record these words again.")}
+    assert fix["listen"][0]["edited_context"] == [0, 1.3]
+    assert job["audio"] == f"api/jobs/{made['job_id']}/fixed.wav"
+    s, data, hdr = call(f"{base}/{job['audio']}")
+    assert s == 200 and hdr["content-type"] == "audio/wav"
+    (tmp / "fixed.wav").write_bytes(data)
+    assert len(audio.read_wav(tmp / "fixed.wav")) == int(2.0 * C.SR) // 2
+    assert call(f"{base}/api/jobs/{made['job_id']}/result.json")[0] == 404   # a fix job has no analysis result
+
+
+def test_fix_of_a_self_result_reanalyses_without_a_reference(server, monkeypatch):
+    base, _, tmp = server
+    calls = fake_repair(monkeypatch)
+    jid = finished_analysis(base, tmp)
+    s, made = post_json(f"{base}/api/jobs/{jid}/fix", {"all": True, "pitch_method": "contour"})
+    assert s == 200 and wait_done(base, made["job_id"])["state"] == "done"
+    assert calls == [("all", None, "contour", TEXT), ("verify", ["cache_dir", "transcript"])]
+
+
+def test_one_job_at_a_time_for_analysis_and_fix(server, monkeypatch):
+    base, _, tmp = server
+    gate = threading.Event()
+    fake_repair(monkeypatch, gate)
+    jid = finished_analysis(base, tmp, baseline_id="base")
+    s, made = post_json(f"{base}/api/jobs/{jid}/fix", {"finding": 0})
+    assert s == 200
+    try:
+        s, busy = post_json(f"{base}/api/jobs/{jid}/fix", {"all": True})
+        assert s == 429 and busy["detail"] == appmod.BUSY
+        s, body, _ = call(f"{base}/api/analyze", {"audio": ("a.wav", wav_bytes(tmp)), "transcript": TEXT, "baseline_id": "base"})
+        assert s == 429 and json.loads(body)["detail"] == appmod.BUSY
+        assert json.loads(call(f"{base}/api/jobs/{made['job_id']}")[1])["state"] in ("queued", "running")
+    finally:
+        gate.set()
+    assert wait_done(base, made["job_id"])["state"] == "done"
+    s, again = post_json(f"{base}/api/jobs/{jid}/fix", {"all": True})   # the queue is free again
+    assert s == 200 and wait_done(base, again["job_id"])["state"] == "done"
+
+
+@pytest.mark.parametrize("body,status,detail", [
+    ({"finding": 2}, 422, "This analysis has no finding number 2."),
+    ({"finding": -1}, 422, "This analysis has no finding number -1."),
+    ({}, 422, 'Send either {"finding": <number>} or {"all": true}.'),
+    ({"finding": 0, "all": True}, 422, 'Send either {"finding": <number>} or {"all": true}.'),
+])
+def test_bad_fix_requests_are_refused_in_plain_words(server, monkeypatch, body, status, detail):
+    base, _, tmp = server
+    calls = fake_repair(monkeypatch)
+    jid = finished_analysis(base, tmp, baseline_id="base")
+    s, reply = post_json(f"{base}/api/jobs/{jid}/fix", body)
+    assert (s, reply["detail"]) == (status, detail) and not calls
+
+
+def test_fix_needs_a_finished_analysis_and_a_known_example(server, monkeypatch):
+    base, _, tmp = server
+    fake_repair(monkeypatch)
+    assert post_json(f"{base}/api/jobs/{'0' * 32}/fix", {"all": True})[0] == 404
+    s, body, _ = call(f"{base}/api/analyze", {"audio": ("a.wav", b"RIFF....WAVEjunk"), "transcript": TEXT, "baseline_id": "base"})
+    jid = json.loads(body)["job_id"]
+    assert wait_done(base, jid)["state"] == "error"
+    s, reply = post_json(f"{base}/api/jobs/{jid}/fix", {"all": True})
+    assert s == 409 and reply["detail"] == "Only a finished analysis can be fixed."
+    s, reply = post_json(f"{base}/api/gallery/nope/fix", {"all": True})
+    assert s == 404 and reply["detail"] == "Unknown example."
+    assert post_json(f"{base}/api/gallery/..%2fx/fix", {"all": True})[0] >= 400   # never reaches the file system
+
+
+def test_gallery_source_finds_the_bundled_text_and_bank(tmp_path):
+    g = tmp_path
+    (g / "results").mkdir()
+    for name in ("one", "bank", "other"):
+        (g / "results" / f"{name}.json").write_text(json.dumps({"regime": "R2" if name == "bank" else "R1"}))
+    bank = {"id": "bank", "title": "Bank", "audio": "audio/r0.wav", "text": BANK_TEXT, "references": [{"id": f"r{k}", "audio": f"audio/r{k}.wav"} for k in range(3)]}
+    items = [{"id": "one", "baseline": "base", "audio": "audio/one.wav", "result": "results/one.json"},
+             {"id": "bank", "baseline": "r0", "audio": "audio/bank.wav", "result": "results/bank.json"},
+             {"id": "other", "baseline": "elsewhere", "audio": "audio/other.wav", "result": "results/other.json"}]
+    (g / "index.json").write_text(json.dumps({"baselines": [{"id": "base", "title": "Base", "audio": "audio/base.wav", "text": TEXT}, bank], "items": items}))
+    one, banked, other = (appmod.gallery_source(g, it) for it in items)
+    assert one == appmod.FixSource(g / "audio/one.wav", g / "results/one.json", TEXT, "R1", g / "audio/base.wav", None)
+    assert banked.references == tuple(g / f"audio/r{k}.wav" for k in range(3)) and banked.baseline == g / "audio/r0.wav" and banked.regime == "R2"
+    assert other is None and appmod.fixable_examples(g) == ["one", "bank"]
+
+
+def test_plain_outcome_of_each_fix_status():
+    fix = lambda status, reason="": repair.Fix("d1-001", "D1", "RUSH", status, None, None, None, reason)  # noqa: E731
+    assert appmod.plain_outcome(fix(repair.APPLIED), {"d1-001"}) == ("fixed", "")
+    assert appmod.plain_outcome(fix(repair.CAPPED, "partial fix: ..."), {"d1-001"}) == ("fixed", "")
+    assert appmod.plain_outcome(fix(repair.CAPPED, "partial fix: ..."), set()) == ("partly", appmod.CAPPED_WORDS)
+    assert appmod.plain_outcome(fix(repair.APPLIED), set()) == ("partly", appmod.STILL_FLAGGED_WORDS)
+    assert appmod.plain_outcome(fix(repair.SKIPPED, "skipped: the allowed edit ..."), set()) == ("unfixable", appmod.INAUDIBLE_WORDS)
+    assert appmod.plain_outcome(fix(repair.SKIPPED, "skipped: other fixes of these words ..."), set()) == ("unfixable", appmod.SHARED_CAP_WORDS)
+    assert appmod.plain_outcome(fix(repair.UNFIXABLE, "clarity cannot be edited."), set()) == ("unfixable", "Clarity cannot be edited.")
+
+
+@pytest.mark.slow
+def test_real_fix_of_a_gallery_example(tmp_path):
+    """The real repair and re-analysis of gallery L3A: one finding and all of them, served as audio."""
+    from cvoice.pipeline import ROOT
+    g = ROOT / "gallery"
+    if not (g / "results" / "L3A.json").exists():
+        pytest.skip("no gallery")
+    with socket.socket() as sock:
+        sock.bind(("127.0.0.1", 0))
+        port = sock.getsockname()[1]
+    srv = uvicorn.Server(uvicorn.Config(appmod.create_app(g, work=tmp_path / "work"), host="127.0.0.1", port=port, log_level="warning"))
+    th = threading.Thread(target=srv.run, daemon=True)
+    th.start()
+    while not srv.started:
+        time.sleep(0.01)
+    base = f"http://127.0.0.1:{port}"
+    try:
+        assert "L3A" in json.loads(call(f"{base}/api/health")[1])["fix"]["examples"]
+        stored = json.loads((g / "results" / "L3A.json").read_text())
+        for body in ({"finding": 0}, {"all": True}):
+            s, made = post_json(f"{base}/api/gallery/L3A/fix", body)
+            assert s == 200, made
+            job = None
+            for _ in range(1200):
+                job = json.loads(call(f"{base}/api/jobs/{made['job_id']}")[1])
+                if job["state"] in ("done", "error"):
+                    break
+                time.sleep(0.25)
+            assert job["state"] == "done", job
+            fix = job["fix"]
+            assert fix["checks"]["reproduced"] and fix["score_before"] == stored["scores"]["overall"]
+            assert {f["finding"] for f in fix["fixes"]} == ({stored["flaws"][0]["id"]} if "finding" in body else {f["id"] for f in stored["flaws"]})
+            assert all(f["outcome"] in ("fixed", "partly", "unfixable") for f in fix["fixes"])
+            if "all" in body:
+                assert fix["score_after"] > fix["score_before"] and fix["listen"]
+            s, data, hdr = call(f"{base}/{job['audio']}")
+            assert s == 200 and data[:4] == b"RIFF"
+    finally:
+        srv.should_exit = True
+        th.join(5)

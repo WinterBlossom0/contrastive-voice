@@ -4,18 +4,25 @@
 
 The port defaults to the PORT environment variable when it is set (hosting platforms set it), else 7860.
 
-    GET  /api/health                       uploads possible? limits
-    POST /api/analyze                      multipart: audio, transcript (text) or transcript_file, baseline_id or baseline_audio
-                                           (one to MAX_REFERENCES files: the user's own reference bank, the first one shown)
-    GET  /api/jobs/{id}                    {state, stage, stages, error?, result?, reference?}
+    GET  /api/health                       uploads possible? limits; which gallery examples can be fixed
+    POST /api/analyze                      multipart: audio, transcript (text) or transcript_file, and baseline_id or
+                                           baseline_audio (one to MAX_REFERENCES files: the user's own reference bank, the
+                                           first one shown) or neither (no reference reading: the SELF mode)
+    POST /api/jobs/{id}/fix                JSON {"finding": index in result.flaws} or {"all": true}, optional "pitch_method":
+                                           fix the finding(s) of a finished analysis on its own recording, then re-analyse
+    POST /api/gallery/{item}/fix           the same for a bundled example
+    GET  /api/jobs/{id}                    {kind, state, stage, stages, error?; analysis: result?, reference?; fix: audio?, fix?}
     GET  /api/jobs/{id}/result.json        the analysis result JSON
-    GET  /api/jobs/{id}/{participant|baseline}.wav   the decoded audio the analysis used (Range-capable)
+    GET  /api/jobs/{id}/{participant|baseline|fixed}.wav   the decoded audio the analysis used, or the fixed audio (Range-capable)
     /gallery/...  /                        static files (gallery data, then the page)
 
 Regime rule: a bundled dataset clip against its own baseline is R1; anything else is R2. An upload is never a
-bundled clip, so every upload is analysed as R2. A bundled baseline with `references` (a reference bank) is passed to the
-pipeline as its bank, and so are two or more uploaded reference recordings; the pipeline selects the reference mode, and a
-finished job states the mode it used (`reference`).
+bundled clip, so every upload with a reference is analysed as R2, and an upload without one as SELF. A bundled baseline
+with `references` (a reference bank) is passed to the pipeline as its bank, and so are two or more uploaded reference
+recordings; the pipeline selects the reference mode, and a finished job states the mode it used (`reference`).
+
+Analysis and fix jobs share one queue: one job at a time. A fix job re-analyses with the inputs of its analysis (the
+decoded recordings and the transcript stay in the analysis job folder), so the scores before and after are comparable.
 """
 from __future__ import annotations
 
@@ -29,6 +36,7 @@ import time
 import traceback
 import uuid
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
@@ -36,17 +44,21 @@ import uvicorn
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from . import __version__, audio
+from . import __version__, audio, repair
 from . import config as C
 from .align import Transcript, TranscriptError, TranscriptMismatch, parse_transcript
 from .detect import load_detector, scale, threshold
 from .pipeline import DEFAULT_DETECTOR, ROOT, analyze, dumps
+from .selfref import DEFAULT_DETECTOR as SELF_DETECTOR
+from .selfref import NAME as SELF_REGIME
 
 GALLERY = ROOT / "gallery"
 STATIC = Path(__file__).parent / "static"
 STAGES = ("decode", "align", "features", "compare", "detect")
+FIX_STAGES = ("edit", "check")
 UPLOAD_REGIME = "R2"
 TRANSCRIPT_MAX_CHARS = 20_000  # characters; Starlette would accept 1 MB per text field
 JOB_TTL_S = 3600  # s, finished jobs and their files are swept after this
@@ -56,6 +68,13 @@ MAX_REFERENCES = C.CONSENSUS_K  # the pipeline uses at most CONSENSUS_K readings
 # Rows whose flag threshold is a plain physical change (speed factor, seconds, dB); pitch range has a regularising offset.
 LIMIT_ROWS = {"D1": "pace", "D2": "pauses", "D5": "volume"}
 MODE_REGIMES = {"single": "R2", "consensus5": "R2_consensus"}  # detector.json regime entry of each upload reference mode
+LISTEN_CONTEXT_S = 1.0  # s of audio before and after a fixed region in the page's looping player
+BUSY = "Another analysis or fix is running. Try again when it has finished."
+# Plain words for a fix that stopped short of its target, by repair.Fix status (the reason prefix tells the two skips apart).
+CAPPED_WORDS = "A larger change would sound processed, so the edit stops part of the way."
+SHARED_CAP_WORDS = "Other fixes already change these words as far as they can go without sounding processed."
+INAUDIBLE_WORDS = "The change that still sounds natural here is too small to hear."
+STILL_FLAGGED_WORDS = "The edit changed this spot, but it is still flagged."
 
 
 def max_request_bytes() -> int:
@@ -169,6 +188,11 @@ def reference_names(count: int) -> list[str]:
     return ["reference recording"] if count == 1 else [f"reference recording {k + 1}" for k in range(count)]
 
 
+def decoded_reference_names(count: int) -> list[str]:
+    """File names of the decoded references in the job folder; the first is the one the page plays."""
+    return ["baseline.wav", *(f"reference_{k + 1}.wav" for k in range(1, count))]
+
+
 def save_upload(file: UploadFile, dest: Path) -> None:
     """Write an upload under a server-chosen name and sniff its magic bytes; 415 when it is not audio."""
     with dest.open("wb") as fh:
@@ -180,13 +204,26 @@ def save_upload(file: UploadFile, dest: Path) -> None:
 
 
 # ============================================================================================ jobs
+@dataclass(frozen=True)
+class FixSource:
+    """The inputs of one analysis that a fix needs to re-analyse the edited recording the same way: canonical WAV files,
+    the transcript text and the regime. baseline and references are None in the SELF mode."""
+    participant: Path
+    result: Path
+    transcript: str
+    regime: str
+    baseline: Path | None = None
+    references: tuple[Path, ...] | None = None
+
+
 class Jobs:
-    """In-memory job table with one worker thread. Known limit: jobs are lost on restart and the table is wrong with more
-    than one uvicorn worker, so main() starts one worker."""
+    """In-memory job table with one worker thread for analysis and fix jobs. Known limit: jobs are lost on restart and the
+    table is wrong with more than one uvicorn worker, so main() starts one worker."""
 
     def __init__(self, work: Path):
         self.work, self.table = work, {}
-        work.mkdir(parents=True, exist_ok=True)
+        self.cache = work / "align-cache"  # alignments by audio and text hash: a fix re-analyses the unedited recording
+        self.cache.mkdir(parents=True, exist_ok=True)
         self.pool = ThreadPoolExecutor(max_workers=1)
         self.lock = threading.Lock()
 
@@ -194,44 +231,61 @@ class Jobs:
         for jid in [k for k, j in self.table.items() if j["state"] in ("done", "error") and time.monotonic() - j["born"] > JOB_TTL_S]:
             shutil.rmtree(self.work / jid, ignore_errors=True)
             del self.table[jid]
+        for cached in self.cache.glob("*.npz"):
+            if time.time() - cached.stat().st_mtime > JOB_TTL_S:
+                cached.unlink(missing_ok=True)
 
-    def new(self) -> tuple[str, Path] | None:
-        """A fresh job id and folder, or None while another analysis is queued or running."""
+    def new(self, kind: Literal["analysis", "fix"] = "analysis") -> tuple[str, Path] | None:
+        """A fresh job id and folder, or None while another job is queued or running."""
         with self.lock:
             if any(j["state"] in ("queued", "running") for j in self.table.values()):
                 return None
             self.sweep()
             jid = uuid.uuid4().hex  # server-generated: no client file name is ever used
             (self.work / jid).mkdir()
-            self.table[jid] = {"state": "queued", "stage": "decode", "born": time.monotonic()}
+            stage = STAGES[0] if kind == "analysis" else FIX_STAGES[0]
+            self.table[jid] = {"kind": kind, "state": "queued", "stage": stage, "born": time.monotonic()}
             return jid, self.work / jid
 
 
-def run_job(job: dict, folder: Path, tr, baseline: dict | None, detector: Path, own_count: int = 0) -> None:
-    """Worker: decode, analyse as R2 (against the bank when the baseline has one or the user uploaded two or more references),
-    write result.json. own_count: number of uploaded references (baseline is None then). Every failure becomes a plain message on the job."""
+def run_job(job: dict, folder: Path, text: str, baseline: dict | None, detector: Path, own_count: int = 0,
+            cache_dir: Path | None = None) -> None:
+    """Worker: decode, analyse as R2 (against the bank when the baseline has one or the user uploaded two or more references)
+    or, without any reference, as SELF; write result.json and keep the decoded inputs for a fix (job["source"]).
+    text: the transcript as sent; own_count: number of uploaded references (baseline is None then). Every failure becomes a
+    plain message on the job."""
     try:
         job.update(state="running", stage="decode")
+        tr = parse_transcript(text)
         participant_wav = audio.load_audio(folder / "your recording", C.MAX_UPLOAD_BYTES, C.MAX_UPLOAD_S)[0]
         audio.write_wav(folder / "participant.wav", participant_wav)
-        references = None
-        if baseline is None:
-            own = [audio.load_audio(folder / name, C.MAX_UPLOAD_BYTES, C.MAX_UPLOAD_S)[0] for name in reference_names(own_count)]
-            references = own if len(own) > 1 else None
-            reference_wav = own[0]
-            audio.write_wav(folder / "baseline.wav", reference_wav)
-            baseline_meta = {"id": "uploaded_baseline", "title": "Your baseline recording", "audio": f"api/jobs/{folder.name}/baseline.wav"}
+        participant_meta = {"id": folder.name, "title": "Your recording", "audio": f"api/jobs/{folder.name}/participant.wav"}
+        common = {"participant_meta": participant_meta, "progress": lambda stage: job.update(stage=stage), "refuse_mismatch": True,
+                  "cache_dir": cache_dir}
+        source = {"participant": folder / "participant.wav", "result": folder / "result.json", "transcript": text}
+        if baseline is None and own_count == 0:
+            res = analyze(participant_wav, tr, regime=SELF_REGIME, **common)
+            source = FixSource(**source, regime=SELF_REGIME)
         else:
-            if baseline.get("reference_wavs"):
-                references = [audio.read_wav(p) for p in baseline["reference_wavs"]]
-            reference_wav = references[0] if references else audio.read_wav(baseline["wav"])
-            baseline_meta = {"id": baseline["id"], "title": baseline["title"], "audio": f"gallery/{baseline['audio']}"}
-        res = analyze(participant_wav, tr, reference_wav, regime=UPLOAD_REGIME, detector=load_detector(detector), baseline_meta=baseline_meta, refuse_mismatch=True,
-                      participant_meta={"id": folder.name, "title": "Your recording", "audio": f"api/jobs/{folder.name}/participant.wav"},
-                      progress=lambda stage: job.update(stage=stage), references=references)
+            if baseline is None:
+                own = [audio.load_audio(folder / name, C.MAX_UPLOAD_BYTES, C.MAX_UPLOAD_S)[0] for name in reference_names(own_count)]
+                paths = [folder / name for name in decoded_reference_names(own_count)]
+                for path, wav in zip(paths, own):
+                    audio.write_wav(path, wav)
+                references, reference_wav, reference_paths = (own if len(own) > 1 else None), own[0], paths
+                baseline_meta = {"id": "uploaded_baseline", "title": "Your baseline recording", "audio": f"api/jobs/{folder.name}/baseline.wav"}
+            else:
+                reference_paths = list(baseline.get("reference_wavs") or [baseline["wav"]])
+                references = [audio.read_wav(p) for p in baseline["reference_wavs"]] if baseline.get("reference_wavs") else None
+                reference_wav = references[0] if references else audio.read_wav(baseline["wav"])
+                baseline_meta = {"id": baseline["id"], "title": baseline["title"], "audio": f"gallery/{baseline['audio']}"}
+            res = analyze(participant_wav, tr, reference_wav, regime=UPLOAD_REGIME, detector=load_detector(detector), baseline_meta=baseline_meta,
+                          references=references, **common)
+            source = FixSource(**source, regime=UPLOAD_REGIME, baseline=reference_paths[0],
+                               references=tuple(reference_paths) if references is not None else None)
         (folder / "result.json").write_text(dumps(res) + "\n")
         detection = res.get("detection", {})
-        job.update(state="done", stage="done", reference={k: detection.get(k) for k in REFERENCE_FIELDS})
+        job.update(state="done", stage="done", reference={k: detection.get(k) for k in REFERENCE_FIELDS}, source=source)
     except (audio.AudioError, TranscriptError) as e:
         job.update(state="error", error=str(e))
     except TranscriptMismatch as e:
@@ -244,12 +298,122 @@ def run_job(job: dict, folder: Path, tr, baseline: dict | None, detector: Path, 
             raw.unlink(missing_ok=True)
 
 
+# ============================================================================================ fix your speech
+class FixRequest(BaseModel):
+    """finding: index in the result's `flaws` list (the stored order); all: fix every finding."""
+    finding: int | None = None
+    all: bool = False
+    pitch_method: Literal["own", "contour"] = "own"
+
+
+def fix_target(request: FixRequest, result: dict) -> int | None:
+    """The finding index to fix, or None for all; 422 in plain words for anything else."""
+    if request.all == (request.finding is not None):
+        raise HTTPException(422, 'Send either {"finding": <number>} or {"all": true}.')
+    if request.all:
+        if not result.get("flaws"):
+            raise HTTPException(422, "This analysis has no findings to fix.")
+        return None
+    if not 0 <= request.finding < len(result.get("flaws", [])):
+        raise HTTPException(422, f"This analysis has no finding number {request.finding}.")
+    return request.finding
+
+
+def gallery_source(gallery: Path, item: dict) -> FixSource | None:
+    """The fix inputs of a bundled example: its audio, stored result and the bundled baseline it was analysed against
+    (a bank example names one of the bank's readings). None when the gallery bundles no text for that baseline."""
+    result_path = gallery / item["result"]
+    regime = json.loads(result_path.read_text())["regime"]
+    for baseline in bundled_baselines(gallery).values():
+        references = baseline.get("references") or []
+        if item.get("baseline") == baseline["id"]:
+            refs = tuple(gallery / r["audio"] for r in references) or None
+            return FixSource(gallery / item["audio"], result_path, baseline["text"], regime, gallery / baseline["audio"], refs)
+        if any(r["id"] == item.get("baseline") for r in references):
+            refs = tuple(gallery / r["audio"] for r in references)
+            return FixSource(gallery / item["audio"], result_path, baseline["text"], regime, refs[0], refs)
+    return None
+
+
+def fixable_examples(gallery: Path) -> list[str]:
+    items = json.loads((gallery / "index.json").read_text()).get("items", [])
+    return [it["id"] for it in items if it.get("result") and (gallery / it["result"]).exists() and gallery_source(gallery, it) is not None]
+
+
+def analyze_kwargs(source: FixSource, detector: Path, cache_dir: Path | None) -> dict:
+    """The pipeline.analyze arguments of the source's own analysis, other than the participant (repair.verify)."""
+    kwargs = {"transcript": source.transcript, "cache_dir": cache_dir}
+    if source.regime == SELF_REGIME:
+        return kwargs
+    references = None if source.references is None else [audio.read_wav(p) for p in source.references]
+    return {**kwargs, "baseline": references[0] if references else audio.read_wav(source.baseline), "references": references,
+            "detector": load_detector(detector)}
+
+
+def plain_outcome(fix: repair.Fix, removed: set[str]) -> tuple[str, str]:
+    """(fixed | partly | unfixable, the reason in plain words or ""), from the fix status and the re-analysis."""
+    if fix.status == repair.UNFIXABLE:
+        return "unfixable", fix.reason[:1].upper() + fix.reason[1:]
+    if fix.status == repair.SKIPPED:
+        return "unfixable", SHARED_CAP_WORDS if "other fixes" in fix.reason else INAUDIBLE_WORDS
+    if fix.finding in removed:
+        return "fixed", ""
+    return "partly", CAPPED_WORDS if fix.status == repair.CAPPED else STILL_FLAGGED_WORDS
+
+
+def covering_finding(fix: repair.Fix, result: dict) -> str | None:
+    """The id of the finding whose edit also fixes a covered finding (repair names it in the reason)."""
+    if fix.status != repair.COVERED:
+        return None
+    return next((f["id"] for f in result["flaws"] if f["id"] != fix.finding and f["id"] in fix.reason), None)
+
+
+def fix_summary(outcome: repair.FixOutcome, report: dict, finding: int | None, result: dict) -> dict:
+    """What the page shows: the score before and after, which findings went, stayed or are new, the checks of the
+    re-analysis, each fix in plain words, and the region of each edit in the original and the fixed audio."""
+    removed = set(report["removed"])
+    fixes = []
+    for fx in outcome.fixes:
+        status, words = plain_outcome(fx, removed)
+        fixes.append({"finding": fx.finding, "status": fx.status, "outcome": status, "reason": words, "detail": fx.reason,
+                      "share": fx.share, "covered_by": covering_finding(fx, result)})
+    placebo, alignment = report.get("placebo") or {}, report.get("alignment") or {}
+    checks = {"reproduced": bool(report.get("reproduced")), "placebo": bool(placebo.get("within_tolerance", True)),
+              "pitch": all(row.get("agree", True) for row in report.get("pitch_check") or []), "alignment": not alignment.get("words_off")}
+    return {"target": "all" if finding is None else result["flaws"][finding]["id"], "score_before": report.get("score_before"),
+            "score_after": report.get("score"), "removed": report["removed"], "remaining": [r["id"] for r in report.get("remaining", [])],
+            "new_findings": len(report.get("new_findings") or []), "checks": checks, "checks_passed": all(checks.values()),
+            "fixes": fixes, "listen": repair.listen_pairs(outcome, LISTEN_CONTEXT_S), "duration": round(len(outcome.audio) / C.SR, 3)}
+
+
+def run_fix(job: dict, folder: Path, source: FixSource, finding: int | None, pitch_method: str, detector: Path,
+            cache_dir: Path | None) -> None:
+    """Worker: fix one finding (an index of result.flaws) or all of them, write fixed.wav, re-analyse it with the source's
+    own settings (repair.verify) and keep the summary on the job."""
+    try:
+        job.update(state="running", stage="edit")
+        result = json.loads(source.result.read_text())
+        wav = audio.read_wav(source.participant)
+        if finding is None:
+            outcome = repair.fix_all(result, wav, pitch_method=pitch_method, transcript=source.transcript)
+        else:
+            outcome = repair.fix_finding(result, wav, finding, pitch_method=pitch_method, transcript=source.transcript)
+        audio.write_wav(folder / "fixed.wav", outcome.audio)
+        job.update(stage="check")
+        report = repair.verify(outcome, result, analyze_kwargs(source, detector, cache_dir))
+        job.update(state="done", stage="done", fix=fix_summary(outcome, report, finding, result))
+    except Exception as e:  # report, never lose the worker thread silently
+        traceback.print_exc()
+        job.update(state="error", error=f"The fix failed ({type(e).__name__}: {e}).")
+
+
 # ============================================================================================ app
 def create_app(gallery: Path = GALLERY, detector: Path = DEFAULT_DETECTOR, work: Path | None = None) -> FastAPI:
     """The dashboard app. gallery: folder with index.json, results/ and audio/ (built by `python -m cvoice.gallery`)."""
     if not (gallery / "index.json").exists():
         raise FileNotFoundError(f"{gallery}/index.json not found: the gallery is built by the Kaggle run (python -m cvoice.gallery)")
     jobs = Jobs(work or Path(tempfile.mkdtemp(prefix="cvoice-jobs-")))
+    fixable = set(fixable_examples(gallery))
     app = FastAPI(title="Contrastive Voice", version=__version__)
     app.add_middleware(BodySizeLimit, max_bytes=max_request_bytes())
 
@@ -259,25 +423,29 @@ def create_app(gallery: Path = GALLERY, detector: Path = DEFAULT_DETECTOR, work:
         return {"ok": True, "pipeline": __version__,
                 "limits": {"max_bytes": C.MAX_UPLOAD_BYTES, "max_total_bytes": max_request_bytes(), "max_seconds": C.MAX_UPLOAD_S,
                            "max_references": MAX_REFERENCES, "consensus_k": C.CONSENSUS_K},
-                "flag_limits": upload_limits(detector), "analysis": {"available": reason is None, "reason": reason}, "stages": STAGES}
+                "flag_limits": upload_limits(detector), "analysis": {"available": reason is None, "reason": reason},
+                "self": {"available": SELF_DETECTOR.exists()},
+                "fix": {"available": reason is None, "examples": sorted(fixable)}, "stages": STAGES, "fix_stages": FIX_STAGES}
 
     @app.post("/api/analyze")
     def submit(audio_file: UploadFile = File(alias="audio"), transcript: str = Form(""), transcript_file: UploadFile | None = File(None),
                baseline_id: str = Form(""), baseline_audio: list[UploadFile] | None = File(None)) -> dict:
-        if not detector.exists():
-            raise HTTPException(503, f"Analysis is not available: {detector.name} is missing (run `python -m cvoice.calibrate`).")
         own = reference_uploads(baseline_audio)
-        if bool(own) == bool(baseline_id):
-            raise HTTPException(422, "Choose a bundled baseline or upload your own reference recordings (one of the two).")
+        if own and baseline_id:
+            raise HTTPException(422, "Choose a bundled baseline or upload your own reference recordings, not both.")
+        needed = detector if own or baseline_id else SELF_DETECTOR
+        if not needed.exists():
+            raise HTTPException(503, f"Analysis is not available: {needed.name} is missing.")
         check_sizes([audio_file, *own])
         try:
-            tr = parse_transcript(read_transcript(transcript, transcript_file))
+            text = read_transcript(transcript, transcript_file)
+            tr = parse_transcript(text)
         except TranscriptError as e:
             raise HTTPException(422, str(e)) from e
         baseline = bundled_choice(gallery, baseline_id, tr) if baseline_id else None
         made = jobs.new()
         if made is None:
-            raise HTTPException(429, "Another analysis is running. Try again when it has finished.")
+            raise HTTPException(429, BUSY)
         jid, folder = made
         try:
             save_upload(audio_file, folder / "your recording")
@@ -287,7 +455,7 @@ def create_app(gallery: Path = GALLERY, detector: Path = DEFAULT_DETECTOR, work:
             shutil.rmtree(folder, ignore_errors=True)
             del jobs.table[jid]
             raise
-        jobs.pool.submit(run_job, jobs.table[jid], folder, tr, baseline, detector, len(own))
+        jobs.pool.submit(run_job, jobs.table[jid], folder, text, baseline, detector, len(own), jobs.cache)
         return {"job_id": jid}
 
     def job_or_404(job_id: str) -> dict:
@@ -295,29 +463,62 @@ def create_app(gallery: Path = GALLERY, detector: Path = DEFAULT_DETECTOR, work:
             raise HTTPException(404, "This analysis is no longer available. Upload again.")
         return jobs.table[job_id]
 
+    def start_fix(source: FixSource, request: FixRequest) -> dict:
+        finding = fix_target(request, json.loads(source.result.read_text()))
+        if source.regime != SELF_REGIME and not detector.exists():
+            raise HTTPException(503, f"Fixing is not available: {detector.name} is missing.")
+        made = jobs.new("fix")
+        if made is None:
+            raise HTTPException(429, BUSY)
+        jid, folder = made
+        jobs.pool.submit(run_fix, jobs.table[jid], folder, source, finding, request.pitch_method, detector, jobs.cache)
+        return {"job_id": jid}
+
+    @app.post("/api/jobs/{job_id}/fix")
+    def fix_upload(job_id: str, request: FixRequest) -> dict:
+        job = job_or_404(job_id)
+        if job["kind"] != "analysis" or job["state"] != "done":
+            raise HTTPException(409, "Only a finished analysis can be fixed.")
+        return start_fix(job["source"], request)
+
+    @app.post("/api/gallery/{item_id}/fix")
+    def fix_example(item_id: str, request: FixRequest) -> dict:
+        items = {it["id"]: it for it in json.loads((gallery / "index.json").read_text()).get("items", [])}
+        if item_id not in items:  # dict lookup: no client string ever reaches the file system
+            raise HTTPException(404, "Unknown example.")
+        source = gallery_source(gallery, items[item_id]) if item_id in fixable else None
+        if source is None:
+            raise HTTPException(422, "This example cannot be fixed here: its text is not bundled.")
+        return start_fix(source, request)
+
     @app.get("/api/jobs/{job_id}")
     def job_status(job_id: str) -> dict:
         job = job_or_404(job_id)
-        out = {"state": job["state"], "stage": job["stage"], "stages": STAGES}
+        fix = job["kind"] == "fix"
+        out = {"kind": job["kind"], "state": job["state"], "stage": job["stage"], "stages": FIX_STAGES if fix else STAGES}
         if job["state"] == "error":
             out["error"] = job["error"]
-        if job["state"] == "done":
+        if job["state"] == "done" and fix:
+            out["audio"] = f"api/jobs/{job_id}/fixed.wav"
+            out["fix"] = job["fix"]
+        elif job["state"] == "done":
             out["result"] = f"api/jobs/{job_id}/result.json"
             out["reference"] = job["reference"]
         return out
 
     @app.get("/api/jobs/{job_id}/result.json")
     def job_result(job_id: str) -> FileResponse:
-        if job_or_404(job_id)["state"] != "done":
+        job = job_or_404(job_id)
+        if job["kind"] != "analysis" or job["state"] != "done":
             raise HTTPException(404, "The analysis has not finished.")
         return FileResponse(jobs.work / job_id / "result.json", media_type="application/json")
 
     @app.get("/api/jobs/{job_id}/{role}.wav")
-    def job_audio(job_id: str, role: Literal["participant", "baseline"]) -> FileResponse:
+    def job_audio(job_id: str, role: Literal["participant", "baseline", "fixed"]) -> FileResponse:
         job_or_404(job_id)
         path = jobs.work / job_id / f"{role}.wav"
         if not path.exists():
-            raise HTTPException(404, f"No {role} audio for this analysis.")
+            raise HTTPException(404, f"No {role} audio for this job.")
         return FileResponse(path, media_type="audio/wav")
 
     app.mount("/gallery", StaticFiles(directory=gallery), name="gallery")
