@@ -18,9 +18,9 @@ export const S10Close: React.FC<{ scene: SceneTiming }> = () => {
       <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", gap: 40, paddingBottom: 120 }}>
         <svg viewBox="0 0 40 28" width={260} height={182} style={{ overflow: "visible" }}>
           <path d={REFERENCE_PATH} fill="none" stroke={color.ink2} strokeWidth={2.2} strokeLinecap="round" pathLength={PATH_LENGTH} strokeDasharray={PATH_LENGTH} strokeDashoffset={PATH_LENGTH * (1 - draw)} />
-          <path d={READING_PATH} fill="none" stroke={color.accent} strokeWidth={2.2} strokeLinecap="round" pathLength={PATH_LENGTH} strokeDasharray={PATH_LENGTH} strokeDashoffset={PATH_LENGTH * (1 - rise(frame, 6, 40))} />
+          <path d={READING_PATH} fill="none" stroke={color.youText} strokeWidth={2.2} strokeLinecap="round" pathLength={PATH_LENGTH} strokeDasharray={PATH_LENGTH} strokeDashoffset={PATH_LENGTH * (1 - rise(frame, 6, 40))} />
         </svg>
-        <div style={{ fontFamily: font.display, fontWeight: 600, fontSize: 120, letterSpacing: "-0.01em", wordSpacing: "0.14em", opacity: rise(frame, 18, 22), translate: `0px ${interpolate(rise(frame, 18, 22), [0, 1], [18, 0])}px` }}>
+        <div style={{ fontFamily: font.display, fontWeight: 500, fontSize: 120, letterSpacing: "-0.015em", opacity: rise(frame, 18, 22), translate: `0px ${interpolate(rise(frame, 18, 22), [0, 1], [18, 0])}px` }}>
           Contrastive Voice
         </div>
         <div style={{ fontSize: 44, color: color.ink2, opacity: rise(frame, 34, 22) }}>Record. Compare. Fix the exact words.</div>

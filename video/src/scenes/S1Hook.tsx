@@ -21,7 +21,7 @@ export const S1Hook: React.FC<{ scene: SceneTiming }> = ({ scene }) => {
           You practise a speech.
         </Heading>
         <div style={{ marginTop: 56, opacity: rise(frame, 14, 20) }}>
-          <Waveform words={yourWords} width={1600} height={170} seed={11} barColor={color.accent} reveal={interpolate(frame, [14, 14 + 70], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" })} />
+          <Waveform words={yourWords} width={1600} height={170} seed={11} barColor={color.you} reveal={interpolate(frame, [14, 14 + 70], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" })} />
         </div>
         <div style={{ display: "flex", gap: 22, marginTop: 44 }}>
           {GUESSES.map((remark, index) => (
@@ -42,7 +42,7 @@ export const S1Hook: React.FC<{ scene: SceneTiming }> = ({ scene }) => {
           ))}
         </div>
         <Heading style={{ fontSize: 96, marginTop: 70, opacity: answer, translate: `0px ${interpolate(answer, [0, 1], [24, 0])}px` }}>
-          Which <span style={{ color: color.accentText }}>words</span> to fix, and how
+          Which <span style={{ color: color.action }}>words</span> to fix, and how
         </Heading>
       </div>
     </SceneShell>

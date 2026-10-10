@@ -45,11 +45,11 @@ export const S2What: React.FC<{ scene: SceneTiming }> = ({ scene }) => {
   return (
     <SceneShell>
       <Heading style={{ position: "absolute", left: LEFT, top: 100, fontSize: 58, opacity: rise(frame, 0, 20) }}>
-        Your reading, against a reference of the <span style={{ color: color.accentText }}>same text</span>
+        Your reading, against a reference of the <span style={{ color: color.refText }}>same text</span>
       </Heading>
-      <div style={{ position: "absolute", left: LEFT, top: YOU_TOP - 46, fontSize: 30, color: color.accentText, fontWeight: 700 }}>You</div>
+      <div style={{ position: "absolute", left: LEFT, top: YOU_TOP - 46, fontSize: 30, color: color.youText, fontWeight: 700 }}>You</div>
       <div style={{ position: "absolute", left: LEFT, top: YOU_TOP }}>
-        <Waveform words={yourWords} width={WIDTH} height={WAVE_HEIGHT} seed={3} barColor={color.accent} reveal={reveal} flag={{ start: yourWords[RUSH_FIRST].start, end: yourWords[RUSH_LAST].end }} flagStrength={flag} />
+        <Waveform words={yourWords} width={WIDTH} height={WAVE_HEIGHT} seed={3} barColor={color.you} reveal={reveal} flag={{ start: yourWords[RUSH_FIRST].start, end: yourWords[RUSH_LAST].end }} flagStrength={flag} />
       </div>
       <WordLabels words={yourWords} top={YOU_TOP + WAVE_HEIGHT + 10} mergeFlagged flagged={flag} />
       <svg width={1920} height={1080} style={{ position: "absolute", left: 0, top: 0, pointerEvents: "none" }}>
@@ -75,10 +75,10 @@ export const S2What: React.FC<{ scene: SceneTiming }> = ({ scene }) => {
         })}
       </svg>
       <div style={{ position: "absolute", left: LEFT, top: REF_TOP }}>
-        <Waveform words={referenceWords} width={WIDTH} height={WAVE_HEIGHT} seed={5} barColor={color.reference} reveal={reveal} />
+        <Waveform words={referenceWords} width={WIDTH} height={WAVE_HEIGHT} seed={5} barColor={color.ref} reveal={reveal} />
       </div>
       <WordLabels words={referenceWords} top={REF_TOP + WAVE_HEIGHT + 10} mergeFlagged={false} flagged={0} />
-      <div style={{ position: "absolute", left: LEFT, top: REF_TOP + WAVE_HEIGHT + 56, fontSize: 30, color: color.ink2, fontWeight: 700 }}>Reference</div>
+      <div style={{ position: "absolute", left: LEFT, top: REF_TOP + WAVE_HEIGHT + 56, fontSize: 30, color: color.refText, fontWeight: 700 }}>Reference</div>
       <div
         style={{
           position: "absolute",

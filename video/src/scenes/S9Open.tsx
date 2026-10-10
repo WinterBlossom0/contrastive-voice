@@ -44,9 +44,9 @@ export const S9Open: React.FC<{ scene: SceneTiming }> = ({ scene }) => {
         </div>
         <div style={{ padding: "30px 36px", fontFamily: "ui-monospace, 'DejaVu Sans Mono', monospace", fontSize: 34, lineHeight: 1.9 }}>
           <div style={{ whiteSpace: "nowrap" }}>
-            <span style={{ color: color.accentText }}>$ </span>
+            <span style={{ color: color.action }}>$ </span>
             {COMMAND.slice(0, typed)}
-            {typed < COMMAND.length && Math.floor(frame / 8) % 2 === 0 ? <span style={{ color: color.accentText }}>▍</span> : null}
+            {typed < COMMAND.length && Math.floor(frame / 8) % 2 === 0 ? <span style={{ color: color.action }}>▍</span> : null}
           </div>
           <div style={{ color: color.ink2, opacity: rise(frame, openPage, 16) }}>Then open localhost:7860 in your browser</div>
         </div>
@@ -57,7 +57,7 @@ export const S9Open: React.FC<{ scene: SceneTiming }> = ({ scene }) => {
           return (
             <div key={link.place} style={{ display: "flex", alignItems: "baseline", gap: 30, opacity: shown, translate: `${interpolate(shown, [0, 1], [-16, 0])}px 0px` }}>
               <div style={{ width: 130, fontSize: 32, color: color.ink2 }}>{link.place}</div>
-              <div style={{ fontFamily: font.display, fontWeight: 600, fontSize: 48 }}>{link.address}</div>
+              <div style={{ fontFamily: font.display, fontWeight: 500, fontSize: 48 }}>{link.address}</div>
             </div>
           );
         })}

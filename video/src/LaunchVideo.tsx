@@ -2,7 +2,7 @@ import { Audio } from "@remotion/media";
 import React from "react";
 import { AbsoluteFill, Sequence, Series, staticFile, useVideoConfig } from "remotion";
 import { Subtitles } from "./components/Subtitles";
-import { S3DemoSummary, S4DemoListen, S5DemoFinding, S6DemoCleanAndUpload } from "./scenes/DemoScenes";
+import { S3DemoSummary, S4DemoListen, S5bDemoHearFixed, S5cDemoFixAll, S5DemoFinding, S6bDemoNoReference, S6DemoCleanAndUpload } from "./scenes/DemoScenes";
 import { S1Hook } from "./scenes/S1Hook";
 import { S2What } from "./scenes/S2What";
 import { S7How } from "./scenes/S7How";
@@ -18,7 +18,10 @@ const SCENE_COMPONENTS: Record<SceneId, React.FC<{ scene: SceneTiming }>> = {
   s3_demo_summary: S3DemoSummary,
   s4_demo_listen: S4DemoListen,
   s5_demo_finding: S5DemoFinding,
+  s5b_demo_hear_fixed: S5bDemoHearFixed,
+  s5c_demo_fix_all: S5cDemoFixAll,
   s6_demo_clean_and_upload: S6DemoCleanAndUpload,
+  s6b_demo_no_reference: S6bDemoNoReference,
   s7_how: S7How,
   s8_evidence: S8Evidence,
   s9_open: S9Open,

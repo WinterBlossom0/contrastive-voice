@@ -3,7 +3,9 @@
      node video/scripts/capture.cjs [PORT] [SHOT ...]   (needs a Chromium: npx playwright-core install chromium-headless-shell, or CHROME_PATH)
 
    Output in video/public/captures: <id>.webm (30 fps VP9), <id>_first.png and <id>.png (the first and last frames) for each moving shot, and s3_page.png
-   (the full L3A page). raw/<id>.json keeps the frame count, the sync second and the element rects (capture px) that the camera
+   (the full L3A page). The fix shots run real fix jobs on the server; the recording holds the progress line for a fixed time.
+   raw/<id>.json also keeps "boxes": every visible text line and control, sampled every BOX_EVERY frames, for
+   scripts/check-framing.cjs, which fails a camera view that cuts one of them at its edge. raw/<id>.json keeps the frame count, the sync second and the element rects (capture px) that the camera
    keyframes in video/src/data/captures.json use.
 
    Stop motion: each output frame is one screenshot after the pointer and the page are set for that frame. A real-time
@@ -25,6 +27,44 @@ const NARRATION = JSON.parse(fs.readFileSync(path.join(ROOT, 'video/src/data/nar
 const FPS = 30;
 const EXAMPLE = 'L3A';
 const CLEAN = 'identity';
+const NO_REFERENCE = 'L3A_self';
+const RUSHED = 2;   // the index of the Rushed finding of the example on the page (findings sorted by time)
+// The fix job runs for about ten seconds; the video shows its progress line for this many frames.
+const PROGRESS_FRAMES = 30;
+const BOX_EVERY = 6;
+
+// Each visible line of text, each control and each drawn waveform as [x, y, width, height, label] in capture px; pageY
+// is the viewport offset of a full-page shot. A box under another element (the sticky player bar) is not visible, so it is left out.
+const BOX_SCRIPT = (pageY) => {
+  const atomic = '#wave, #wave-ref, .tl-host svg, .ring-wrap, .meter';
+  const skip = '.horizon, .defs';
+  const controls = 'button, input, select, summary, textarea, .chip, a';
+  const out = [];
+  // A closed <details> keeps a layout box for its content, so elementFromPoint alone would count that content as visible.
+  const folded = (owner) => { const closed = owner.closest('details:not([open])'); return !!closed && !owner.closest('summary'); };
+  const seen = (r, owner) => {
+    if (folded(owner)) return false;
+    const left = Math.max(r.left, 0), right = Math.min(r.right, innerWidth), top = Math.max(r.top, 0), bottom = Math.min(r.bottom, innerHeight);
+    if (r.width < 1 || r.height < 1 || right <= left || bottom <= top) return false;
+    const hit = document.elementFromPoint((left + right) / 2, (top + bottom) / 2);
+    return !!hit && (owner.contains(hit) || hit.contains(owner));
+  };
+  const add = (r, label) => out.push([Math.round(r.left), Math.round(r.top + pageY), Math.round(r.width), Math.round(r.height), label.trim().slice(0, 24)]);
+  for (const element of document.querySelectorAll(`${atomic}, ${controls}`)) {
+    if (element.closest(skip) || element.parentElement?.closest(atomic)) continue;
+    const r = element.getBoundingClientRect();
+    if (seen(r, element)) add(r, element.textContent || element.tagName);
+  }
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    const owner = node.parentElement;
+    if (!node.textContent.trim() || !owner || owner.closest(`${skip}, ${atomic}, ${controls}, script, style`)) continue;
+    const range = document.createRange();
+    range.selectNodeContents(node);
+    for (const r of range.getClientRects()) if (seen(r, owner)) add(r, node.textContent);
+  }
+  return out;
+};
 // The 1920 px layout of the dashboard shows a 1400x750 CSS px page area; CSS zoom 1.6 renders that area at 2240x1200 px.
 // A screenshot has the size of the viewport in CSS px, so CSS zoom adds detail where deviceScaleFactor would not change the layout.
 const ZOOM = 1.6;
@@ -34,7 +74,7 @@ const VIEW = { width: 2240, height: 1200 };
 const PAGE_SETUP = `addEventListener('DOMContentLoaded', () => {
   document.documentElement.style.zoom = '${ZOOM}';
   const c = document.createElement('div');
-  c.innerHTML = '<svg width="24" height="28" viewBox="0 0 26 30"><path d="M3 2 L3 24 L9 18.5 L13 28 L17 26.3 L13 17 L21 17 Z" fill="#f4f4f6" stroke="#121212" stroke-width="1.6" stroke-linejoin="round"/></svg>';
+  c.innerHTML = '<svg width="24" height="28" viewBox="0 0 26 30"><path d="M3 2 L3 24 L9 18.5 L13 28 L17 26.3 L13 17 L21 17 Z" fill="#ede6da" stroke="#1f1e1d" stroke-width="1.6" stroke-linejoin="round"/></svg>';
   Object.assign(c.style, { position: 'fixed', left: '0', top: '0', zIndex: 2147483647, pointerEvents: 'none', transform: 'translate(-100px,-100px)', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,.45))' });
   document.body.append(c);
   addEventListener('mousemove', (e) => { c.style.transform = 'translate(' + (e.clientX / ${ZOOM} - 3) + 'px,' + (e.clientY / ${ZOOM} - 2) + 'px)'; }, true);
@@ -42,11 +82,14 @@ const PAGE_SETUP = `addEventListener('DOMContentLoaded', () => {
 
 // Rects of these elements, in capture px, go to raw/<id>.json for the camera keyframes.
 const RECT_SELECTORS = {
-  player: '.player', playAll: '#play-all', ring: '.ring', summary: '.summary-line', picker: '#picker-menu', heroTitle: '.hero h1',
-  timeView: '.tl-host', fixesTitle: '.fixes h2', card1: '.top-card.lead', card2: '.top-card:nth-child(2)', card3: '.top-card:nth-child(3)',
+  player: '.player', playAll: '#play-all', ledger: '#ledger', ring: '.ring-wrap', summary: '.summary-line', kicker: '.sum-text .kicker',
+  limit: '#detect-limit', fixAllButton: '#fix-all-btn', picker: '#picker-menu', heroTitle: '.hero h1', heroWave: '#hero-wave',
+  timeView: '.tl-stage', fixesTitle: '.fixes h2', card1: '.top-card.lead', card2: '.top-card:nth-child(2)', card3: '.top-card:nth-child(3)',
   textView: '#text-view', transcript: '#transcript', explain: '#explain', explainHead: '#explain h3', gauge: '#explain .gauge',
-  listen: '#explain [data-listen]', fix: '#explain .fix', chips: '#picker-menu[open]', upload: '#upload', submit: '#submit',
-  fAudio: '#f-audio', fBaseline: '#f-baseline', fBaselineAudio: '#f-baseline-audio',
+  listen: '#explain [data-listen]', hearFixed: '#explain [data-fix]', fixer: '#explain .fixer', fixHead: '#explain .fix-head',
+  fixScore: '#explain .fix-score', fixPlayer: '#explain .abc', fix: '#explain .fix', chips: '#picker-menu[open]',
+  fixAll: '#fix-all-body', fixAllScore: '#fix-all-body .fix-all-score', fixList: '#fix-all-body .fix-list',
+  upload: '#upload', submit: '#submit', fAudio: '#f-audio', fBaseline: '#f-baseline', fBaselineAudio: '#f-baseline-audio',
 };
 
 // Scene line start frames, computed as video/src/timeline.ts computes them.
@@ -64,6 +107,7 @@ function sceneFrames(id) {
       cursor += scene.clip.durationSec;
     }
   });
+  if (clip) clip.segments = (scene.clip.segments || []).map((seg) => ({ ...seg, from: clip.from + toFrame(seg.startSec), to: clip.from + toFrame(seg.endSec) }));
   return { lines, clip, end: toFrame(cursor + scene.gapAfterSec) };
 }
 
@@ -78,6 +122,9 @@ class StopMotion {
     this.pointer = { x: VIEW.width + 50, y: VIEW.height + 50 };
     this.syncFrame = null;
     this.rects = null;
+    this.boxes = {};
+    this.lastBoxes = -Infinity;
+    this.scrolls = [];
   }
 
   file(index) { return path.join(this.dir, String(index).padStart(5, '0') + '.jpg'); }
@@ -86,12 +133,19 @@ class StopMotion {
     await this.page.mouse.move(this.pointer.x, this.pointer.y);
     await this.page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
     await this.page.screenshot({ path: this.file(this.count), type: 'jpeg', quality: 95 });
+    if (this.count % BOX_EVERY === 0 || this.count - this.lastBoxes >= BOX_EVERY) await this.sampleBoxes();
     this.count += 1;
+  }
+
+  async sampleBoxes() {
+    this.boxes[this.count] = await this.page.evaluate(BOX_SCRIPT, 0);
+    this.lastBoxes = this.count;
   }
 
   // A still page gives the same picture, so one screenshot fills every frame of the hold.
   async holdUntil(frame) {
     if (this.count >= frame) return;
+    this.lastBoxes = -Infinity;
     await this.shoot();
     while (this.count < frame) {
       fs.copyFileSync(this.file(this.count - 1), this.file(this.count));
@@ -121,6 +175,39 @@ class StopMotion {
   }
 
   async measure() { this.rects = await rects(this.page); }
+
+  // Scrolls the page by `by` CSS px over the frames up to endFrame; the pointer keeps its place on the screen.
+  async scrollBy(by, endFrame) {
+    const from = await this.page.evaluate(() => scrollY);
+    const startFrame = this.count;
+    this.scrolls.push([startFrame, endFrame]);
+    const span = Math.max(1, endFrame - startFrame);
+    while (this.count < endFrame) {
+      const t = easeInOut((this.count - startFrame + 1) / span);
+      await this.page.evaluate((y) => scrollTo(0, y), from + by * t);
+      await this.shoot();
+    }
+  }
+}
+
+// The scroll distance that puts the element top `gap` px below the sticky player bar. With CSS zoom on the root, element
+// rects and scroll offsets both use capture px.
+async function scrollToBelowPlayer(page, selector, gap = 30) {
+  return page.evaluate(({ selector, gap }) => {
+    const top = document.querySelector(selector).getBoundingClientRect().top;
+    const bar = document.querySelector('.player').getBoundingClientRect().bottom;
+    return top - bar - gap;
+  }, { selector, gap });
+}
+
+// Runs a fix job from a button: the progress line shows for PROGRESS_FRAMES, then the recording waits for the result
+// without frames, and the page's automatic playback of the edited take stops, so the clip can choose the sides.
+async function runFix(page, motion, doneSelector) {
+  await motion.click();
+  await motion.holdUntil(motion.count + PROGRESS_FRAMES);
+  await page.waitForSelector(doneSelector, { timeout: 180000 });
+  await page.evaluate(() => S.fix.player?.stop());
+  await wait(500);
 }
 
 async function center(page, selector) {
@@ -180,7 +267,19 @@ const SHOTS = {
     await ready(page);
     await wait(1500);
     await page.screenshot({ path: path.join(OUT, 's3_page.png'), fullPage: true });
-    return { rects: await page.evaluate((selectors) => {
+    // The full-page screenshot shows the sticky bars only at the top. Below the first viewport they would cover the content
+    // under them, so the rest of the page is sampled with them hidden, one viewport at a time.
+    const boxes = (await page.evaluate(BOX_SCRIPT, 0)).map((box) => JSON.stringify(box));
+    await page.addStyleTag({ content: '.player, header.top { visibility: hidden !important; }' });
+    const height = await page.evaluate(() => document.documentElement.scrollHeight);
+    for (let y = 600; y < height; y += 600) {
+      await page.evaluate((y) => scrollTo(0, y), y);
+      await wait(150);
+      const pageY = await page.evaluate(() => scrollY);
+      for (const box of await page.evaluate(BOX_SCRIPT, pageY)) boxes.push(JSON.stringify(box));
+    }
+    await page.evaluate(() => scrollTo(0, 0));
+    return { boxes: { 0: [...new Set(boxes)].map((box) => JSON.parse(box)) }, rects: await page.evaluate((selectors) => {
       const out = {};
       for (const [name, selector] of Object.entries(selectors)) {
         const r = document.querySelector(selector)?.getBoundingClientRect();
@@ -203,7 +302,7 @@ const SHOTS = {
     await motion.measure();
     // The pointer waits in the player bar, so its path to Play does not cross the transcript and light words on hover.
     motion.pointer = { x: 1150, y: 150 };
-    await motion.holdUntil(scene.lines[1]);
+    await motion.holdUntil(Math.max(12, scene.clip.from - 60));
     await motion.glideToSelector('#play-all', scene.clip.from - 8);
     await motion.holdUntil(scene.clip.from - 2);
     await showPlaying(page, '#play-all', true);
@@ -222,7 +321,7 @@ const SHOTS = {
     await motion.holdUntil(scene.clip.to + 6);
   },
 
-  // Scene s5: a flagged word opens its finding; at the clip the pointer presses Listen.
+  // Scene s5: a flagged word opens its finding.
   async finding(page, motion) {
     const scene = sceneFrames('s5_demo_finding');
     await page.goto(URL);
@@ -232,22 +331,80 @@ const SHOTS = {
     await scrollToText(page);
     motion.pointer = { x: 760, y: 1050 };
     await motion.holdUntil(8);
-    await motion.glideToSelector('#transcript .w[data-peek="2"]', 44);
+    await motion.glideToSelector(`#transcript .w[data-peek="${RUSHED}"]`, 44);
     await motion.holdUntil(48);
     await motion.click();
+    await scrollToText(page);
     await motion.measure();
     await motion.holdUntil(56);
     await motion.glideTo({ x: 1300, y: 1120 }, 90);
-    await motion.holdUntil(scene.clip.from - 40);
-    await motion.glideToSelector('#explain [data-listen]', scene.clip.from - 4);
-    await motion.holdUntil(scene.clip.from - 1);
-    await showPlaying(page, '#explain [data-listen]', true);
-    motion.syncFrame = scene.clip.from;
-    await motion.holdUntil(scene.clip.from + 6);
-    await motion.glideTo({ x: 1420, y: 1150 }, scene.clip.from + 36);
-    await motion.holdUntil(scene.clip.to);
-    await showPlaying(page, '#explain [data-listen]', false);
-    await motion.holdUntil(scene.clip.to + 6);
+    await motion.holdUntil(scene.end + 4);
+  },
+
+  // Scene s5b: "Hear it fixed" on the Rushed finding, then Yours, Edited and Target in step with the clip.
+  async hear_fixed(page, motion) {
+    const scene = sceneFrames('s5b_demo_hear_fixed');
+    await page.goto(URL);
+    await ready(page);
+    await openExample(page, EXAMPLE);
+    await page.click(`#transcript .w[data-peek="${RUSHED}"]`);
+    await scrollToText(page);
+    await motion.measure();
+    motion.pointer = { x: 1300, y: 1120 };
+    await motion.holdUntil(10);
+    await motion.glideToSelector('#explain [data-fix]', 40);
+    await motion.holdUntil(44);
+    await runFix(page, motion, '#explain .fixer .abc');
+    // The whole fix result comes into view under the player bar, with the Hear it fixed button above it.
+    const by = await scrollToBelowPlayer(page, '#explain .fixer', 160);
+    await motion.holdUntil(motion.count + 6);
+    await motion.glideTo({ x: 2150, y: 1150 }, motion.count + 14);
+    await motion.scrollBy(by, motion.count + 26);
+    motion.rectsEnd = await rects(page);
+    const sides = { Yours: 'yours', Edited: 'fixed', Target: 'target' };
+    for (const seg of scene.clip.segments) {
+      const button = `#explain .fixer .abc [data-side="${sides[seg.label]}"]`;
+      if (motion.count < seg.from - 14) {
+        await motion.holdUntil(seg.from - 14);
+      }
+      await motion.glideToSelector(button, seg.from - 1);
+      await motion.click();
+      if (seg.label === 'Yours') motion.syncFrame = seg.from;
+      await motion.holdUntil(seg.from + 3);
+    }
+    await motion.holdUntil(scene.clip.to - 12);
+    await motion.glideToSelector('#explain .fixer .loop-btn', scene.clip.to);
+    await motion.click();
+    await motion.holdUntil(scene.clip.to + 4);
+    await motion.glideTo({ x: 2150, y: 1150 }, scene.clip.to + 30);
+    await motion.holdUntil(scene.end + 4);
+  },
+
+  // Scene s5c: "Fix everything and listen" on the whole reading, then the list of what each fix did.
+  async fix_all(page, motion) {
+    const scene = sceneFrames('s5c_demo_fix_all');
+    await page.goto(URL);
+    await ready(page);
+    await openExample(page, EXAMPLE);
+    await page.evaluate((y) => scrollTo(0, y), await scrollToBelowPlayer(page, '#ledger', 40));
+    await wait(300);
+    await motion.measure();
+    motion.pointer = { x: 1500, y: 1120 };
+    await motion.holdUntil(6);
+    await motion.glideToSelector('#fix-all-btn', 34);
+    await motion.holdUntil(38);
+    await runFix(page, motion, '#fix-all-body .fix-all-score');
+    await motion.holdUntil(motion.count + 4);
+    await motion.glideTo({ x: 1900, y: 1150 }, motion.count + 12);
+    await motion.scrollBy(await scrollToBelowPlayer(page, '#fix-all-body', 30), motion.count + 28);
+    motion.rectsMid = await rects(page);
+    await motion.holdUntil(Math.max(motion.count, scene.lines[1] - 22));
+    await motion.glideToSelector('#fix-all-body .fix-list > summary', scene.lines[1] + 2);
+    await motion.click();
+    await motion.holdUntil(scene.lines[1] + 6);
+    await motion.glideTo({ x: 2150, y: 1150 }, scene.lines[1] + 30);
+    motion.rectsEnd = await rects(page);
+    await motion.holdUntil(scene.end + 4);
   },
 
   // Scene s6, first part: the example menu opens and the placebo copy loads; a full score and no flags.
@@ -275,10 +432,11 @@ const SHOTS = {
     await page.waitForFunction((id) => document.querySelector(`.chip[data-id="${id}"]`)?.getAttribute('aria-pressed') === 'true', CLEAN);
     await ready(page);
     await wait(600);
-    motion.rectsEnd = await rects(page);
     await motion.holdUntil(motion.count + 4);
-    await motion.glideTo({ x: 2150, y: 1150 }, motion.count + 24);
-    await motion.holdUntil(scene.lines[2] + 6);
+    await motion.glideTo({ x: 2150, y: 1150 }, motion.count + 20);
+    await motion.scrollBy(await scrollToBelowPlayer(page, '#ledger', 40), motion.count + 24);
+    motion.rectsEnd = await rects(page);
+    await motion.holdUntil(scene.lines[1] + 6);
   },
 
   // Scene s6, second part: the upload form with your reading and your own reference reading chosen; nothing is submitted.
@@ -303,9 +461,37 @@ const SHOTS = {
     await motion.glideToSelector('#f-baseline-audio', 80);
     await page.setInputFiles('#f-baseline-audio', path.join(AUDIO, 'reagan_farewell_1989.wav'));
     await motion.holdUntil(92);
-    await motion.glideToSelector('#submit', 120);
+    // The reference file field makes the form taller, so the page scrolls until the Analyse button is in view.
+    await motion.scrollBy(await page.evaluate(() => Math.max(0, document.querySelector('#submit').getBoundingClientRect().bottom - 1130)), 112);
+    await motion.glideToSelector('#submit', 135);
     motion.rectsEnd = await rects(page);
     await motion.holdUntil(180);
+  },
+
+  // Scene s6b: the same reading graded without a reference, chosen from the example menu.
+  async no_reference(page, motion) {
+    const scene = sceneFrames('s6b_demo_no_reference');
+    await page.goto(URL);
+    await ready(page);
+    motion.pointer = { x: 1500, y: 420 };
+    await motion.holdUntil(6);
+    await motion.glideToSelector('#picker-menu > summary', 30);
+    await motion.holdUntil(34);
+    await motion.click();
+    const chip = `.chip[data-id="${NO_REFERENCE}"]`;
+    await motion.measure();
+    await motion.holdUntil(motion.count + 6);
+    await motion.glideToSelector(chip, motion.count + 24);
+    await motion.holdUntil(motion.count + 4);
+    await motion.click();
+    await page.waitForFunction((id) => document.querySelector(`.chip[data-id="${id}"]`)?.getAttribute('aria-pressed') === 'true', NO_REFERENCE);
+    await ready(page);
+    await wait(800);
+    await motion.holdUntil(motion.count + 4);
+    await motion.glideTo({ x: 2150, y: 1150 }, motion.count + 20);
+    await motion.scrollBy(await scrollToBelowPlayer(page, '#ledger', 40), motion.count + 24);
+    motion.rectsEnd = await rects(page);
+    await motion.holdUntil(scene.end + 4);
   },
 };
 
@@ -338,7 +524,7 @@ function encode(id, motion) {
     let info;
     if (motion.count > 0) {
       encode(id, motion);
-      info = { durationSec: +(motion.count / FPS).toFixed(3), frames: motion.count, alignSec: motion.syncFrame === null ? null : +(motion.syncFrame / FPS).toFixed(3), rects: motion.rects, rectsEnd: motion.rectsEnd ?? null, errors };
+      info = { durationSec: +(motion.count / FPS).toFixed(3), frames: motion.count, alignSec: motion.syncFrame === null ? null : +(motion.syncFrame / FPS).toFixed(3), rects: motion.rects, rectsMid: motion.rectsMid ?? null, rectsEnd: motion.rectsEnd ?? null, boxes: motion.boxes, scrolls: motion.scrolls, errors };
     } else {
       info = { ...result, errors };
     }

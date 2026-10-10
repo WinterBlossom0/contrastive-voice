@@ -26,18 +26,22 @@ const STRESS = [
   { condition: "Babble 10 dB", kept: 0.6 },
 ];
 
+// The share of the scores line spoken before "point eight seven nine" (narration s8_evidence_02).
+const COUNT_ONCE_SHARE = 0.57;
+
 const CountUp: React.FC<{ value: number; start: number; decimals: number; size: number; tint: string }> = ({ value, start, decimals, size, tint }) => {
   const frame = useCurrentFrame();
   const shown = value * rise(frame, start, 36);
-  return <span style={{ fontFamily: font.display, fontWeight: 700, fontSize: size, color: tint, fontVariantNumeric: "tabular-nums" }}>{shown.toFixed(decimals)}</span>;
+  return <span style={{ fontFamily: font.display, fontWeight: 500, fontSize: size, color: tint, fontVariantNumeric: "lining-nums tabular-nums" }}>{shown.toFixed(decimals)}</span>;
 };
 
 export const S8Evidence: React.FC<{ scene: SceneTiming }> = ({ scene }) => {
   const frame = useCurrentFrame();
-  const scores = beatFrame(scene, 2);
-  const countOnce = beatFrame(scene, 3);
-  const clean = beatFrame(scene, 4);
-  const stress = beatFrame(scene, 5);
+  // The second F1 is spoken in the second half of the scores line.
+  const scores = beatFrame(scene, 1);
+  const countOnce = scores + Math.round(scene.lines[1].durationInFrames * COUNT_ONCE_SHARE);
+  const clean = beatFrame(scene, 2);
+  const stress = beatFrame(scene, 3);
   const firstPhase = fadeOut(frame, stress + 6, 14);
   const secondPhase = rise(frame, stress + 4, 20);
   return (
@@ -47,14 +51,14 @@ export const S8Evidence: React.FC<{ scene: SceneTiming }> = ({ scene }) => {
         <div style={{ display: "flex", gap: 70, marginTop: 44 }}>
           {DATASET.map((item, index) => (
             <div key={item.label} style={{ opacity: rise(frame, 8 + index * 8, 18) }}>
-              <div style={{ fontFamily: font.display, fontWeight: 600, fontSize: 56 }}>{item.value}</div>
+              <div style={{ fontFamily: font.display, fontWeight: 500, fontSize: 56 }}>{item.value}</div>
               <div style={{ fontSize: 30, color: color.ink2 }}>{item.label}</div>
             </div>
           ))}
         </div>
         <div style={{ display: "flex", alignItems: "flex-end", gap: 90, marginTop: 70, opacity: rise(frame, scores, 18) }}>
           <div>
-            <CountUp value={0.812} start={scores} decimals={3} size={150} tint={color.accentText} />
+            <CountUp value={0.812} start={scores} decimals={3} size={150} tint={color.action} />
             <div style={{ fontSize: 32, color: color.ink }}>Test F1, pre-registered</div>
             <div style={{ fontSize: 28, color: color.ink2 }}>every prediction counted</div>
           </div>
@@ -78,7 +82,7 @@ export const S8Evidence: React.FC<{ scene: SceneTiming }> = ({ scene }) => {
             opacity: rise(frame, clean, 18),
           }}
         >
-          <CountUp value={0} start={clean} decimals={0} size={72} tint={color.accentText} />
+          <CountUp value={0} start={clean} decimals={0} size={72} tint={color.action} />
           <span style={{ fontSize: 36 }}>false flags in 5.89 minutes of unedited and placebo test copies</span>
         </div>
       </div>
@@ -93,7 +97,7 @@ export const S8Evidence: React.FC<{ scene: SceneTiming }> = ({ scene }) => {
               <div key={row.condition} style={{ display: "flex", alignItems: "center", gap: 24 }}>
                 <div style={{ width: 430, fontSize: 28, color: color.ink2, textAlign: "right" }}>{row.condition}</div>
                 <div style={{ width: 900, height: 34, borderRadius: 8, backgroundColor: color.panel }}>
-                  <div style={{ width: `${row.kept * 100 * grow}%`, height: "100%", borderRadius: 8, backgroundColor: color.accent, opacity: interpolate(row.kept, [0.6, 1], [0.6, 1]) }} />
+                  <div style={{ width: `${row.kept * 100 * grow}%`, height: "100%", borderRadius: 8, backgroundColor: color.you, opacity: interpolate(row.kept, [0.6, 1], [0.6, 1]) }} />
                 </div>
                 <div style={{ width: 90, fontSize: 28, fontVariantNumeric: "tabular-nums", opacity: grow }}>{row.kept.toFixed(2)}</div>
               </div>

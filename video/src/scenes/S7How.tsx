@@ -8,6 +8,8 @@ import { beatFrame, type SceneTiming } from "../timeline";
 
 const STEPS = ["Align", "Window", "Measure", "Compare"];
 const DIMENSIONS = ["Pace", "Pauses", "Pitch variation", "Emphasis", "Volume", "Clarity", "Word time", "Ending", "Speech tempo"];
+// The share of the scales line spoken before "so a deep voice is not a flaw" (narration s7_how_04).
+const NOT_A_FLAW_SHARE = 0.58;
 const LEFT = 160;
 const WIDTH = 1600;
 
@@ -50,9 +52,9 @@ const WordRow: React.FC<{ words: typeof yourWords; top: number; tint: string; la
 export const S7How: React.FC<{ scene: SceneTiming }> = ({ scene }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
-  // Narration order: intro, alignment (two lines), windows and measures (one line), then the comparison lines.
-  const windowLine = scene.lines[Math.min(3, scene.lines.length - 1)];
-  const starts = [beatFrame(scene, 1), windowLine.from, windowLine.from + Math.round(windowLine.durationInFrames / 2), beatFrame(scene, 4)];
+  // Narration order: intro, alignment, windows and measures (one line), own-median scales, threshold.
+  const windowLine = scene.lines[Math.min(2, scene.lines.length - 1)];
+  const starts = [beatFrame(scene, 1), windowLine.from, windowLine.from + Math.round(windowLine.durationInFrames / 2), beatFrame(scene, 3)];
   const ends = [...starts.slice(1), scene.durationInFrames];
   const visibility = starts.map((start, index) => rise(frame, start, 18) * (index === STEPS.length - 1 ? 1 : fadeOut(frame, ends[index] + 6, 12)));
   const active = starts.filter((start) => frame >= start).length - 1;
@@ -72,9 +74,9 @@ export const S7How: React.FC<{ scene: SceneTiming }> = ({ scene }) => {
               borderRadius: 999,
               fontSize: 28,
               fontWeight: 700,
-              border: `1px solid ${index === active ? color.accent : color.line}`,
-              backgroundColor: index === active ? color.accentWash : "transparent",
-              color: index === active ? color.accentText : color.muted,
+              border: `1px solid ${index === active ? color.action : color.line}`,
+              backgroundColor: index === active ? color.actionWash : "transparent",
+              color: index === active ? color.action : color.muted,
             }}
           >
             {index + 1}. {step}
@@ -83,16 +85,16 @@ export const S7How: React.FC<{ scene: SceneTiming }> = ({ scene }) => {
       </div>
 
       <Panel visible={visibility[0]}>
-        <div style={{ fontSize: 40, fontFamily: font.display, fontWeight: 600 }}>Forced alignment finds every word in both recordings</div>
+        <div style={{ fontSize: 40, fontFamily: font.display, fontWeight: 500 }}>Forced alignment finds every word in both recordings</div>
         <div style={{ fontSize: 30, color: color.ink2, marginTop: 14 }}>wav2vec2 CTC model: a start and end time for every word, at 20 ms resolution</div>
         <div style={{ position: "relative", marginTop: 110 }}>
-          <WordRow words={yourWords} top={0} tint={color.accent} label="You" progress={rise(frame, starts[0], 40)} />
-          <WordRow words={referenceWords} top={190} tint={color.reference} label="Reference" progress={rise(frame, starts[0] + 10, 40)} />
+          <WordRow words={yourWords} top={0} tint={color.you} label="You" progress={rise(frame, starts[0], 40)} />
+          <WordRow words={referenceWords} top={190} tint={color.ref} label="Reference" progress={rise(frame, starts[0] + 10, 40)} />
         </div>
       </Panel>
 
       <Panel visible={visibility[1]}>
-        <div style={{ fontSize: 40, fontFamily: font.display, fontWeight: 600 }}>A window of five words slides along the text</div>
+        <div style={{ fontSize: 40, fontFamily: font.display, fontWeight: 500 }}>A window of five words slides along the text</div>
         <div style={{ fontSize: 30, color: color.ink2, marginTop: 14 }}>Each window is compared with the same five words in the reference</div>
         <div style={{ position: "relative", marginTop: 150 }}>
           <div
@@ -103,8 +105,8 @@ export const S7How: React.FC<{ scene: SceneTiming }> = ({ scene }) => {
               width: (lastWord.end - referenceWords[windowStart].start) * WIDTH + 20,
               height: 96,
               borderRadius: 16,
-              backgroundColor: color.accentWash,
-              border: `2px solid ${color.accent}`,
+              backgroundColor: color.actionWash,
+              border: `2px solid ${color.action}`,
             }}
           />
           <WordRow words={referenceWords} top={0} tint={color.line} label="" progress={1} />
@@ -112,7 +114,7 @@ export const S7How: React.FC<{ scene: SceneTiming }> = ({ scene }) => {
       </Panel>
 
       <Panel visible={visibility[2]}>
-        <div style={{ fontSize: 40, fontFamily: font.display, fontWeight: 600 }}>Nine delivery measures, on the same words in both readings</div>
+        <div style={{ fontSize: 40, fontFamily: font.display, fontWeight: 500 }}>Nine delivery measures, on the same words in both readings</div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 26, marginTop: 70, width: 1300 }}>
           {DIMENSIONS.map((dimension, index) => {
             const pop = spring({ frame: frame - starts[2] - 8 - index * 5, fps, config: { damping: 200 } });
@@ -138,21 +140,21 @@ export const S7How: React.FC<{ scene: SceneTiming }> = ({ scene }) => {
       </Panel>
 
       <Panel visible={visibility[3]}>
-        <div style={{ fontSize: 40, fontFamily: font.display, fontWeight: 600 }}>Every value is scored against the reference</div>
-        <div style={{ display: "flex", alignItems: "center", gap: 40, marginTop: 60, fontFamily: font.display, fontSize: 60, fontWeight: 600 }}>
+        <div style={{ fontSize: 40, fontFamily: font.display, fontWeight: 500 }}>Every value is scored against the reference</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 40, marginTop: 60, fontFamily: font.display, fontSize: 64, fontWeight: 500 }}>
           <span>change</span>
           <span style={{ color: color.muted }}>=</span>
           <span>
-            ln(<span style={{ color: color.accentText }}>you</span>
+            ln(<span style={{ color: color.youText }}>you</span>
             <span style={{ color: color.muted }}> / </span>
-            <span style={{ color: color.ink2 }}>reference</span>)
+            <span style={{ color: color.refText }}>reference</span>)
           </span>
         </div>
         <div style={{ marginTop: 30, fontSize: 30, color: color.ink2 }}>Volume against your own median level, pitch against your own median pitch</div>
-        <div style={{ marginTop: 56, fontSize: 38, lineHeight: 1.45, maxWidth: 1450, opacity: rise(frame, beatFrame(scene, 5), 20) }}>
+        <div style={{ marginTop: 56, fontSize: 38, lineHeight: 1.45, maxWidth: 1450, opacity: rise(frame, starts[3] + Math.round(scene.lines[3].durationInFrames * NOT_A_FLAW_SHARE), 20) }}>
           Not a flaw: a quiet microphone, a deep voice
         </div>
-        <div style={{ marginTop: 30, fontSize: 34, lineHeight: 1.45, color: color.ink2, maxWidth: 1450, opacity: rise(frame, beatFrame(scene, 6), 20) }}>
+        <div style={{ marginTop: 30, fontSize: 34, lineHeight: 1.45, color: color.ink2, maxWidth: 1450, opacity: rise(frame, beatFrame(scene, 4), 20) }}>
           Flag threshold: fitted on flawless comparisons
         </div>
       </Panel>

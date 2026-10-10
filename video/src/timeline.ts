@@ -5,7 +5,9 @@ import narrationData from "./data/narration.json";
 export const FPS = 30;
 
 export type NarrationLine = { text: string; file: string; durationSec: number };
-export type NarrationClip = { file: string; durationSec: number; caption: string };
+// A clip of several takes names each take and its place in the clip, in seconds.
+export type ClipSegment = { label: string; startSec: number; endSec: number };
+export type NarrationClip = { file: string; durationSec: number; caption: string; segments?: ClipSegment[] };
 export type NarrationScene = {
   id: SceneId;
   lines: NarrationLine[];
@@ -34,9 +36,21 @@ export type Capture = {
   camera?: CameraKey[];
 };
 
-// The camera moves to (x, y) at `zoom` output px per capture px; the move starts at narration line `at` (or at the clip) plus `sec`.
-export type CameraKey = { at: number | "clip"; sec?: number; x: number; y: number; zoom: number; moveFrames?: number };
-export type TimedCameraKey = { frame: number; x: number; y: number; zoom: number; moveFrames: number };
+// The camera shows `rect` = [left, top, right, bottom] of the media in capture px; the browser window takes the shape of the
+// rect at the largest size that fits CAPTURE_VIEW. The move starts at narration line `at` (or at the clip) plus `sec`.
+export type CameraKey = { at: number | "clip"; sec?: number; rect: [number, number, number, number]; moveFrames?: number };
+export type CameraRect = CameraKey["rect"];
+export type TimedCameraKey = { frame: number; rect: CameraRect; moveFrames: number };
+
+// The largest page area of the browser window in output px: the frame of CaptureFrame without its title bar.
+export const CAPTURE_VIEW = { width: 1760, height: 764 } as const;
+
+// (x, y): the rect centre in capture px; zoom: output px per capture px; view: the window's page area in output px.
+export const cameraFromRect = (rect: CameraRect) => {
+  const [left, top, right, bottom] = rect;
+  const zoom = Math.min(CAPTURE_VIEW.width / (right - left), CAPTURE_VIEW.height / (bottom - top));
+  return { x: (left + right) / 2, y: (top + bottom) / 2, zoom, viewWidth: (right - left) * zoom, viewHeight: (bottom - top) * zoom };
+};
 
 export const SCENE_IDS = [
   "s1_hook",
@@ -44,7 +58,10 @@ export const SCENE_IDS = [
   "s3_demo_summary",
   "s4_demo_listen",
   "s5_demo_finding",
+  "s5b_demo_hear_fixed",
+  "s5c_demo_fix_all",
   "s6_demo_clean_and_upload",
+  "s6b_demo_no_reference",
   "s7_how",
   "s8_evidence",
   "s9_open",
@@ -157,7 +174,7 @@ export const computeTimeline = async (signal?: AbortSignal): Promise<SceneTiming
           throw new Error(`captures.json: ${capture.id} has a camera key at the clip, but scene ${id} has no clip`);
         }
         const base = key.at === "clip" ? (clip as TimedClip).from : lines[key.at].from;
-        return { frame: base + toFrame(key.sec ?? 0), x: key.x, y: key.y, zoom: key.zoom, moveFrames: key.moveFrames ?? DEFAULT_MOVE_FRAMES };
+        return { frame: base + toFrame(key.sec ?? 0), rect: key.rect, moveFrames: key.moveFrames ?? DEFAULT_MOVE_FRAMES };
       });
       return {
         ...capture,

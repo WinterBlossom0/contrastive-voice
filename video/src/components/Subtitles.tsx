@@ -7,20 +7,32 @@ const MAX_CHARS = 62;
 
 type Chunk = { text: string; from: number; durationInFrames: number };
 
-// Long sentences become several one-line chunks; each chunk's time share follows its character count.
+// A quoted name opens with a word that starts with a quote mark and closes with a word that ends with one before its punctuation.
+const opensQuote = (word: string): boolean => /^['‘"“]/.test(word);
+const closesQuote = (word: string): boolean => /['’"”][.,:;!?]*$/.test(word);
+
+// Long sentences become several one-line chunks; each chunk's time share follows its character count. A chunk never ends
+// inside a quoted name, so a name such as 'Hear it fixed' stays on one line.
 const splitLine = (text: string, from: number, durationInFrames: number): Chunk[] => {
   const words = text.split(/\s+/).filter((word) => word.length > 0);
   const pieces = Math.max(1, Math.ceil(text.length / MAX_CHARS));
   const target = text.length / pieces;
   const chunks: string[] = [];
   let current = "";
+  let inQuote = false;
   for (const word of words) {
     const candidate = current.length === 0 ? word : `${current} ${word}`;
-    if (current.length > 0 && candidate.length > target && chunks.length < pieces - 1) {
+    if (current.length > 0 && !inQuote && candidate.length > target && chunks.length < pieces - 1) {
       chunks.push(current);
       current = word;
     } else {
       current = candidate;
+    }
+    if (opensQuote(word)) {
+      inQuote = true;
+    }
+    if (closesQuote(word)) {
+      inQuote = false;
     }
   }
   chunks.push(current);
@@ -41,7 +53,7 @@ const SubtitleText: React.FC<{ text: string; quiet?: boolean }> = ({ text, quiet
         maxWidth: 1600,
         padding: "10px 26px",
         borderRadius: 12,
-        backgroundColor: "rgba(18, 18, 18, 0.82)",
+        backgroundColor: "rgba(31, 30, 29, 0.86)",
         color: quiet ? color.ink2 : color.ink,
         fontFamily: font.text,
         fontStyle: quiet ? "italic" : "normal",

@@ -26,7 +26,7 @@
         }
       ],
       "clip": null,
-      "gapAfterSec": 1.2
+      "gapAfterSec": 1.0
     },
     {
       "id": "s2_what",
@@ -80,19 +80,13 @@
           "durationSec": 4.492
         },
         {
-          "text": "The page opens on the top three fixes, ranked by the points each one costs.",
+          "text": "The biggest fixes come first: rushed words, a fade, and a dropped pause.",
           "file": "narration/s3_demo_summary_04.wav",
-          "durationSec": 4.647
-        },
-        {
-          "text": "Rushed words at 'the Washington Monument'. A fade at 'you can see past the'. A dropped pause after 'morning'.",
-          "file": "narration/s3_demo_summary_05.wav",
-          "durationSec": 6.787,
-          "spoken": "Rushed words at, the Washington Monument. A fade at, you can see past the. And a dropped pause after, morning."
+          "durationSec": 4.336
         },
         {
           "text": "The score is 86 out of 100, measured against the reference.",
-          "file": "narration/s3_demo_summary_06.wav",
+          "file": "narration/s3_demo_summary_05.wav",
           "durationSec": 4.122,
           "spoken": "The score is eighty-six out of a hundred, measured against the reference."
         }
@@ -109,19 +103,14 @@
           "durationSec": 3.84
         },
         {
-          "text": "Listen for the three flagged spots.",
-          "file": "narration/s4_demo_listen_02.wav",
-          "durationSec": 2.064
-        },
-        {
           "text": "The pause after 'morning' is gone, the monument phrase is rushed, and the last words fade.",
-          "file": "narration/s4_demo_listen_03.wav",
+          "file": "narration/s4_demo_listen_02.wav",
           "durationSec": 5.375,
           "spoken": "The pause after morning is gone, the monument phrase is rushed, and the last words fade."
         },
         {
           "text": "Each highlight sits on the words where you heard the problem.",
-          "file": "narration/s4_demo_listen_04.wav",
+          "file": "narration/s4_demo_listen_03.wav",
           "durationSec": 3.143
         }
       ],
@@ -133,7 +122,7 @@
         "sourceEndSec": 24.2
       },
       "gapAfterSec": 0.8,
-      "clipAfterLine": 2
+      "clipAfterLine": 1
     },
     {
       "id": "s5_demo_finding",
@@ -155,61 +144,120 @@
           "spoken": "Here, five words took point eight seven seconds. In the reference, they take one point six two seconds."
         },
         {
-          "text": "Play both and hear the difference.",
-          "file": "narration/s5_demo_finding_04.wav",
-          "durationSec": 1.891
-        },
-        {
           "text": "The fix: give these words about 1.6 s, and lengthen the stressed words rather than adding gaps.",
-          "file": "narration/s5_demo_finding_05.wav",
+          "file": "narration/s5_demo_finding_04.wav",
           "durationSec": 6.75,
           "spoken": "The fix: give these words about one point six seconds, and lengthen the stressed words, rather than adding gaps."
         }
       ],
+      "clip": null,
+      "gapAfterSec": 0.6
+    },
+    {
+      "id": "s5b_demo_hear_fixed",
+      "lines": [
+        {
+          "text": "Added after the frozen evaluation: 'Hear it fixed' edits your own recording toward the reference.",
+          "file": "narration/s5b_demo_hear_fixed_01.wav",
+          "durationSec": 5.996,
+          "spoken": "Added after the frozen evaluation: Hear it fixed, edits your own recording toward the reference."
+        },
+        {
+          "text": "Listen to yours, the edited take, then the target.",
+          "file": "narration/s5b_demo_hear_fixed_02.wav",
+          "durationSec": 2.876
+        },
+        {
+          "text": "Still flagged, partly changed: the score rises 3.07 points.",
+          "file": "narration/s5b_demo_hear_fixed_03.wav",
+          "durationSec": 5.066,
+          "spoken": "Still flagged, partly changed. The score rises three point zero seven points."
+        },
+        {
+          "text": "It is an edited preview of the change, not a guarantee.",
+          "file": "narration/s5b_demo_hear_fixed_04.wav",
+          "durationSec": 3.333
+        }
+      ],
       "clip": {
-        "file": "clips/L3A_rush_ab.wav",
-        "durationSec": 7.67,
-        "caption": "Your reading, then the reference: 'the grounds here to the Washington Monument, and then the Mall'",
+        "file": "clips/L3A_hear_fixed.wav",
+        "durationSec": 12.088,
+        "caption": "Yours, edited, then the target: 'over the grounds here to the Washington Monument and then the Mall'",
         "segments": [
           {
-            "label": "Your reading",
+            "label": "Yours",
             "startSec": 0.0,
-            "endSec": 3.01,
-            "sourceStartSec": 14.88,
-            "sourceEndSec": 17.89,
-            "file": "clips/L3A_rush_yours.wav"
+            "endSec": 3.34,
+            "sourceStartSec": 14.8,
+            "sourceEndSec": 18.14
           },
           {
-            "label": "Reference",
-            "startSec": 3.81,
-            "endSec": 7.67,
-            "sourceStartSec": 15.59,
-            "sourceEndSec": 19.45,
-            "file": "clips/reagan_rush_reference.wav"
+            "label": "Edited",
+            "startSec": 3.84,
+            "endSec": 7.488,
+            "sourceStartSec": 14.8,
+            "sourceEndSec": 18.448
+          },
+          {
+            "label": "Target",
+            "startSec": 7.988,
+            "endSec": 12.088,
+            "sourceStartSec": 15.52,
+            "sourceEndSec": 19.62
           }
         ]
       },
-      "gapAfterSec": 0.8,
-      "clipAfterLine": 4
+      "gapAfterSec": 0.6,
+      "clipAfterLine": 2
+    },
+    {
+      "id": "s5c_demo_fix_all",
+      "lines": [
+        {
+          "text": "'Fix everything and listen' edits the whole reading: 86.11 becomes 96.17.",
+          "file": "narration/s5c_demo_fix_all_01.wav",
+          "durationSec": 7.308,
+          "spoken": "Fix everything and listen, edits the whole reading. Eighty-six point one one becomes ninety-six point one seven."
+        },
+        {
+          "text": "The list says what each fix did: two spots are no longer flagged, three are still flagged.",
+          "file": "narration/s5c_demo_fix_all_02.wav",
+          "durationSec": 5.384
+        }
+      ],
+      "clip": null,
+      "gapAfterSec": 0.8
     },
     {
       "id": "s6_demo_clean_and_upload",
       "lines": [
         {
-          "text": "A clean reading should get no flags.",
+          "text": "A clean reading should get no flags: the identity example scores 100, with nothing flagged.",
           "file": "narration/s6_demo_clean_and_upload_01.wav",
-          "durationSec": 2.171
-        },
-        {
-          "text": "The identity example runs every edit with zero strength. It scores 100, with nothing flagged.",
-          "file": "narration/s6_demo_clean_and_upload_02.wav",
-          "durationSec": 6.35,
-          "spoken": "The identity example runs every edit with zero strength. It scores a hundred, with nothing flagged."
+          "durationSec": 5.93,
+          "spoken": "A clean reading should get no flags. The identity example scores a hundred, with nothing flagged."
         },
         {
           "text": "To check your own speech, upload your reading and a reference reading of the same text.",
-          "file": "narration/s6_demo_clean_and_upload_03.wav",
-          "durationSec": 4.887
+          "file": "narration/s6_demo_clean_and_upload_02.wav",
+          "durationSec": 4.888
+        }
+      ],
+      "clip": null,
+      "gapAfterSec": 0.6
+    },
+    {
+      "id": "s6b_demo_no_reference",
+      "lines": [
+        {
+          "text": "Also added after the evaluation: with no reference, the reading is graded against itself, and three spots stand out.",
+          "file": "narration/s6b_demo_no_reference_01.wav",
+          "durationSec": 7.332
+        },
+        {
+          "text": "That is a rough check. A reference reading of the same text gives better results.",
+          "file": "narration/s6b_demo_no_reference_02.wav",
+          "durationSec": 4.935
         }
       ],
       "clip": null,
@@ -224,82 +272,60 @@
           "durationSec": 1.234
         },
         {
-          "text": "Both recordings are force-aligned to the transcript with a wav2vec2 CTC model.",
+          "text": "Forced alignment times every word in both recordings, at 20 ms resolution.",
           "file": "narration/s7_how_02.wav",
-          "durationSec": 5.743,
-          "spoken": "Both recordings are force-aligned to the transcript, with a wave-to-vec two, C T C model."
+          "durationSec": 5.61,
+          "spoken": "Forced alignment times every word in both recordings, at twenty millisecond resolution."
         },
         {
-          "text": "That gives every word a start and end time, at 20 ms resolution.",
+          "text": "Nine delivery measures are taken on the same words in both, over five-word windows.",
           "file": "narration/s7_how_03.wav",
-          "durationSec": 4.828,
-          "spoken": "That gives every word a start and end time, at twenty millisecond resolution."
+          "durationSec": 5.018
         },
         {
-          "text": "Nine delivery measures are then taken on the same words in both readings, over five-word windows.",
+          "text": "Volume and pitch are relative to your own median, so a deep voice is not a flaw.",
           "file": "narration/s7_how_04.wav",
-          "durationSec": 5.966
+          "durationSec": 4.822
         },
         {
-          "text": "Volume is relative to your own median level, and pitch to your own median pitch.",
+          "text": "Only a difference past a threshold fitted on flawless comparisons is flagged.",
           "file": "narration/s7_how_05.wav",
-          "durationSec": 4.795
-        },
-        {
-          "text": "So a quiet microphone or a deep voice is not a flaw. Only a change from the reference is.",
-          "file": "narration/s7_how_06.wav",
-          "durationSec": 5.688
-        },
-        {
-          "text": "A difference is flagged only when it passes a threshold fitted on comparisons with no flaws.",
-          "file": "narration/s7_how_07.wav",
-          "durationSec": 5.952
+          "durationSec": 4.656
         }
       ],
       "clip": null,
-      "gapAfterSec": 1.0
+      "gapAfterSec": 0.8
     },
     {
       "id": "s8_evidence",
       "lines": [
         {
-          "text": "The dataset holds 2,410 audio files, rebuilt from public origins.",
+          "text": "2,410 audio files: nine public-domain speeches, with edits of known type, place and size.",
           "file": "narration/s8_evidence_01.wav",
-          "durationSec": 6.182,
-          "spoken": "The dataset holds two thousand, four hundred and ten audio files, rebuilt from public origins."
+          "durationSec": 7.931,
+          "spoken": "Two thousand, four hundred and ten audio files: nine public-domain speeches, with edits of known type, place and size."
         },
         {
-          "text": "Edits of known type, place and size are added to nine public-domain speeches.",
+          "text": "On held-out speakers, F1 is 0.812 as pre-registered; 0.879 with one detection per change.",
           "file": "narration/s8_evidence_02.wav",
-          "durationSec": 4.914
+          "durationSec": 7.814,
+          "spoken": "On held-out speakers, F one is point eight one two as pre-registered. Point eight seven nine, with one detection per change."
         },
         {
-          "text": "On the held-out test speakers, F1 is 0.812 with every prediction counted, as pre-registered.",
+          "text": "Zero false flags in 5.89 minutes of unedited and placebo copies.",
           "file": "narration/s8_evidence_03.wav",
-          "durationSec": 6.483,
-          "spoken": "On the held-out test speakers, F one is point eight one two, with every prediction counted, as pre-registered."
+          "durationSec": 5.255,
+          "spoken": "Zero false flags, in five point eight nine minutes of unedited and placebo copies."
         },
         {
-          "text": "Counting duplicate detections of one change once, it is 0.879.",
+          "text": "Gain and MP3 keep every detection; 10 dB babble keeps 60 %.",
           "file": "narration/s8_evidence_04.wav",
-          "durationSec": 4.667,
-          "spoken": "Counting duplicate detections of one change once, it is point eight seven nine."
-        },
-        {
-          "text": "On unedited and placebo copies of the test recordings: zero false flags in 5.89 minutes of comparison.",
-          "file": "narration/s8_evidence_05.wav",
-          "durationSec": 7.681,
-          "spoken": "On unedited and placebo copies of the test recordings, zero false flags, in five point eight nine minutes of comparison."
-        },
-        {
-          "text": "Under eleven channel conditions, gain and MP3 keep every test detection; 10 dB babble keeps 60 %.",
-          "file": "narration/s8_evidence_06.wav",
-          "durationSec": 8.273,
-          "spoken": "Under eleven channel conditions, gain and M P three keep every test detection. Ten decibel babble keeps sixty percent."
+          "durationSec": 5.685,
+          "spoken": "Gain and M P three keep every detection. Ten decibel babble keeps sixty percent."
         }
       ],
       "clip": null,
-      "gapAfterSec": 1.0
+      "gapAfterSec": 0.8
     },
     {
       "id": "s9_open",
@@ -321,7 +347,7 @@
         }
       ],
       "clip": null,
-      "gapAfterSec": 1.5
+      "gapAfterSec": 1.2
     },
     {
       "id": "s10_close",
