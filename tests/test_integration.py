@@ -86,7 +86,7 @@ def test_build_calibrate_evaluate_gallery_end_to_end(world, pinned_detector):
         wav, al = make_clean(10 + j, tr, planted)
         known[audio.sha256_pcm(wav)] = al
         readers.append(dataset._entry(f"gettysburg_{r}", wav, f"readers/gettysburg_{r}.wav", root, tr, role=role, split="calibration" if "cal" in role else "check",
-                                      speaker=r, licence_basis="test", licence_url="x", passage={}))
+                                      speaker=r, licence_basis="test", licence_url="x", passage={}, source={"file": f"gettysburg/{r}.mp3"}))
     wav, al = make_clean(30, tr, planted)
     known[audio.sha256_pcm(wav)] = al
     readers.append(dataset._entry("greenman_reagan", wav, "readers/greenman_reagan.wav", root, tr, role="orator_reference", split="train", speaker="g",
