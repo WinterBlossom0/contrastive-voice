@@ -9,14 +9,14 @@
 <link rel="icon" href="data:,">
 <link rel="preload" href="vendor/fonts/AtkinsonHyperlegibleNext-Regular.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="vendor/fonts/Newsreader-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="style.css?v=2026-10-10l">
+<link rel="stylesheet" href="style.css?v=2026-10-10m">
 <script defer src="https://cdn.jsdelivr.net/npm/plotly.js-cartesian-dist-min@4.1.1/plotly-cartesian.min.js"
         integrity="sha384-zc4SwKObGL/W0M3RUI09UPWjlgIZHfbwMgcZO6713mRh78tfUmIQKhzCyE2LIiUg" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/wavesurfer.js@8.0.1/dist/wavesurfer.min.js"
         integrity="sha384-cFoZUUrlVjbDowT5/idDYja9T/OY8JaecFDFEt6O/CHQxJjjQR440T5VhilWib4U" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/wavesurfer.js@8.0.1/dist/plugins/timeline.min.js"
         integrity="sha384-2l5/6KGTIt5kr+AcoXrcOzSiDUedbqv1LlHsFtQ5/ABj0cbzhpA2w6bCvc4Ns2vk" crossorigin="anonymous"></script>
-<script defer src="app.js?v=2026-10-10l"></script>
+<script defer src="app.js?v=2026-10-10m"></script>
 </head>
 <body class="intro">
 <svg width="0" height="0" class="defs" aria-hidden="true" focusable="false">
@@ -63,12 +63,13 @@
     </div>
     <span class="meter" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
     <span id="clock" class="clock">Loading audio…</span>
-    <div id="player-progress" class="player-progress" aria-hidden="true"><i></i></div>
+    <div id="player-progress" class="player-progress" role="slider" tabindex="0" aria-label="Playback position" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i></i></div>
     <p class="player-now"><span class="player-label">Finding</span> <span id="player-finding">-</span></p>
   </div>
 </div>
 
 <div id="alert" role="alert" hidden></div>
+<p id="announce" class="sr-only" role="status"></p>
 
 <main>
 <section class="hero" aria-labelledby="hero-title">
@@ -102,7 +103,8 @@
         <p class="sub" id="reference-mode" hidden><span class="badge"></span></p>
         <p class="sub limit-line" id="detect-limit" hidden></p>
         <div id="fix-all" class="fix-all" hidden>
-          <button type="button" id="fix-all-btn" class="fix-btn">Fix everything and listen</button>
+          <button type="button" id="fix-all-btn" class="fix-btn" aria-describedby="fix-wait">Fix everything and listen</button>
+          <p id="fix-wait" class="note" hidden></p>
         </div>
       </div>
     </div>
@@ -120,7 +122,7 @@
       <p id="wave-msg" class="note"></p>
     </div>
   </div>
-  <div id="fix-all-body" aria-live="polite" aria-label="Your reading with every fix applied"></div>
+  <div id="fix-all-body" role="region" aria-label="Your reading with every fix applied"></div>
 </section>
 
 <section class="fixes" aria-labelledby="fixes-title">
@@ -135,11 +137,11 @@
       <h2 id="text-title">Your text</h2>
       <p class="note">Highlighted words have a finding: select one to read it. Select any other word to hear it.</p>
       <p id="whole-note" class="note" hidden>The selected finding concerns the whole passage.</p>
-      <p id="transcript" class="transcript"></p>
+      <p id="transcript" class="transcript" role="group" aria-label="Your text, word by word: use the arrow keys to move between the words"></p>
       <p class="note text-key">Underlines get firmer as a finding gets more serious: <span class="key-line f-dot">dotted</span>, <span class="key-line f-dash">dashed</span>, <span class="key-line f-solid">solid</span>.</p>
     </section>
     <section id="all-findings" class="fold">
-      <h2><button type="button" class="fold-toggle" id="all-findings-toggle" aria-expanded="false" aria-controls="all-findings-body">Every finding <span id="flaw-count"></span></button></h2>
+      <h2><button type="button" class="fold-toggle" id="all-findings-toggle" aria-expanded="false" aria-controls="all-findings-body"><span id="all-findings-word">Every finding</span> <span id="flaw-count"></span></button></h2>
       <div class="fold-body" id="all-findings-body" inert>
         <section id="clip-wrap" aria-label="Findings over the whole passage" hidden>
           <h3>Over the whole passage</h3>
@@ -194,7 +196,7 @@
       </div>
     </section>
   </div>
-  <section id="explain" class="explain panel" aria-label="Selected finding" aria-live="polite"></section>
+  <section id="explain" class="explain panel" aria-label="Selected finding"></section>
 </div>
 
 <section class="upload-wrap" aria-label="Analyse your reading">
@@ -214,17 +216,18 @@
           <input type="file" name="baseline_audio" id="f-baseline-audio" accept="audio/*,.wav,.mp3,.m4a,.ogg,.oga,.webm,.flac" multiple aria-describedby="baseline-note">
         </label>
         <label class="wide"><span id="text-label">Transcript: the exact words both recordings read</span>
-          <textarea id="f-text" rows="6" maxlength="20000" required></textarea>
+          <textarea id="f-text" rows="6" required aria-describedby="text-warn"></textarea>
         </label>
+        <p id="text-warn" class="err wide" role="alert" hidden></p>
         <label>or load the transcript from a text file
           <input type="file" id="f-text-file" accept=".txt,text/plain">
         </label>
-        <p class="note wide"><span id="compare-note">Your recording is compared as a different speaker from the reference reading.</span> Upload limits: <span id="limits"></span>.</p>
+        <p class="note wide"><span id="compare-note">Your recording is compared as a different speaker from the reference reading.</span> <span id="limits-line" hidden>Upload limits: <span id="limits"></span>.</span></p>
         <button type="submit" id="submit">Analyse</button>
       </fieldset>
     </form>
     <ol id="stages" class="stages" aria-label="Analysis stages" hidden></ol>
-    <p id="stage-msg" role="status" class="note"></p>
+    <p id="stage-msg" role="alert" class="note"></p>
   </details>
 </section>
 </main>
