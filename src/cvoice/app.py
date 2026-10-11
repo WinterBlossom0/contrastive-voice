@@ -35,6 +35,7 @@ import json
 import logging
 import math
 import os
+import re
 import shutil
 import tempfile
 import threading
@@ -55,7 +56,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from . import __version__, audio, repair
 from . import config as C
-from .align import MISMATCH_SHORT, Transcript, TranscriptError, TranscriptMismatch, parse_transcript
+from .align import MISMATCH_PART, MISMATCH_SHORT, Transcript, TranscriptError, TranscriptMismatch, parse_transcript
 from .detect import load_detector, scale, threshold
 from .pipeline import DEFAULT_DETECTOR, REPORT_PDF, ROOT, analyze, dumps
 from .selfref import DEFAULT_DETECTOR as SELF_DETECTOR
@@ -169,16 +170,21 @@ def bundled_baselines(gallery: Path) -> dict[str, dict]:
     return {b["id"]: b for b in index.get("baselines") or [index["baseline"]]}
 
 
+def bundled_text_words(baseline: dict) -> str:
+    """The refusal of a transcript that is not the fixed text of a bundled reference (one reading or a bank)."""
+    return f"The transcript is not the text of the reference '{baseline['title']}'. Use that text, or choose another reference."
+
+
 def bundled_choice(gallery: Path, baseline_id: str, tr: Transcript) -> dict:
-    """The bundled baseline with its audio paths; 422 for an unknown id, or for a bank whose text differs from the transcript
-    (the bank readings are aligned to the transcript without the mismatch check that the uploads get)."""
+    """The bundled baseline with its audio paths; 422 for an unknown id, or when its fixed text differs from the
+    transcript (checked before any audio is read, for one reading and for a bank alike)."""
     baseline = bundled_baselines(gallery).get(baseline_id)
     if baseline is None:
         raise HTTPException(422, f"Unknown baseline '{baseline_id}'.")
+    if parse_transcript(baseline["text"]).norm != tr.norm:
+        raise HTTPException(422, bundled_text_words(baseline))
     baseline = {**baseline, "wav": gallery / baseline["audio"]}
     if baseline.get("references"):
-        if parse_transcript(baseline["text"]).norm != tr.norm:
-            raise HTTPException(422, f"The {baseline['title']} readings read a fixed text. {TRANSCRIPT_HINT}")
         baseline["reference_wavs"] = [gallery / r["audio"] for r in baseline["references"]]
     return baseline
 
@@ -212,10 +218,19 @@ def reference_uploads(files: list[UploadFile] | None) -> list[UploadFile]:
     return files
 
 
-def check_sizes(files: list[UploadFile]) -> None:
-    """413 when one file is above the per-file limit (the body cap allows several files)."""
-    if any(f.size is not None and f.size > C.MAX_UPLOAD_BYTES for f in files):
-        raise HTTPException(413, f"Each recording must be {C.MAX_UPLOAD_BYTES // 2**20} MB or smaller.")
+def too_large_words(who: str) -> str:
+    return f"{who} is larger than {C.MAX_UPLOAD_BYTES // 2**20} MB."
+
+
+def unsupported_words(who: str) -> str:
+    return f"{who} could not be read as audio. Use wav, mp3, m4a, ogg, flac or webm."
+
+
+def check_sizes(files: list[tuple[UploadFile | None, str]]) -> None:
+    """413 naming the first file (file, words of its name) above the per-file limit (the body cap allows several files)."""
+    for file, who in files:
+        if file is not None and file.size is not None and file.size > C.MAX_UPLOAD_BYTES:
+            raise HTTPException(413, too_large_words(who))
 
 
 def reference_names(count: int) -> list[str]:
@@ -229,13 +244,13 @@ def decoded_reference_names(count: int) -> list[str]:
 
 
 def save_upload(file: UploadFile, dest: Path) -> None:
-    """Write an upload under a server-chosen name and sniff its magic bytes; 415 when it is not audio."""
+    """Write an upload under a server-chosen name and sniff its magic bytes; 415 naming the file when it is not audio."""
     with dest.open("wb") as fh:
         shutil.copyfileobj(file.file, fh)
     try:
         audio.sniff(dest)
     except audio.AudioError as e:
-        raise HTTPException(415, "Unsupported audio. Use wav, mp3, m4a, ogg, flac or webm.") from e
+        raise HTTPException(415, unsupported_words(upload_label(dest.name))) from e
 
 
 # ============================================================================================ plain errors
@@ -259,10 +274,10 @@ def audio_words(e: audio.AudioError, who: str) -> str:
     return {
         audio.DECODE_TIMEOUT: f"{who} took too long to read. Save it as wav or mp3 and upload it again.",
         audio.CHANNELS: f"{who} has more than two channels. Use a mono or stereo recording.",
-        audio.TOO_LARGE: f"{who} is larger than {C.MAX_UPLOAD_BYTES // 2**20} MB.",
+        audio.TOO_LARGE: too_large_words(who),
         audio.TOO_LONG: f"{who} is longer than {seconds}. Use a recording of {seconds} or less.",
         audio.TOO_SHORT: f"{who} is shorter than {audio.MIN_SECONDS:.0f} s. Upload a recording of the whole text.",
-    }.get(e.kind, f"{who} could not be read as audio. Use wav, mp3, m4a, ogg, flac or webm.")
+    }.get(e.kind, unsupported_words(who))
 
 
 def load_upload(folder: Path, name: str):
@@ -278,22 +293,45 @@ def too_short_words(who: str, needed_s: float | None) -> str:
     return f"{who} is too short for this transcript{needed}."
 
 
+def mismatch_sentence(e: TranscriptMismatch, who: str) -> str:
+    """The first sentence of a transcript refusal of the recording `who` ("Your recording", "Your reference recording 2")."""
+    if e.kind == MISMATCH_SHORT:
+        return too_short_words(who, e.needed_s)
+    lower = who[:1].lower() + who[1:]
+    if e.kind == MISMATCH_PART:
+        where = "" if e.at_s is None else f" (at about {e.at_s:.0f} s, near '{e.near}')"
+        return f"Part of the transcript does not match {lower}{where}."
+    return f"The words in {lower} do not match the transcript."
+
+
+BRACKET_HINT = "Words in brackets or parentheses count as not read aloud."
+
+
+def bracket_hint(text: str, e: TranscriptMismatch) -> str:
+    """parse_transcript drops bracketed text as stage directions, so a partial mismatch of a transcript with brackets may
+    come from words that were read inside them."""
+    return f" {BRACKET_HINT}" if e.kind == MISMATCH_PART and re.search(r"[\[(]", text) else ""
+
+
+def own_reference_label(role: str, own_count: int) -> str:
+    """"Your reference recording [k]" of a refused role: the baseline is the first upload, "reference k" the k-th."""
+    k = 1 if role == "baseline" else int(role.split()[-1])
+    return upload_label(reference_names(own_count)[k - 1])
+
+
 def mismatch_words(e: TranscriptMismatch, baseline: dict | None, own_count: int) -> str:
     """Plain words of a transcript refusal that name the input to correct. The user's own recording comes first; a
     bundled reference reads a fixed text, so its refusal asks for that text. An error without roles is the user's."""
     roles = e.roles or ("participant",)
-    short = e.kind == MISMATCH_SHORT
     if "participant" in roles:
-        check = "Check that the transcript is the exact text you read."
-        first = too_short_words("Your recording", e.needed_s) if short else "The words in your recording do not match the transcript."
-        also = " The reference reading does not match the transcript either." if "baseline" in roles else ""
-        return f"{first} {check}{also}"
+        also = ""
+        if "baseline" in roles:
+            who = "The reference reading" if baseline is not None else own_reference_label("baseline", own_count)
+            also = f" {who} does not match the transcript either."
+        return f"{mismatch_sentence(e, 'Your recording')} Check that the transcript is the exact text you read.{also}"
     if baseline is not None:
-        return (f"The transcript is not the text that the reference reading '{baseline['title']}' reads. "
-                "Use that text, or choose another reference.")
-    who = "Your reference recording" if own_count == 1 else "One of your reference recordings"
-    first = too_short_words(who, e.needed_s) if short else f"The words in {who[:1].lower()}{who[1:]} do not match the transcript."
-    return f"{first} {TRANSCRIPT_HINT}"
+        return bundled_text_words(baseline)
+    return f"{mismatch_sentence(e, own_reference_label(roles[0], own_count))} {TRANSCRIPT_HINT}"
 
 
 # ============================================================================================ jobs
@@ -387,7 +425,7 @@ def run_job(job: dict, folder: Path, text: str, baseline: dict | None, detector:
         job.update(state="error", error=str(e))
     except TranscriptMismatch as e:
         LOG.warning("analysis %s refused: %s", folder.name, e)
-        job.update(state="error", error=mismatch_words(e, baseline, own_count))
+        job.update(state="error", error=mismatch_words(e, baseline, own_count) + bracket_hint(text, e))
     except Exception:  # report, never lose the worker thread silently
         traceback.print_exc()
         job.update(state="error", error=ANALYSIS_FAILED)
@@ -618,7 +656,8 @@ def create_app(gallery: Path = GALLERY, detector: Path = DEFAULT_DETECTOR, work:
         needed = detector if own or baseline_id else SELF_DETECTOR
         if not needed.exists():
             raise HTTPException(503, f"Analysis is not available: {needed.name} is missing.")
-        check_sizes([audio_file, *own])
+        check_sizes([(audio_file, "Your recording"), *zip(own, map(upload_label, reference_names(len(own)))),
+                     (transcript_file, "The transcript file")])
         try:
             text = read_transcript(transcript, transcript_file)
             tr = parse_transcript(text)

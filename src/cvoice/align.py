@@ -28,18 +28,21 @@ class TranscriptError(ValueError):
     """The transcript cannot be turned into spoken words (trust boundary)."""
 
 
-MISMATCH_WORDS, MISMATCH_SHORT = "words", "short"
+MISMATCH_WORDS, MISMATCH_SHORT, MISMATCH_PART = "words", "short", "part"
 
 
 class TranscriptMismatch(ValueError):
-    """The transcript does not match the audio. kind: MISMATCH_WORDS (mean word compatibility below the floor) or
-    MISMATCH_SHORT (the audio has fewer CTC frames than the transcript needs); needed_s: the shortest audio (s) that the
-    transcript needs, for MISMATCH_SHORT; roles: the recordings that fail ("baseline", "participant", "reference"), which
-    the pipeline sets."""
+    """The transcript does not match the audio. kind: MISMATCH_WORDS (mean word compatibility below the floor),
+    MISMATCH_SHORT (the audio has fewer CTC frames than the transcript needs) or MISMATCH_PART (one stretch of the
+    recording does not match its part of the transcript); needed_s: the shortest audio (s) that the transcript needs, for
+    MISMATCH_SHORT; at_s, near: for MISMATCH_PART, the evidence-weighted centre (s) of that stretch and the transcript
+    words at it; roles: the recordings that fail ("baseline", "participant", "reference k" for the k-th reading of a
+    bank), which the pipeline sets."""
 
-    def __init__(self, message: str, kind: str = MISMATCH_WORDS, needed_s: float | None = None, roles: tuple[str, ...] = ()):
+    def __init__(self, message: str, kind: str = MISMATCH_WORDS, needed_s: float | None = None, roles: tuple[str, ...] = (),
+                 at_s: float | None = None, near: str | None = None):
         super().__init__(message)
-        self.kind, self.needed_s, self.roles = kind, needed_s, roles
+        self.kind, self.needed_s, self.roles, self.at_s, self.near = kind, needed_s, roles, at_s, near
 
 
 # ============================================================================================ text
@@ -381,16 +384,46 @@ def _token_frames(states: np.ndarray, n_targets: int) -> tuple[np.ndarray, np.nd
 @dataclass
 class Alignment:
     """Raw CTC word timing of one recording. start/end in seconds; compat = per-word posterior compatibility, reported
-    (notice, QA), never used to exclude a word."""
+    (notice, QA), never used to exclude a word. missing/extra: per-frame evidence (nats, >= 0) of transcript characters
+    that the audio does not contain and of speech that the transcript does not contain (`mismatch_evidence`); used only
+    by `require_full_match`."""
     start: np.ndarray
     end: np.ndarray
     compat: np.ndarray
     mean_compat: float
     decoded: list[dict] = field(default_factory=list)
     char_spans: np.ndarray = field(default_factory=lambda: np.empty((0, 2)))
+    missing: np.ndarray = field(default_factory=lambda: np.empty(0))
+    extra: np.ndarray = field(default_factory=lambda: np.empty(0))
 
     def __len__(self) -> int:
         return len(self.start)
+
+
+def mismatch_evidence(logp: np.ndarray, targets: np.ndarray, states: np.ndarray, ext: np.ndarray, first: np.ndarray,
+                      last: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """(missing, extra), one value per frame in nats, from a forced path.
+    missing: at the first frame of each transcript character, minus the best log-probability of its label within
+    MISMATCH_TOL_FRAMES frames of its forced span. extra: on each spike frame (a letter is the most probable label, with
+    probability above MISMATCH_SPIKE_P) whose letter the forced path does not give within MISMATCH_TOL_FRAMES frames, the
+    best log-probability minus the log-probability of the forced label. The tolerance keeps a forced path that runs a few
+    frames behind the spikes (fast speech) from counting as a mismatch. Both are log-likelihood ratios of the free
+    best label to the transcript, as in the goodness-of-pronunciation score (Witt and Young 2000, Speech Communication
+    30:95-108)."""
+    n_frames, tol = len(logp), C.MISMATCH_TOL_FRAMES
+    forced = ext[states]
+    best, label = logp.max(1), logp.argmax(1)
+    missing = np.zeros(n_frames)
+    for p in np.flatnonzero(targets != VOCAB["|"]):
+        a, b = max(0, first[p] - tol), min(n_frames, last[p] + tol + 1)
+        missing[first[p]] -= float(logp[a:b, targets[p]].max())
+    covered = np.zeros(n_frames, dtype=bool)
+    padded = np.concatenate((np.full(tol, -1), forced, np.full(tol, -1)))
+    for shift in range(2 * tol + 1):
+        covered |= padded[shift:shift + n_frames] == label
+    spike = (label > VOCAB["|"]) & (best > np.log(C.MISMATCH_SPIKE_P))
+    extra = np.where(spike & ~covered, best - logp[np.arange(n_frames), forced], 0.0)
+    return missing.astype(np.float32), extra.astype(np.float32)
 
 
 def align_emissions(logp: np.ndarray, norm: tuple[str, ...]) -> Alignment:
@@ -407,7 +440,8 @@ def align_emissions(logp: np.ndarray, norm: tuple[str, ...]) -> Alignment:
         compat[w] = float(np.exp(np.mean(peaks)))
     chars = np.flatnonzero(targets != VOCAB["|"])
     spans = np.column_stack((first[chars], last[chars] + 1)) * C.CTC_FRAME_S
-    return Alignment(start, end, compat, float(compat.mean()), greedy_words(logp), spans)
+    missing, extra = mismatch_evidence(logp, targets, states, ext, first, last)
+    return Alignment(start, end, compat, float(compat.mean()), greedy_words(logp), spans, missing, extra)
 
 
 def require_match(al: Alignment) -> Alignment:
@@ -415,6 +449,73 @@ def require_match(al: Alignment) -> Alignment:
     if al.mean_compat < C.MEAN_COMPAT_MIN:
         raise TranscriptMismatch(f"transcript does not match the audio (mean word compatibility {al.mean_compat:.3f} < {C.MEAN_COMPAT_MIN})")
     return al
+
+
+def worst_window(values: np.ndarray, window_s: float) -> tuple[float, int]:
+    """(sum, first frame) of the window of window_s seconds with the largest sum of the per-frame values."""
+    frames = int(round(window_s / C.CTC_FRAME_S))
+    values = np.asarray(values, dtype=np.float64)
+    if len(values) <= frames:
+        return float(values.sum()), 0
+    total = np.concatenate(([0.0], np.cumsum(values)))
+    sums = total[frames:] - total[:-frames]
+    first = int(sums.argmax())
+    return float(sums[first]), first
+
+
+def words_near(al: Alignment, t: float) -> tuple[int, int]:
+    """First and last index of the MISMATCH_QUOTE_WORDS words (fewer at the end) from the word at time t s, or from the
+    nearest word when t falls between words."""
+    inside = np.flatnonzero((al.start <= t) & (al.end > t))
+    if len(inside):
+        word = int(inside[0])
+    else:
+        word = int(np.argmin(np.minimum(np.abs(al.start - t), np.abs(al.end - t))))
+    return word, min(len(al) - 1, word + C.MISMATCH_QUOTE_WORDS - 1)
+
+
+def evidence_centre(values: np.ndarray, first: int, window_s: float) -> float:
+    """Evidence-weighted mean time (s) of the window that starts at frame `first`."""
+    frames = int(round(window_s / C.CTC_FRAME_S))
+    part = np.asarray(values[first:first + frames], dtype=np.float64)
+    return float((first + np.average(np.arange(len(part)), weights=part)) * C.CTC_FRAME_S)
+
+
+def spread_rate(extra: np.ndarray) -> float:
+    """Extra evidence outside the worst MISMATCH_SPREAD_EXCLUDE_S window, in nats per second of the recording: high when
+    the speech that the transcript does not contain is spread over the reading (every second word left out), low for one
+    added phrase (a restart, a spoken title)."""
+    if len(extra) == 0:
+        return 0.0
+    rest = float(np.sum(extra, dtype=np.float64)) - worst_window(extra, C.MISMATCH_SPREAD_EXCLUDE_S)[0]
+    return rest / (len(extra) * C.CTC_FRAME_S)
+
+
+def require_full_match(al: Alignment, tr: Transcript) -> Alignment:
+    """Upload trust boundary: `require_match`, then refuse a recording when, in one MISMATCH_WINDOW_S window, the missing
+    evidence is above MISMATCH_MISSING_MAX (transcript words that the audio does not contain) or the extra evidence is
+    above MISMATCH_EXTRA_MAX (speech that the transcript does not contain), or when the extra evidence outside the worst
+    window is above MISMATCH_SPREAD_MAX per second (`spread_rate`). The quote comes from the window of the failed check
+    with the largest ratio to its limit (for the spread check, the worst extra window)."""
+    require_match(al)
+    if len(al.missing) == 0 or len(al.extra) == 0:
+        raise ValueError("the alignment has no mismatch evidence: align it again with align_emissions")
+    missing, missing_at = worst_window(al.missing, C.MISMATCH_WINDOW_S)
+    extra, extra_at = worst_window(al.extra, C.MISMATCH_WINDOW_S)
+    spread = spread_rate(al.extra)
+    checks = [("missing", missing, C.MISMATCH_MISSING_MAX, al.missing, missing_at),
+              ("extra", extra, C.MISMATCH_EXTRA_MAX, al.extra, extra_at),
+              ("spread extra", spread, C.MISMATCH_SPREAD_MAX, al.extra, extra_at)]
+    failed = [c for c in checks if c[1] > c[2]]
+    if not failed:
+        return al
+    side, value, limit, values, first = max(failed, key=lambda c: c[1] / c[2])
+    centre = evidence_centre(values, first, C.MISMATCH_WINDOW_S)
+    i0, i1 = words_near(al, centre)
+    raise TranscriptMismatch(f"part of the transcript does not match the audio: {side} evidence {value:.1f} > {limit} "
+                             f"(missing {missing:.1f} nats, extra {extra:.1f} nats in {C.MISMATCH_WINDOW_S} s windows, "
+                             f"spread {spread:.2f} nats/s), centre {centre:.2f} s (words {i0}-{i1})",
+                             MISMATCH_PART, at_s=centre, near=" ".join(tr.disp[i0:i1 + 1]))
 
 
 def align_audio(aligner: Aligner, wav: np.ndarray, tr: Transcript) -> Alignment:

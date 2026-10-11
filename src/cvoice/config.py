@@ -86,6 +86,14 @@ CHECKPOINT_BYTES = 377_664_473
 # 6-18 ms boundary error); per-word compatibility is reported, never used to exclude a word.
 LOW_COMPAT_NOTICE = 0.10  # (D) words below this are counted in a low-confidence notice, still scored
 MEAN_COMPAT_MIN = 0.10  # (D) refusal "transcript does not match the audio", enforced only at trust boundaries (uploads, passage selection)
+# Partial-mismatch refusal of uploads (align.require_full_match); outside the detector hash because it only refuses an upload.
+MISMATCH_TOL_FRAMES = 4  # CTC frames (80 ms)
+MISMATCH_SPIKE_P = 0.5  # posterior of the most probable letter on a spike frame
+# Limits 1.25 x the largest value of 1936 real readings with their correct transcripts (build/work/qa2/n1/REPORT.txt).
+MISMATCH_WINDOW_S = 2.0  # s
+MISMATCH_MISSING_MAX, MISMATCH_EXTRA_MAX = 175.0, 360.0  # nats in one MISMATCH_WINDOW_S window
+MISMATCH_SPREAD_EXCLUDE_S, MISMATCH_SPREAD_MAX = 3.0, 9.5  # s, nats per second
+MISMATCH_QUOTE_WORDS = 4  # words of the transcript quoted in the refusal
 PAUSE_MIN_S = 0.20  # s, acoustic pause
 PAUSE_FRAC, PAUSE_CLIP_DB = 0.3, (6.0, 15.0)  # theta = Q5(L) + clip(0.3 * (Q95 - Q5), 6, 15) dB
 PAUSE_Q = (5, 95)

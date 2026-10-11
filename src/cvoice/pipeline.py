@@ -20,7 +20,7 @@ from . import __version__
 from . import audio, explain, patterns
 from . import config as C
 from .align import (Alignment, Transcript, TranscriptMismatch, align_audio, emissions, load_aligner, parse_transcript,
-                    require_match)
+                    require_full_match)
 from .compare import Comparison, compare, time_map, warp
 from .detect import clip_flags, decode, decode_dim, flagged_dims, key as flag_key, load_detector, scale, threshold
 from .features import Recording, make_recording
@@ -44,13 +44,15 @@ def align_wav(wav: np.ndarray, tr: Transcript, aligner=None, cache_dir: Path | N
     cache = None if cache_dir is None else Path(cache_dir) / f"align_{cache_key(wav, tr)}_v2.npz"
     if cache is not None and cache.exists():
         with np.load(cache) as z:
-            decoded = [{"norm": str(w), "start": float(a), "end": float(b)}
-                       for w, a, b in zip(z["decode_norm"], z["decode_start"], z["decode_end"])]
-            return wav, Alignment(z["start"], z["end"], z["compat"], float(z["compat"].mean()), decoded, z["char_spans"])
+            if "extra" in z.files:  # an older cache file without the mismatch evidence is aligned again
+                decoded = [{"norm": str(w), "start": float(a), "end": float(b)}
+                           for w, a, b in zip(z["decode_norm"], z["decode_start"], z["decode_end"])]
+                return wav, Alignment(z["start"], z["end"], z["compat"], float(z["compat"].mean()), decoded, z["char_spans"],
+                                      z["missing"], z["extra"])
     al = align_audio(aligner or load_aligner(), wav, tr)
     if cache is not None:
         cache.parent.mkdir(parents=True, exist_ok=True)
-        np.savez(cache, start=al.start, end=al.end, compat=al.compat, char_spans=al.char_spans,
+        np.savez(cache, start=al.start, end=al.end, compat=al.compat, char_spans=al.char_spans, missing=al.missing, extra=al.extra,
                  decode_norm=np.array([w["norm"] for w in al.decoded], dtype=str),
                  decode_start=np.array([w["start"] for w in al.decoded]), decode_end=np.array([w["end"] for w in al.decoded]))
     return wav, al
@@ -363,7 +365,21 @@ def refusal(refused: list[tuple[str, TranscriptMismatch]]) -> TranscriptMismatch
     participant when the participant fails, because the user can correct that recording."""
     chosen = next((e for name, e in refused if name == "participant"), refused[0][1])
     return TranscriptMismatch("; ".join(f"{name} recording: {e}" for name, e in refused), chosen.kind, chosen.needed_s,
-                              tuple(name for name, _ in refused))
+                              tuple(name for name, _ in refused), chosen.at_s, chosen.near)
+
+
+def reference_recording(x, k: int, tr: Transcript, aligner, cache_dir: Path | None, refuse_mismatch: bool) -> Recording:
+    """Reading k (from 0) of a reference bank as a Recording; with refuse_mismatch, every reading of the bank is checked
+    against the transcript and a refusal names it ("reference k+1")."""
+    if isinstance(x, Recording):
+        return x
+    try:
+        wav, al = align_wav(_load(x), tr, aligner, cache_dir)
+        if refuse_mismatch:
+            require_full_match(al, tr)
+    except TranscriptMismatch as e:
+        raise refusal([(f"reference {k + 1}", e)]) from e
+    return make_recording(wav, tr, al)
 
 
 def analyze(participant, transcript, baseline=None, *, regime: str | None = None, detector: dict | None = None,
@@ -391,7 +407,7 @@ def analyze(participant, transcript, baseline=None, *, regime: str | None = None
         try:
             part = x if isinstance(x, Recording) else align_wav(_load(x), tr, aligner, cache_dir)
             if refuse_mismatch and not isinstance(part, Recording):
-                require_match(part[1])
+                require_full_match(part[1], tr)
             parts.append(part)
         except TranscriptMismatch as e:
             refused.append((name, e))
@@ -399,10 +415,8 @@ def analyze(participant, transcript, baseline=None, *, regime: str | None = None
         raise refusal(refused) from refused[0][1]
     progress("features")
     B, P = (x if isinstance(x, Recording) else make_recording(x[0], tr, x[1]) for x in parts)
-    try:
-        refs = [B] if references is None else [x if isinstance(x, Recording) else prepare(_load(x), tr, aligner, cache_dir) for x in references]
-    except TranscriptMismatch as e:
-        raise refusal([("reference", e)]) from e
+    refs = [B] if references is None else [reference_recording(x, k, tr, aligner, cache_dir, refuse_mismatch)
+                                           for k, x in enumerate(references)]
     B, reg, mode, reference_count = select_reference(refs, det, regime)
     progress("compare")
     comp = compare(B, P)
@@ -567,7 +581,7 @@ def analyze_self(participant, transcript, *, detector: dict | None = None, parti
     try:
         part = participant if isinstance(participant, Recording) else align_wav(_load(participant), tr, aligner, cache_dir)
         if refuse_mismatch and not isinstance(part, Recording):
-            require_match(part[1])
+            require_full_match(part[1], tr)
     except TranscriptMismatch as e:
         raise refusal([("participant", e)]) from e
     progress("features")

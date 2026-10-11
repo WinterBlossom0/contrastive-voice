@@ -15,7 +15,7 @@ import pytest
 import uvicorn
 
 from cvoice import app as appmod, audio, config as C, gallery, repair
-from cvoice.align import MISMATCH_SHORT, TranscriptMismatch
+from cvoice.align import MISMATCH_PART, MISMATCH_SHORT, TranscriptMismatch
 
 TEXT = "we hold these truths to be self evident. That all men are created equal."
 BANK_TEXT = "We are met on a great battlefield of that war. We have come to dedicate a portion of that field."
@@ -244,7 +244,7 @@ def test_each_file_and_the_whole_request_are_size_limited(server):
     base, _, _ = server
     over = [("audio", ("a.wav", b"RIFF" + b"\0" * C.MAX_UPLOAD_BYTES)), ("transcript", TEXT), ("baseline_id", "base")]
     s, body, _ = call(f"{base}/api/analyze", over)   # one file above the per-file limit, the request under the total
-    assert s == 413 and "Each recording" in json.loads(body)["detail"]
+    assert s == 413 and json.loads(body)["detail"] == f"Your recording is larger than {C.MAX_UPLOAD_BYTES // 2**20} MB."
     total = appmod.max_request_bytes()
     assert total == C.MAX_UPLOAD_BYTES * (1 + appmod.MAX_REFERENCES)   # room for every file of a full upload at its own limit
     reply = declared_length_reply(base, total + 1)
@@ -270,10 +270,13 @@ def test_flag_limits_match_the_result_rows_of_the_frozen_detector():
         assert {k: rows[k] for k in appmod.LIMIT_ROWS.values()} == limits[mode]
 
 
-def test_bank_choice_refuses_another_text(server):
-    base, _, tmp = server
-    s, body, _ = call(f"{base}/api/analyze", {"audio": ("a.wav", wav_bytes(tmp)), "transcript": TEXT, "baseline_id": "bank"})
-    assert s == 422 and "fixed text" in json.loads(body)["detail"]
+@pytest.mark.parametrize("baseline_id,title,text", [("bank", "Bank", TEXT), ("base", "Base", BANK_TEXT)])
+def test_bundled_references_refuse_another_text_up_front_in_the_same_words(server, baseline_id, title, text):
+    base, seen, tmp = server
+    s, body, _ = call(f"{base}/api/analyze", {"audio": ("a.wav", wav_bytes(tmp)), "transcript": text, "baseline_id": baseline_id})
+    assert (s, json.loads(body)["detail"]) == (
+        422, f"The transcript is not the text of the reference '{title}'. Use that text, or choose another reference.")
+    assert not seen
 
 
 def test_index_without_a_baselines_list_offers_its_one_baseline(tmp_path):
@@ -348,7 +351,13 @@ CHECK_TEXT = "Check that the transcript is the exact text you read."
     (TranscriptMismatch("participant recording: 249 frames < 467 needed", MISMATCH_SHORT, 467 * C.CTC_FRAME_S, ("participant",)), {},
      f"Your recording is too short for this transcript: at least 10 seconds of speech is needed. {CHECK_TEXT}"),
     (TranscriptMismatch("baseline recording: x", roles=("baseline",)), {"baseline_id": "base"},
-     "The transcript is not the text that the reference reading 'Base' reads. Use that text, or choose another reference."),
+     "The transcript is not the text of the reference 'Base'. Use that text, or choose another reference."),
+    (TranscriptMismatch("participant recording: extra evidence 250 nats", MISMATCH_PART, roles=("participant",), at_s=12.4,
+                        near="his family live"), {},
+     f"Part of the transcript does not match your recording (at about 12 s, near 'his family live'). {CHECK_TEXT}"),
+    (TranscriptMismatch("baseline recording: x; participant recording: y", roles=("baseline", "participant")),
+     {"baseline_audio": ("b.wav", b"")},
+     f"The words in your recording do not match the transcript. {CHECK_TEXT} Your reference recording does not match the transcript either."),
     (TranscriptMismatch("baseline recording: x", roles=("baseline",)), {"baseline_audio": ("b.wav", b"")},
      f"The words in your reference recording do not match the transcript. {appmod.TRANSCRIPT_HINT}"),
     (RuntimeError("index 7 is out of bounds"), {}, appmod.ANALYSIS_FAILED),
@@ -729,3 +738,52 @@ def test_real_fix_of_a_gallery_example(tmp_path):
     finally:
         srv.should_exit = True
         th.join(5)
+
+
+@pytest.mark.parametrize("error,count,expected", [
+    (TranscriptMismatch("reference 3 recording: missing evidence 140 nats", MISMATCH_PART, roles=("reference 3",), at_s=4.2,
+                        near="a portion of that"), 3,
+     f"Part of the transcript does not match your reference recording 3 (at about 4 s, near 'a portion of that'). {appmod.TRANSCRIPT_HINT}"),
+    (TranscriptMismatch("baseline recording: x", roles=("baseline",)), 2,
+     f"The words in your reference recording 1 do not match the transcript. {appmod.TRANSCRIPT_HINT}"),
+    (TranscriptMismatch("reference 2 recording: 249 frames < 467 needed", MISMATCH_SHORT, 467 * C.CTC_FRAME_S, ("reference 2",)), 2,
+     f"Your reference recording 2 is too short for this transcript: at least 10 seconds of speech is needed. {appmod.TRANSCRIPT_HINT}"),
+])
+def test_a_refused_reference_of_an_uploaded_bank_is_named(error, count, expected):
+    assert appmod.mismatch_words(error, None, count) == expected
+
+
+def test_unsupported_audio_names_the_file(server):
+    base, seen, tmp = server
+    text_file = ("notaudio.wav", b"this is a text file, not audio\n" * 10)
+    s, body, _ = call(f"{base}/api/analyze", [("audio", text_file), ("transcript", TEXT)])
+    assert (s, json.loads(body)["detail"]) == (415, "Your recording could not be read as audio. Use wav, mp3, m4a, ogg, flac or webm.")
+    fields = [("audio", ("a.wav", wav_bytes(tmp))), ("transcript", TEXT), *own_references(tmp, 1), ("baseline_audio", text_file)]
+    s, body, _ = call(f"{base}/api/analyze", fields)
+    assert (s, json.loads(body)["detail"]) == (
+        415, "Your reference recording 2 could not be read as audio. Use wav, mp3, m4a, ogg, flac or webm.")
+    assert not seen
+
+
+def test_a_file_above_the_limit_is_named(server):
+    base, _, tmp = server
+    big = b"RIFF" + b"\0" * C.MAX_UPLOAD_BYTES
+    limit = f"is larger than {C.MAX_UPLOAD_BYTES // 2**20} MB."
+    fields = [("audio", ("a.wav", wav_bytes(tmp))), ("transcript", TEXT), *own_references(tmp, 1), ("baseline_audio", ("big.wav", big))]
+    s, body, _ = call(f"{base}/api/analyze", fields)
+    assert (s, json.loads(body)["detail"]) == (413, f"Your reference recording 2 {limit}")
+    s, body, _ = call(f"{base}/api/analyze", [("audio", ("a.wav", wav_bytes(tmp))), ("transcript_file", ("t.txt", big))])
+    assert (s, json.loads(body)["detail"]) == (413, f"The transcript file {limit}")
+
+
+def test_a_partial_mismatch_of_a_transcript_with_brackets_explains_them(server, monkeypatch):
+    base, _, tmp = server
+    error = TranscriptMismatch("participant recording: extra evidence", MISMATCH_PART, roles=("participant",), at_s=3.0, near="we hold")
+
+    def refuse(*args, **kwargs):
+        raise error
+    monkeypatch.setattr(appmod, "analyze", refuse)
+    s, body, _ = call(f"{base}/api/analyze", {"audio": ("a.wav", wav_bytes(tmp)), "transcript": TEXT + " (pause)"})
+    job = wait_done(base, json.loads(body)["job_id"])
+    assert job["error"] == (f"Part of the transcript does not match your recording (at about 3 s, near 'we hold'). {CHECK_TEXT} "
+                            f"{appmod.BRACKET_HINT}")

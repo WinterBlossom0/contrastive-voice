@@ -214,7 +214,7 @@ uv run --extra cpu pytest -q -m slow tests/test_smoke.py
 uv run --extra cpu ruff check --select F,E9 src kaggle tests
 ```
 
-The second command runs 636 tests (all pass, about 94 s on a laptop CPU, 2026-10-10 IST); 11 slow tests are deselected by default. The third runs the one-clip smoke test (it needs the alignment checkpoint; about 6 s once the checkpoint is cached). The slow tests of the two later features are in `tests/test_repair.py` and `tests/test_selfref.py` (`pytest -m slow`). The slow test `tests/test_integration.py` (a mini dataset build through the gallery) passes: `uv run --extra cpu --group build pytest -q -m slow tests/test_integration.py` gave 1 passed in 1110.57 s (18 min 31 s) on 2026-10-10 IST. A few tests read the final-run outputs under `build/`, which is not part of the repository; in a fresh clone they are skipped. `.github/workflows/ci.yml` runs the first three commands.
+The second command runs 658 tests (all pass, about 94 s on a laptop CPU, 2026-10-10 IST); 11 slow tests are deselected by default. The third runs the one-clip smoke test (it needs the alignment checkpoint; about 6 s once the checkpoint is cached). The slow tests of the two later features are in `tests/test_repair.py` and `tests/test_selfref.py` (`pytest -m slow`). The slow test `tests/test_integration.py` (a mini dataset build through the gallery) passes: `uv run --extra cpu --group build pytest -q -m slow tests/test_integration.py` gave 1 passed in 1110.57 s (18 min 31 s) on 2026-10-10 IST. A few tests read the final-run outputs under `build/`, which is not part of the repository; in a fresh clone they are skipped. `.github/workflows/ci.yml` runs the first three commands.
 
 ## Repository layout
 
