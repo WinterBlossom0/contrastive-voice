@@ -24,6 +24,7 @@
   --you: #957fd0;          /* this recording and the edited take */
   --ref: #219ba1;          /* reference reading */
   --flag: #b24981;         /* flagged regions only */
+  --flag-bar: #ca6699;     /* bars and word ticks of a fault on this recording: --flag lifted to 4.1:1 on --panel (--flag is 2.9:1) */
   --tol: #ad7b3d;          /* tolerance band, drawn as a light fill */
   --neutral: #8f887e;      /* unscored reference differences */
   --you-text: #bcaef0; --ref-text: #6cc4c8; --flag-text: #ee98bf; --on-flag: #1f1e1d; --on-accent: #1f1e1d;
@@ -362,27 +363,35 @@ a:hover { text-decoration-color: var(--ink); }
 .lane-label { margin: 0 0 2px; font-size: 12px; font-weight: 700; color: var(--muted); line-height: 16px; }
 .tl-label { font-size: 12px; font-weight: 700; fill: var(--you-text); }
 .tl-word { cursor: pointer; }
-.tl-word rect { fill: rgba(149, 127, 208, 0.36); transition: fill 0.15s ease; }
+.tl-word rect { fill: rgba(149, 127, 208, 0.36); transition: fill 0.15s ease, fill-opacity 0.15s ease; }
 .tl-word.ref rect { fill: rgba(179, 172, 161, 0.16); }
 .tl-word:hover rect { fill: rgba(149, 127, 208, 0.62); }
 .tl-word.ref:hover rect { fill: rgba(179, 172, 161, 0.36); }
-/* A fault is one region on this recording: a wash whose strength follows the severity tier (as SEVERITY_ALPHA in app.js,
-   which the waveform regions below use) and a top edge in the severity line style (dotted, dashed, solid). */
+/* A fault is drawn on this recording, never over it: the words of the finding keep their ticks in bramble (stronger with
+   the severity tier), a thin marker line above them carries the severity line style (dotted, dashed, solid), and the
+   waveform bars inside the span take the fault colour (FAULT_LOOK in app.js). */
+.tl-word.flag rect { fill: var(--flag-bar); fill-opacity: 0.85; }
+.tl-word.flag.sev-dot rect { fill-opacity: 0.5; }
+.tl-word.flag.sev-dash rect { fill-opacity: 0.68; }
+.tl-word.flag.grp rect { fill-opacity: 1; }
+.tl-word.flag.peek rect, .tl-word.flag:hover rect { fill: var(--flag-text); fill-opacity: 0.85; }
+.tl-word.flag.sel rect { fill: var(--flag-text); fill-opacity: 1; }
+.has-sel .tl-word.flag:not(.sel):not(.grp):not(.peek) rect, .peeking .tl-word.flag:not(.peek):not(.sel) rect { fill-opacity: 0.4; }
 .tl-band { cursor: pointer; }
-.tl-band .wash { fill: var(--flag); fill-opacity: 0.26; }
-.tl-band .wash.sev-dot { fill-opacity: 0.1; }
-.tl-band .wash.sev-dash { fill-opacity: 0.17; }
-.tl-band .edge { stroke: var(--flag-text); stroke-width: 1.5; }
-.tl-band.grp .wash { fill-opacity: 0.3; }
-.tl-band.sel .wash { fill-opacity: 0.36; }
-.tl-band.sel .edge, .tl-band.grp .edge { stroke: var(--you-text); stroke-width: 2; }
+.tl-band .hit { fill: transparent; }
+.tl-band .edge { stroke: var(--flag-text); stroke-width: 1.5; stroke-opacity: 0.9; }
+.tl-band .edge.sev-dot { stroke-opacity: 0.75; }
+.tl-band .edge.pin { stroke-width: 2; }
+.tl-band.peek .edge { stroke-opacity: 1; stroke-width: 2; }
+.tl-band.sel .edge, .tl-band.grp .edge { stroke: var(--you-text); stroke-opacity: 1; stroke-width: 2; }
+.has-sel .tl-band:not(.sel):not(.grp):not(.peek) .edge { stroke-opacity: 0.5; }
 /* the link to the reference span shows only for the hovered or selected fault */
 .tl-link { opacity: 0; transition: opacity 0.2s ease; pointer-events: none; }
 .tl-band.sel .tl-link, .tl-band.peek .tl-link { opacity: 1; }
-.tl-link .ref-span { fill: var(--flag); fill-opacity: 0.3; stroke: var(--flag-text); stroke-width: 1; }
+.tl-link .ref-span { fill: var(--flag-bar); fill-opacity: 0.55; }
 .tl-link .link { fill: none; stroke: var(--flag-text); stroke-opacity: 0.55; stroke-width: 1; }
-.tl-band .wash, .tl-band .edge, .tl-mk rect { transition: fill-opacity 0.2s ease, stroke-width 0.2s ease, fill 0.2s ease, stroke 0.2s ease; }
-.tl-diff .wash { fill: var(--neutral); fill-opacity: 0.25; }
+.tl-band .edge, .tl-mk rect { transition: fill-opacity 0.2s ease, stroke-width 0.2s ease, stroke-opacity 0.2s ease, fill 0.2s ease, stroke 0.2s ease; }
+.tl-diff .hit { fill: var(--neutral); fill-opacity: 0.18; }
 .tl-diff .edge { stroke: var(--neutral); }
 .tl-diff .tl-link { opacity: 1; }
 .tl-diff .tl-link .ref-span { fill: var(--neutral); stroke: var(--neutral); }
@@ -409,7 +418,17 @@ a:hover { text-decoration-color: var(--ink); }
 .tl-more { display: block; margin: 6px 0 0 auto; font-size: 14px; }
 .tl-cursor { stroke: var(--ink); stroke-width: 2; }
 .wave-ref { min-height: 36px; }
-.wave-you { min-height: 56px; }
+.wave-you { min-height: 56px; position: relative; isolation: isolate; }
+/* The soft wash behind a fault's bars: under the waveform canvas, strongest on the centre line, gone at the top and the bottom.
+   bottom: the 16 px time axis under the waveform (timeline plugin height in app.js). */
+.wave-wash { position: absolute; top: 0; bottom: 16px; left: 0; right: 0; z-index: -1; pointer-events: none; }
+.wash-run { position: absolute; top: 0; bottom: 0; border-radius: 8px;
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 34%, #000 66%, transparent);
+  mask-image: linear-gradient(to bottom, transparent, #000 34%, #000 66%, transparent); }
+/* A fault at one point in time (a missing pause) falls in a silence, where there are no bars to recolour: a hairline marks it. */
+.wash-point { position: absolute; top: 12%; bottom: 12%; width: 2px; margin-left: -1px; border-radius: 1px; background: var(--c);
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 30%, #000 70%, transparent);
+  mask-image: linear-gradient(to bottom, transparent, #000 30%, #000 70%, transparent); }
 .tl-tip { position: absolute; z-index: 5; pointer-events: none; padding: 4px 10px; border-radius: var(--r-chip); background: var(--glass-solid); border: 1px solid var(--glass-edge);
   font-size: 14px; white-space: nowrap; box-shadow: var(--glass-shadow); }
 #wave-msg:empty { display: none; }
@@ -652,7 +671,7 @@ body::after { content: ""; position: fixed; inset: 0; z-index: 60; pointer-event
 @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(178, 73, 129, 0.55); } 100% { box-shadow: 0 0 0 14px rgba(178, 73, 129, 0); } }
 @keyframes pulse-svg { 0%, 100% { opacity: 1; } 40% { opacity: 0.45; } }
 .top-card.pulse, #flaws button.pulse { animation: pulse 0.9s ease-out 1; }
-.tl-band.pulse .wash, .tl-mk.pulse rect { animation: pulse-svg 0.7s ease-in-out 1; }
+.tl-band.pulse .edge, .tl-mk.pulse rect { animation: pulse-svg 0.7s ease-in-out 1; }
 .peeking .tl-band:not(.peek), .peeking .tl-mk:not(.peek), .peeking .tl-stem:not(.peek) { opacity: 0.35; }
 .peeking .w.f-dot:not(.peek), .peeking .w.f-dash:not(.peek), .peeking .w.f-solid:not(.peek) { opacity: 0.45; }
 .peeking .top-card:not(.peek) { opacity: 0.7; }
@@ -668,7 +687,7 @@ body::after { content: ""; position: fixed; inset: 0; z-index: 60; pointer-event
 @keyframes slide-in { from { opacity: 0; transform: translateX(14px); } to { opacity: 1; transform: none; } }
 main { transition: opacity 0.14s ease; }
 main.fading { opacity: 0.25; }
-.intro .tl-band, .intro .tl-mk, .intro .tl-stem { animation: band-in 0.35s ease-out both; animation-delay: calc(1s + var(--seq, 0) * 0.16s); }
+.intro .tl-band, .intro .tl-mk, .intro .tl-stem, .intro .wave-wash { animation: band-in 0.35s ease-out both; animation-delay: calc(1s + var(--seq, 0) * 0.16s); }
 @keyframes band-in { from { opacity: 0; } 60% { opacity: 1; filter: brightness(1.6); } to { opacity: 1; } }
 
 @media (prefers-reduced-motion: reduce) {
