@@ -1,4 +1,4 @@
-# The image needs only src/, models/, gallery/, pyproject.toml, uv.lock, README.md and LICENSE.
+# The image needs only src/, models/, gallery/, docs/technical.pdf (served at /report), pyproject.toml, uv.lock, README.md and LICENSE.
 .venv
 .git
 .github
@@ -10,7 +10,8 @@ build
 out
 video
 tests
-docs
+docs/*
+!docs/technical.pdf
 kaggle
 scripts
 data

@@ -29,6 +29,7 @@ from .score import Scored, score
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_DETECTOR = ROOT / "models" / "detector.json"
+REPORT_PDF = ROOT / "docs" / "technical.pdf"  # the technical report that the page links to
 
 
 # ============================================================================================ preparation
@@ -356,6 +357,15 @@ def _load(x) -> np.ndarray:
         return audio.load_audio(Path(x), C.MAX_UPLOAD_BYTES, C.MAX_UPLOAD_S)[0]
 
 
+def refusal(refused: list[tuple[str, TranscriptMismatch]]) -> TranscriptMismatch:
+    """One error for every recording (role, error) that does not match the transcript. Both recordings are checked
+    before the refusal, so the error can name the user's own recording; its kind and needed_s are those of the
+    participant when the participant fails, because the user can correct that recording."""
+    chosen = next((e for name, e in refused if name == "participant"), refused[0][1])
+    return TranscriptMismatch("; ".join(f"{name} recording: {e}" for name, e in refused), chosen.kind, chosen.needed_s,
+                              tuple(name for name, _ in refused))
+
+
 def analyze(participant, transcript, baseline=None, *, regime: str | None = None, detector: dict | None = None,
             baseline_meta: dict | None = None, participant_meta: dict | None = None, truth: list | None = None,
             aligner=None, cache_dir: Path | None = None, progress: Callable[[str], None] = lambda stage: None,
@@ -376,7 +386,7 @@ def analyze(participant, transcript, baseline=None, *, regime: str | None = None
     det = detector or load_detector(DEFAULT_DETECTOR)
     tr = transcript if isinstance(transcript, Transcript) else parse_transcript(transcript)
     progress("align")
-    parts = []
+    parts, refused = [], []
     for name, x in (("baseline", baseline), ("participant", participant)):
         try:
             part = x if isinstance(x, Recording) else align_wav(_load(x), tr, aligner, cache_dir)
@@ -384,10 +394,15 @@ def analyze(participant, transcript, baseline=None, *, regime: str | None = None
                 require_match(part[1])
             parts.append(part)
         except TranscriptMismatch as e:
-            raise TranscriptMismatch(f"{name} recording: {e}") from e
+            refused.append((name, e))
+    if refused:
+        raise refusal(refused) from refused[0][1]
     progress("features")
     B, P = (x if isinstance(x, Recording) else make_recording(x[0], tr, x[1]) for x in parts)
-    refs = [B] if references is None else [x if isinstance(x, Recording) else prepare(_load(x), tr, aligner, cache_dir) for x in references]
+    try:
+        refs = [B] if references is None else [x if isinstance(x, Recording) else prepare(_load(x), tr, aligner, cache_dir) for x in references]
+    except TranscriptMismatch as e:
+        raise refusal([("reference", e)]) from e
     B, reg, mode, reference_count = select_reference(refs, det, regime)
     progress("compare")
     comp = compare(B, P)
@@ -554,7 +569,7 @@ def analyze_self(participant, transcript, *, detector: dict | None = None, parti
         if refuse_mismatch and not isinstance(part, Recording):
             require_match(part[1])
     except TranscriptMismatch as e:
-        raise TranscriptMismatch(f"participant recording: {e}") from e
+        raise refusal([("participant", e)]) from e
     progress("features")
     P = part if isinstance(part, Recording) else make_recording(part[0], tr, part[1])
     model, reg = det["text_model"], det["regime"]

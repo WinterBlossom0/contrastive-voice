@@ -30,12 +30,13 @@ from .dataset import GETTYSBURG_REFERENCE, load_dataset, sha256_file
 from .detect import decode, key, load_detector
 from .evaluate import cross_matches, listed_rank
 from .events import Run, match, on_shortfall, run_pair, truth_changes, truths, whole_passage
-from .pipeline import ROOT, analyze, detector_status, device_class, dumps, self_detector_status
+from .pipeline import REPORT_PDF, ROOT, analyze, detector_status, device_class, dumps, self_detector_status
 from .pool import PreparePool
 from .r2pool import reader_id
 from .reference import select_reference
 
 STATIC = Path(__file__).parent / "static"
+SITE_REPORT = "technical.pdf"  # the report's path in the static site, next to the page
 GALLERY_BASELINE = "reagan_farewell_1989"
 SHOWCASE_SPLITS = ("train", "val")  # never a test clip
 SHOWCASE_GROUP = "New flaw families"
@@ -591,14 +592,23 @@ def build(dataset: Path, models: Path, cache: Path | None, eval_dir: Path, out: 
     return index
 
 
-def site(out: Path, gallery: Path) -> None:
-    """GitHub Pages folder: the static page (with its vendored scripts) and the gallery data under gallery/."""
+def site(out: Path, gallery: Path, report: Path = REPORT_PDF) -> None:
+    """GitHub Pages folder: the static page (with its vendored scripts), the gallery data under gallery/ and the technical
+    report. The copy of index.json states `static_mode: true` (no server: no api/ routes) and `report_url` (the report
+    PDF next to the page, or null when `report` is missing), so the page needs no request that fails."""
     if not (gallery / "index.json").exists():
         raise FileNotFoundError(f"{gallery}/index.json not found: build the gallery first (python -m cvoice.gallery)")
     out.mkdir(parents=True, exist_ok=True)
     shutil.copytree(STATIC, out, dirs_exist_ok=True)
     shutil.rmtree(out / "gallery", ignore_errors=True)  # no stale examples from an earlier build
     shutil.copytree(gallery, out / "gallery")
+    if report.is_file():
+        shutil.copyfile(report, out / SITE_REPORT)
+    else:
+        (out / SITE_REPORT).unlink(missing_ok=True)  # no stale report from an earlier build
+    index = json.loads((out / "gallery" / "index.json").read_text())
+    index.update(static_mode=True, report_url=SITE_REPORT if report.is_file() else None)
+    (out / "gallery" / "index.json").write_text(json.dumps(index, indent=1, sort_keys=True) + "\n")
     (out / ".nojekyll").touch()
     log(f"static site in {out} ({sum(f.is_file() for f in out.rglob('*'))} files)")
 

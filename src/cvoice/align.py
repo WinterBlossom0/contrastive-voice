@@ -28,8 +28,18 @@ class TranscriptError(ValueError):
     """The transcript cannot be turned into spoken words (trust boundary)."""
 
 
+MISMATCH_WORDS, MISMATCH_SHORT = "words", "short"
+
+
 class TranscriptMismatch(ValueError):
-    """The transcript does not match the audio (mean word compatibility below the floor, or audio too short for it)."""
+    """The transcript does not match the audio. kind: MISMATCH_WORDS (mean word compatibility below the floor) or
+    MISMATCH_SHORT (the audio has fewer CTC frames than the transcript needs); needed_s: the shortest audio (s) that the
+    transcript needs, for MISMATCH_SHORT; roles: the recordings that fail ("baseline", "participant", "reference"), which
+    the pipeline sets."""
+
+    def __init__(self, message: str, kind: str = MISMATCH_WORDS, needed_s: float | None = None, roles: tuple[str, ...] = ()):
+        super().__init__(message)
+        self.kind, self.needed_s, self.roles = kind, needed_s, roles
 
 
 # ============================================================================================ text
@@ -48,7 +58,7 @@ def cardinal(n: int) -> list[str]:
         if n >= unit:
             rest = n % unit
             return cardinal(n // unit) + [name] + (cardinal(rest) if rest else [])
-    raise TranscriptError(f"number too large: {n}")
+    raise TranscriptError(f"The transcript has a number too large to read aloud: {n}. Write it in words.")
 
 
 def ordinal(words: list[str]) -> list[str]:
@@ -67,7 +77,7 @@ def spell_number(tok: str) -> list[str]:
     read as two pairs. Raises TranscriptError for digit tokens that cannot be spelled."""
     m = re.fullmatch(r"([$£€]?)(\d[\d,]*)(?:\.(\d+))?(st|nd|rd|th)?(%?)", tok)
     if not m:
-        raise TranscriptError(f"cannot spell the number-like token {tok!r}")
+        raise TranscriptError(f"The transcript has {tok!r}, which cannot be read aloud as written. Write it in words.")
     cur, whole, frac, suffix, pct = m.groups()
     digits = whole.replace(",", "")
     n = int(digits)
@@ -204,7 +214,7 @@ def parse_transcript(text: str, strict: bool = True) -> Transcript:
         if terminal and not abbr and (not nxt or nxt[0].isupper() or nxt[0].isdigit()):
             k += 1
     if not norm:
-        raise TranscriptError("transcript has no speakable words")
+        raise TranscriptError("The transcript has no words to read.")
     syl = [count_syllables(w) for w in norm]
     return Transcript(tuple(disp), tuple(norm), tuple(sent), tuple(punct), tuple(s for s, _ in syl), tuple(h for _, h in syl))
 
@@ -328,7 +338,8 @@ def ctc_viterbi(logp: np.ndarray, targets: np.ndarray, blank: int = 0) -> tuple[
     S = 2 * L + 1
     n_rep = int((targets[1:] == targets[:-1]).sum())
     if T < L + n_rep:
-        raise TranscriptMismatch(f"audio too short for the transcript: {T} frames < {L + n_rep} needed")
+        raise TranscriptMismatch(f"audio too short for the transcript: {T} frames < {L + n_rep} needed", MISMATCH_SHORT,
+                                 (L + n_rep) * C.CTC_FRAME_S)
     ext = np.full(S, blank, dtype=np.int64)
     ext[1::2] = targets
     can_skip = np.zeros(S, dtype=bool)

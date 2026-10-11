@@ -21,8 +21,18 @@ _MAGIC = (  # (offset, bytes, family)
 )
 
 
+UNREADABLE, DECODE_TIMEOUT, CHANNELS, TOO_LARGE, TOO_LONG, TOO_SHORT = (
+    "unreadable", "decode_timeout", "channels", "too_large", "too_long", "too_short")
+MIN_SECONDS = 1.0  # s, shortest upload that load_audio accepts
+
+
 class AudioError(ValueError):
-    """Raised at the upload boundary: unreadable, unsupported, or over the size / duration cap."""
+    """Raised at the upload boundary: unreadable, unsupported, or over the size / duration cap. kind: one of UNREADABLE,
+    DECODE_TIMEOUT, CHANNELS, TOO_LARGE, TOO_LONG, TOO_SHORT, so that a caller can word the refusal for its user."""
+
+    def __init__(self, message: str, kind: str = UNREADABLE):
+        super().__init__(message)
+        self.kind = kind
 
 
 def sniff(path: Path) -> str:
@@ -48,7 +58,7 @@ def decode(path: Path, timeout: float = C.DECODE_TIMEOUT_S, max_seconds: float |
         try:
             subprocess.run(cmd, check=True, capture_output=True, timeout=timeout)
         except subprocess.TimeoutExpired as e:
-            raise AudioError(f"{Path(path).name}: ffmpeg decode exceeded {timeout:.0f} s") from e
+            raise AudioError(f"{Path(path).name}: ffmpeg decode exceeded {timeout:.0f} s", DECODE_TIMEOUT) from e
         except subprocess.CalledProcessError as e:
             raise AudioError(f"{Path(path).name}: ffmpeg could not decode it: {e.stderr.decode(errors='replace')[:300]}") from e
         x, sr = sf.read(out, dtype="float64", always_2d=True)
@@ -61,7 +71,7 @@ def to_mono(x: np.ndarray) -> tuple[np.ndarray, str]:
     if x.shape[1] == 1:
         return x[:, 0], "mono"
     if x.shape[1] != 2:
-        raise AudioError(f"{x.shape[1]} channels: only mono and stereo are supported")
+        raise AudioError(f"{x.shape[1]} channels: only mono and stereo are supported", CHANNELS)
     mid, side = 0.5 * (x[:, 0] + x[:, 1]), 0.5 * (x[:, 0] - x[:, 1])
     side_db = 10.0 * np.log10((np.mean(side ** 2) + 1e-20) / (np.mean(mid ** 2) + 1e-20))
     return (x[:, 0], "left") if side_db > C.STEREO_SIDE_DB else (mid, "mean")
@@ -89,15 +99,15 @@ def load_audio(path: Path, max_bytes: int | None = None, max_seconds: float | No
     path = Path(path)
     size = path.stat().st_size
     if max_bytes is not None and size > max_bytes:
-        raise AudioError(f"{path.name}: {size / 1e6:.1f} MB exceeds the {max_bytes / 1e6:.0f} MB cap")
+        raise AudioError(f"{path.name}: {size / 1e6:.1f} MB exceeds the {max_bytes / 1e6:.0f} MB cap", TOO_LARGE)
     family = sniff(path)
     x, sr = decode(path, max_seconds=max_seconds)
     mono, rule = to_mono(x)
     dur = len(mono) / sr
     if max_seconds is not None and dur > max_seconds:
-        raise AudioError(f"{path.name}: longer than the {max_seconds:.0f} s cap")
-    if dur < 1.0:
-        raise AudioError(f"{path.name}: {dur:.2f} s is too short to analyse")
+        raise AudioError(f"{path.name}: longer than the {max_seconds:.0f} s cap", TOO_LONG)
+    if dur < MIN_SECONDS:
+        raise AudioError(f"{path.name}: {dur:.2f} s is too short to analyse", TOO_SHORT)
     return canonical(mono, sr), {"family": family, "sr_in": sr, "channels": int(x.shape[1]), "channel_rule": rule,
                                  "duration_s": round(dur, 3)}
 

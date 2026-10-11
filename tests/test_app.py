@@ -15,6 +15,7 @@ import pytest
 import uvicorn
 
 from cvoice import app as appmod, audio, config as C, gallery, repair
+from cvoice.align import MISMATCH_SHORT, TranscriptMismatch
 
 TEXT = "we hold these truths to be self evident. That all men are created equal."
 BANK_TEXT = "We are met on a great battlefield of that war. We have come to dedicate a portion of that field."
@@ -321,7 +322,83 @@ def test_decode_failure_becomes_a_plain_job_error(server):
     base, _, _ = server
     s, body, _ = call(f"{base}/api/analyze", {"audio": ("a.wav", b"RIFF....WAVEjunk"), "transcript": TEXT, "baseline_id": "base"})
     job = wait_done(base, json.loads(body)["job_id"])
-    assert job["state"] == "error" and job["error"].startswith("your recording")
+    assert job["state"] == "error" and job["stage"] == "decode"   # the stage that failed
+    assert job["error"] == "Your recording could not be read as audio. Use wav, mp3, m4a, ogg, flac or webm."
+
+
+def failed_upload(base, tmp, monkeypatch, error, fields):
+    """The job error when the stubbed pipeline raises `error`."""
+    def refuse(*args, **kwargs):
+        raise error
+    monkeypatch.setattr(appmod, "analyze", refuse)
+    s, body, _ = call(f"{base}/api/analyze", {"audio": ("a.wav", wav_bytes(tmp)), "transcript": TEXT, **fields})
+    assert s == 200, body
+    job = wait_done(base, json.loads(body)["job_id"])
+    assert job["state"] == "error"
+    return job["error"]
+
+
+CHECK_TEXT = "Check that the transcript is the exact text you read."
+
+
+@pytest.mark.parametrize("error,fields,expected", [
+    (TranscriptMismatch("baseline recording: x (mean word compatibility 0.035 < 0.1); participant recording: y",
+                        roles=("baseline", "participant")), {"baseline_id": "base"},
+     f"The words in your recording do not match the transcript. {CHECK_TEXT} The reference reading does not match the transcript either."),
+    (TranscriptMismatch("participant recording: 249 frames < 467 needed", MISMATCH_SHORT, 467 * C.CTC_FRAME_S, ("participant",)), {},
+     f"Your recording is too short for this transcript: at least 10 seconds of speech is needed. {CHECK_TEXT}"),
+    (TranscriptMismatch("baseline recording: x", roles=("baseline",)), {"baseline_id": "base"},
+     "The transcript is not the text that the reference reading 'Base' reads. Use that text, or choose another reference."),
+    (TranscriptMismatch("baseline recording: x", roles=("baseline",)), {"baseline_audio": ("b.wav", b"")},
+     f"The words in your reference recording do not match the transcript. {appmod.TRANSCRIPT_HINT}"),
+    (RuntimeError("index 7 is out of bounds"), {}, appmod.ANALYSIS_FAILED),
+])
+def test_analysis_errors_name_the_input_in_plain_words(server, monkeypatch, error, fields, expected):
+    base, _, tmp = server
+    if "baseline_audio" in fields:
+        fields = {"baseline_audio": ("b.wav", wav_bytes(tmp, "b.wav"))}
+    message = failed_upload(base, tmp, monkeypatch, error, fields)
+    assert message == expected
+    assert not any(term in message for term in ("compatibility", "frames", "participant", "baseline", "Error", "index 7"))
+
+
+@pytest.mark.parametrize("kind,expected", [
+    (audio.TOO_LONG, f"Your recording is longer than {C.MAX_UPLOAD_S:.0f} s. Use a recording of {C.MAX_UPLOAD_S:.0f} s or less."),
+    (audio.TOO_SHORT, "Your recording is shorter than 1 s. Upload a recording of the whole text."),
+    (audio.CHANNELS, "Your recording has more than two channels. Use a mono or stereo recording."),
+    (audio.UNREADABLE, "Your recording could not be read as audio. Use wav, mp3, m4a, ogg, flac or webm."),
+])
+def test_audio_refusals_in_plain_words(kind, expected):
+    assert appmod.audio_words(audio.AudioError("your recording: technical detail", kind), "Your recording") == expected
+    assert appmod.upload_label("reference recording 2") == "Your reference recording 2"
+
+
+def test_transcript_refusal_in_plain_words(server):
+    base, _, _ = server
+    s, body, _ = call(f"{base}/api/analyze", {"audio": ("a.wav", b"RIFF"), "transcript": "meet at 10:30 am", "baseline_id": "base"})
+    assert (s, json.loads(body)["detail"]) == (422, "The transcript has '10:30', which cannot be read aloud as written. Write it in words.")
+
+
+def test_report_pdf_is_served_and_named_in_health(server, monkeypatch, tmp_path):
+    base, _, _ = server
+    h = json.loads(call(f"{base}/api/health")[1])
+    assert h["report_url"] == appmod.REPORT_URL == "report" and appmod.REPORT_PDF.is_file()
+    s, data, hdr = call(f"{base}/{h['report_url']}")
+    assert s == 200 and hdr["content-type"] == "application/pdf" and data.startswith(b"%PDF")
+    assert hdr["content-disposition"].startswith("inline")
+    monkeypatch.setattr(appmod, "REPORT_PDF", tmp_path / "missing.pdf")
+    assert json.loads(call(f"{base}/api/health")[1])["report_url"] is None
+    assert call(f"{base}/report")[0] == 404
+
+
+def test_stage_names_are_plain_words(server):
+    base, _, tmp = server
+    h = json.loads(call(f"{base}/api/health")[1])
+    assert set(h["stage_labels"]) == {*appmod.STAGES, *appmod.FIX_STAGES}
+    jid = finished_analysis(base, tmp, baseline_id="base")
+    job = json.loads(call(f"{base}/api/jobs/{jid}")[1])
+    assert list(job["stage_labels"]) == job["stages"] == list(appmod.STAGES)
+    assert all(label[:1].isupper() for label in job["stage_labels"].values())
 
 
 def test_chunked_body_over_the_cap_is_refused():
@@ -356,6 +433,10 @@ def test_site_builder_copies_page_and_gallery(tmp_path):
     gallery.main(["site", str(out), "--gallery", str(g)])
     assert (out / "index.html").exists() and (out / "app.js").exists() and (out / "vendor" / "plotly-cartesian.min.js").exists()
     assert (out / "gallery" / "results" / "x.json").exists() and (out / ".nojekyll").exists()
+    assert json.loads((out / "gallery" / "index.json").read_text()) == {"static_mode": True, "report_url": "technical.pdf"}
+    assert (out / "technical.pdf").read_bytes() == appmod.REPORT_PDF.read_bytes() and (g / "index.json").read_text() == "{}"
+    gallery.site(out, g, tmp_path / "missing.pdf")
+    assert json.loads((out / "gallery" / "index.json").read_text())["report_url"] is None and not (out / "technical.pdf").exists()
     with pytest.raises(FileNotFoundError):
         gallery.site(tmp_path / "again", tmp_path / "nothing")
 
@@ -534,6 +615,12 @@ def test_plain_outcome_of_each_fix_status():
     assert appmod.plain_outcome(fix(repair.SKIPPED, cause=repair.FLAT_PITCH), set()) == (
         "skipped", "Your pitch here is too flat to widen enough within natural limits.")
     assert appmod.plain_outcome(fix(repair.UNFIXABLE, "clarity cannot be edited."), set()) == ("unfixable", "Clarity cannot be edited.")
+    tiny = fix(repair.CAPPED, "partial fix: ...", 0.023, repair.CAP)   # 2 % of the change: not heard, so not an edit to hear
+    assert appmod.plain_outcome(tiny, set()) == ("skipped", appmod.CAUSE_WORDS[repair.INAUDIBLE])
+    assert appmod.plain_outcome(tiny, {"d1-001"})[0] == "no_longer_flagged"   # a measured removal is still reported
+    assert appmod.plain_outcome(fix(repair.CAPPED, "", appmod.MIN_HEARD_SHARE, repair.CAP), set())[0] == "still_flagged"
+    small_owner = fix(repair.CAPPED, share=0.05, cause=repair.CAP, finding="d5-005")
+    assert appmod.plain_outcome(fix(repair.COVERED), set(), small_owner) == ("skipped", appmod.CAUSE_WORDS[repair.INAUDIBLE])
     owner = fix(repair.CAPPED, share=0.53, cause=repair.CAP, finding="d5-005")
     assert appmod.plain_outcome(fix(repair.COVERED), {"d1-001"}, owner) == (
         "no_longer_flagged", "The edit of d5-005 also changes this spot; it applied 53% of its change.")

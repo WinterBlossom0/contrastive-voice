@@ -133,8 +133,9 @@ def test_mismatch_is_refused_only_when_asked_to(pair, pinned_detector, monkeypat
     det = pinned_detector()
     res = analyze(P.wav, B.tr, B.wav, regime="R1", detector=det)  # internal use: the low compatibility is only recorded
     assert res["schema"] == 2 and any("low aligner confidence" in n for n in res["notices"])
-    with pytest.raises(TranscriptMismatch, match="baseline recording: transcript does not match"):
+    with pytest.raises(TranscriptMismatch, match="baseline recording: transcript does not match") as refused:
         analyze(P.wav, B.tr, B.wav, regime="R1", detector=det, refuse_mismatch=True)  # upload boundary
+    assert refused.value.roles == ("baseline", "participant")   # both recordings are checked, so the user's own is named
 
 
 def test_whole_clip_flags_are_listed_among_the_flaws_and_scored_in_both_regimes(pair, pinned_detector):

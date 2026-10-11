@@ -4,14 +4,17 @@
 
 The port defaults to the PORT environment variable when it is set (hosting platforms set it), else 7860.
 
-    GET  /api/health                       uploads possible? limits; which gallery examples can be fixed
+    GET  /api/health                       uploads possible? limits; which gallery examples can be fixed; stage names;
+                                           report_url (the technical report, or null when the PDF is missing)
+    GET  /report                           the technical report (docs/technical.pdf), shown in the browser
     POST /api/analyze                      multipart: audio, transcript (text) or transcript_file, and baseline_id or
                                            baseline_audio (one to MAX_REFERENCES files: the user's own reference bank, the
                                            first one shown) or neither (no reference reading: the SELF mode)
     POST /api/jobs/{id}/fix                JSON {"finding": index in result.flaws} or {"all": true}, optional "pitch_method":
                                            fix the finding(s) of a finished analysis on its own recording, then re-analyse
     POST /api/gallery/{item}/fix           the same for a bundled example
-    GET  /api/jobs/{id}                    {kind, state, stage, stages, error?; analysis: result?, reference?; fix: audio?, fix?}
+    GET  /api/jobs/{id}                    {kind, state, stage (on error: the stage that failed), stages, stage_labels, error?;
+                                           analysis: result?, reference?; fix: audio?, fix?}
     GET  /api/jobs/{id}/result.json        the analysis result JSON
     GET  /api/jobs/{id}/{participant|baseline|fixed}.wav   the decoded audio the analysis used, or the fixed audio (Range-capable)
     /gallery/...  /                        static files (gallery data, then the page)
@@ -29,6 +32,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
+import math
 import os
 import shutil
 import tempfile
@@ -50,16 +55,20 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from . import __version__, audio, repair
 from . import config as C
-from .align import Transcript, TranscriptError, TranscriptMismatch, parse_transcript
+from .align import MISMATCH_SHORT, Transcript, TranscriptError, TranscriptMismatch, parse_transcript
 from .detect import load_detector, scale, threshold
-from .pipeline import DEFAULT_DETECTOR, ROOT, analyze, dumps
+from .pipeline import DEFAULT_DETECTOR, REPORT_PDF, ROOT, analyze, dumps
 from .selfref import DEFAULT_DETECTOR as SELF_DETECTOR
 from .selfref import NAME as SELF_REGIME
 
 GALLERY = ROOT / "gallery"
 STATIC = Path(__file__).parent / "static"
+REPORT_URL = "report"  # relative to the page, as the api/ URLs are
 STAGES = ("decode", "align", "features", "compare", "detect")
 FIX_STAGES = ("edit", "check")
+STAGE_LABELS = {"decode": "Reading the audio", "align": "Finding each word", "features": "Measuring the delivery",
+                "compare": "Comparing", "detect": "Finding the spots to work on",
+                "edit": "Editing your recording", "check": "Checking the result"}
 UPLOAD_REGIME = "R2"
 TRANSCRIPT_MAX_CHARS = 20_000  # characters; Starlette would accept 1 MB per text field
 JOB_TTL_S = 3600  # s, finished jobs and their files are swept after this
@@ -81,6 +90,8 @@ CAUSE_WORDS = {
     repair.INAUDIBLE: "The change allowed here is probably too small to hear.",
 }
 STILL_FLAGGED_WORDS = "The edit changed this spot, but it is still flagged."
+# Below this share of the wanted change, a still-flagged edit is reported as skipped: a chosen limit, not a measured one.
+MIN_HEARD_SHARE = 0.10
 FLOOR_WORDS = "The pause is now shorter than the shortest pause the analysis measures, so it is no longer compared."
 # What each kind of edit leaves unchanged; vocal effort is not gain: docs/PAPERS.md #69.
 LIMIT_WORDS = {
@@ -208,7 +219,7 @@ def check_sizes(files: list[UploadFile]) -> None:
 
 
 def reference_names(count: int) -> list[str]:
-    """Server-chosen file names of the uploaded references; the name starts each decode error message."""
+    """Server-chosen file names of the uploaded references; upload_label turns a name into the words of an error message."""
     return ["reference recording"] if count == 1 else [f"reference recording {k + 1}" for k in range(count)]
 
 
@@ -225,6 +236,64 @@ def save_upload(file: UploadFile, dest: Path) -> None:
         audio.sniff(dest)
     except audio.AudioError as e:
         raise HTTPException(415, "Unsupported audio. Use wav, mp3, m4a, ogg, flac or webm.") from e
+
+
+# ============================================================================================ plain errors
+LOG = logging.getLogger("cvoice.app")
+ANALYSIS_FAILED = "The analysis stopped because of an error on the server. Try again."
+FIX_FAILED = "The fix stopped because of an error on the server. Try again."
+
+
+class InputProblem(Exception):
+    """A refusal of one input in plain words for the user; the technical cause is chained and goes to the server log."""
+
+
+def upload_label(name: str) -> str:
+    """The user's name of an uploaded file from its server-chosen name: "your recording" or "reference recording [k]"."""
+    return "Your recording" if name == "your recording" else f"Your {name}"
+
+
+def audio_words(e: audio.AudioError, who: str) -> str:
+    """Plain words of a decode refusal of the file `who` ("Your recording", "Your reference recording 2")."""
+    seconds = f"{C.MAX_UPLOAD_S:.0f} s"
+    return {
+        audio.DECODE_TIMEOUT: f"{who} took too long to read. Save it as wav or mp3 and upload it again.",
+        audio.CHANNELS: f"{who} has more than two channels. Use a mono or stereo recording.",
+        audio.TOO_LARGE: f"{who} is larger than {C.MAX_UPLOAD_BYTES // 2**20} MB.",
+        audio.TOO_LONG: f"{who} is longer than {seconds}. Use a recording of {seconds} or less.",
+        audio.TOO_SHORT: f"{who} is shorter than {audio.MIN_SECONDS:.0f} s. Upload a recording of the whole text.",
+    }.get(e.kind, f"{who} could not be read as audio. Use wav, mp3, m4a, ogg, flac or webm.")
+
+
+def load_upload(folder: Path, name: str):
+    """Decode one upload of the job folder; InputProblem in plain words when it cannot be used."""
+    try:
+        return audio.load_audio(folder / name, C.MAX_UPLOAD_BYTES, C.MAX_UPLOAD_S)[0]
+    except audio.AudioError as e:
+        raise InputProblem(audio_words(e, upload_label(name))) from e
+
+
+def too_short_words(who: str, needed_s: float | None) -> str:
+    needed = "" if needed_s is None else f": at least {math.ceil(needed_s)} seconds of speech is needed"
+    return f"{who} is too short for this transcript{needed}."
+
+
+def mismatch_words(e: TranscriptMismatch, baseline: dict | None, own_count: int) -> str:
+    """Plain words of a transcript refusal that name the input to correct. The user's own recording comes first; a
+    bundled reference reads a fixed text, so its refusal asks for that text. An error without roles is the user's."""
+    roles = e.roles or ("participant",)
+    short = e.kind == MISMATCH_SHORT
+    if "participant" in roles:
+        check = "Check that the transcript is the exact text you read."
+        first = too_short_words("Your recording", e.needed_s) if short else "The words in your recording do not match the transcript."
+        also = " The reference reading does not match the transcript either." if "baseline" in roles else ""
+        return f"{first} {check}{also}"
+    if baseline is not None:
+        return (f"The transcript is not the text that the reference reading '{baseline['title']}' reads. "
+                "Use that text, or choose another reference.")
+    who = "Your reference recording" if own_count == 1 else "One of your reference recordings"
+    first = too_short_words(who, e.needed_s) if short else f"The words in {who[:1].lower()}{who[1:]} do not match the transcript."
+    return f"{first} {TRANSCRIPT_HINT}"
 
 
 # ============================================================================================ jobs
@@ -281,7 +350,7 @@ def run_job(job: dict, folder: Path, text: str, baseline: dict | None, detector:
     try:
         job.update(state="running", stage="decode")
         tr = parse_transcript(text)
-        participant_wav = audio.load_audio(folder / "your recording", C.MAX_UPLOAD_BYTES, C.MAX_UPLOAD_S)[0]
+        participant_wav = load_upload(folder, "your recording")
         audio.write_wav(folder / "participant.wav", participant_wav)
         participant_meta = {"id": folder.name, "title": "Your recording", "audio": f"api/jobs/{folder.name}/participant.wav"}
         common = {"participant_meta": participant_meta, "progress": lambda stage: job.update(stage=stage), "refuse_mismatch": True,
@@ -292,7 +361,7 @@ def run_job(job: dict, folder: Path, text: str, baseline: dict | None, detector:
             source = FixSource(**source, regime=SELF_REGIME)
         else:
             if baseline is None:
-                own = [audio.load_audio(folder / name, C.MAX_UPLOAD_BYTES, C.MAX_UPLOAD_S)[0] for name in reference_names(own_count)]
+                own = [load_upload(folder, name) for name in reference_names(own_count)]
                 paths = [folder / name for name in decoded_reference_names(own_count)]
                 for path, wav in zip(paths, own):
                     audio.write_wav(path, wav)
@@ -310,13 +379,18 @@ def run_job(job: dict, folder: Path, text: str, baseline: dict | None, detector:
         (folder / "result.json").write_text(dumps(res) + "\n")
         detection = res.get("detection", {})
         job.update(state="done", stage="done", reference={k: detection.get(k) for k in REFERENCE_FIELDS}, source=source)
-    except (audio.AudioError, TranscriptError) as e:
+    except InputProblem as e:
+        LOG.warning("analysis %s refused: %s (%s)", folder.name, e, e.__cause__)
+        job.update(state="error", error=str(e))
+    except TranscriptError as e:
+        LOG.warning("analysis %s refused: %s", folder.name, e)
         job.update(state="error", error=str(e))
     except TranscriptMismatch as e:
-        job.update(state="error", error=f"{e}. {TRANSCRIPT_HINT}")
-    except Exception as e:  # report, never lose the worker thread silently
+        LOG.warning("analysis %s refused: %s", folder.name, e)
+        job.update(state="error", error=mismatch_words(e, baseline, own_count))
+    except Exception:  # report, never lose the worker thread silently
         traceback.print_exc()
-        job.update(state="error", error=f"Analysis failed ({type(e).__name__}: {e}).")
+        job.update(state="error", error=ANALYSIS_FAILED)
     finally:
         for raw in folder.glob("*recording*"):
             raw.unlink(missing_ok=True)
@@ -388,12 +462,16 @@ def unsigned_zero(value: float) -> float:
 
 def plain_outcome(fix: repair.Fix, removed: set[str], owner: repair.Fix | None = None) -> tuple[str, str]:
     """(no_longer_flagged | still_flagged | unfixable | skipped, the reason in plain words or ""), from the fix, the
-    re-analysis and, for a covered finding, the fix of the finding whose edit covers it."""
+    re-analysis and, for a covered finding, the fix of the finding whose edit covers it. A still-flagged spot whose edit
+    applied less than MIN_HEARD_SHARE of its change counts as skipped: the change is too small to hear."""
     if fix.status == repair.UNFIXABLE:
         return "unfixable", fix.reason[:1].upper() + fix.reason[1:]
     if fix.status == repair.SKIPPED:
         return "skipped", CAUSE_WORDS.get(fix.cause, CAUSE_WORDS[repair.INAUDIBLE])
     outcome = "no_longer_flagged" if fix.finding in removed else "still_flagged"
+    share = owner.share if owner is not None else fix.share
+    if outcome == "still_flagged" and share is not None and share < MIN_HEARD_SHARE:
+        return "skipped", CAUSE_WORDS[repair.INAUDIBLE]
     if owner is not None:
         whose = f"The edit of {owner.finding} also changes this spot"
         partial = owner.share is not None and owner.share < 1
@@ -499,9 +577,9 @@ def run_fix(job: dict, folder: Path, source: FixSource, finding: int | None, pit
         report = repair.verify(outcome, result, analyze_kwargs(source, detector, cache_dir))
         mode = "self" if source.regime == SELF_REGIME else "reference"
         job.update(state="done", stage="done", fix=fix_summary(outcome, report, finding, result, mode, pitch_method))
-    except Exception as e:  # report, never lose the worker thread silently
+    except Exception:  # report, never lose the worker thread silently
         traceback.print_exc()
-        job.update(state="error", error=f"The fix failed ({type(e).__name__}: {e}).")
+        job.update(state="error", error=FIX_FAILED)
 
 
 # ============================================================================================ app
@@ -522,7 +600,14 @@ def create_app(gallery: Path = GALLERY, detector: Path = DEFAULT_DETECTOR, work:
                            "max_references": MAX_REFERENCES, "consensus_k": C.CONSENSUS_K},
                 "flag_limits": upload_limits(detector), "analysis": {"available": reason is None, "reason": reason},
                 "self": {"available": SELF_DETECTOR.exists()},
-                "fix": {"available": reason is None, "examples": sorted(fixable)}, "stages": STAGES, "fix_stages": FIX_STAGES}
+                "fix": {"available": reason is None, "examples": sorted(fixable)}, "stages": STAGES, "fix_stages": FIX_STAGES,
+                "stage_labels": STAGE_LABELS, "report_url": REPORT_URL if REPORT_PDF.is_file() else None}
+
+    @app.get("/report")
+    def report() -> FileResponse:
+        if not REPORT_PDF.is_file():  # fixed path: no client string reaches the file system
+            raise HTTPException(404, "The technical report is not included in this installation.")
+        return FileResponse(REPORT_PDF, media_type="application/pdf", filename=REPORT_PDF.name, content_disposition_type="inline")
 
     @app.post("/api/analyze")
     def submit(audio_file: UploadFile = File(alias="audio"), transcript: str = Form(""), transcript_file: UploadFile | None = File(None),
@@ -594,7 +679,9 @@ def create_app(gallery: Path = GALLERY, detector: Path = DEFAULT_DETECTOR, work:
     def job_status(job_id: str) -> dict:
         job = job_or_404(job_id)
         fix = job["kind"] == "fix"
-        out = {"kind": job["kind"], "state": job["state"], "stage": job["stage"], "stages": FIX_STAGES if fix else STAGES}
+        stages = FIX_STAGES if fix else STAGES
+        out = {"kind": job["kind"], "state": job["state"], "stage": job["stage"], "stages": stages,
+               "stage_labels": {stage: STAGE_LABELS[stage] for stage in stages}}
         if job["state"] == "error":
             out["error"] = job["error"]
         if job["state"] == "done" and fix:

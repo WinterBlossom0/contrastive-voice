@@ -180,8 +180,10 @@ def _d2(tr, i0, sign, p_span, baseline, participant, mult, theta, **_):
     unmarked = "" if tr.punct[i0] else " and the transcript has no punctuation here"
     how = (f"The word alignment measures {participant:.2f} s of silence between '{prev}' and '{nxt}'; the reference holds {baseline:.2f} s{unmarked} "
            f"({mult:.1f}x the threshold; flagged when {theta:.2f} s longer).")
+    target = _nearest_punct_word(tr, i0)
+    stop = "" if target.rstrip("'").endswith((".", "!", "?")) else "."  # the quoted word already ends the sentence
     fix = (f"Shorten the pause after '{prev}' to about {baseline:.1f} s." if tr.punct[i0] else
-           f"Carry '{prev} {nxt}' on one breath; move the breath to {_nearest_punct_word(tr, i0)}.")
+           f"Carry '{prev} {nxt}' on one breath; move the breath to {target}{stop}")
     return what, how, fix
 
 
