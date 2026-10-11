@@ -1,5 +1,5 @@
 """Reporting of saved results: tables rendered from a saved results.json, stress rows with speakers as clusters,
-the evaluation panel texts, off-truth findings in a gallery description, and the window and aligner caveats of a finding."""
+the addendum baselines, off-truth findings in a gallery description, and the window and aligner caveats of a finding."""
 import dataclasses
 import json
 import re
@@ -10,11 +10,12 @@ import pytest
 from synth import local, with_x
 
 from cvoice import config as C, evaluate as ev, explain, gallery
+from cvoice.events import f1
 from cvoice.score import score
 
 ROOT = Path(__file__).resolve().parents[1]
 RUN = ROOT / 'build/work/kaggle_runs/last_run/x'
-FIRST_FINAL = ROOT / 'docs/evidence_final_32cdd86f3d6e/results.json'
+EVIDENCE = ROOT / 'docs/evidence_final_782d7df7'
 GALLERY = ROOT / 'gallery'
 needs_run = pytest.mark.skipif(not (RUN / 'eval/results.json').exists(),
                                reason='the final-run folder (build/, git-ignored) is not distributed with the repository')
@@ -84,62 +85,22 @@ def test_speaker_clusters_give_per_speaker_values_and_no_interval():
     assert 'fewer than 5 speakers' in by_speaker['limits'][0] and 'per-speaker values' in by_speaker['interval_scope']
 
 
-def test_a_degenerate_kept_interval_carries_the_pooled_wilson_interval():
-    block = {'ci95': [1.0, 1.0], 'retained': 73, 'found': 73}
-    assert gallery.with_wilson(block)['wilson95'] == [0.95, 1.0]
-    assert 'wilson95' not in gallery.with_wilson({**block, 'ci95': [0.9, 1.0]})
-
-
-@needs_run
-def test_shipped_stress_matrix_has_speaker_rows_for_val_and_test():
-    rows = json.loads((GALLERY / 'stress_matrix.json').read_text())
-    assert rows == json.loads(json.dumps(gallery.dashboard_stress(json.loads((RUN / 'eval/results.json').read_text())['stress'])))
-    for row in rows:
+def test_val_and_test_stress_rows_of_the_final_run_use_speakers_as_clusters():
+    rows = ev.speaker_stress_rows(json.loads((EVIDENCE / 'results.json').read_text())['stress'])
+    held_out = [row for row in rows if row['split'] in ('val', 'test', 'val+test')]
+    assert held_out
+    for row in held_out:
         blocks = [row['added_interval'], row['removed_interval'], row['retention_interval'], *row['added_by_key'].values()]
-        if row['split'] in gallery.SUMMARY_SPLITS:
-            assert all(b['ci95'] == [None, None] or not b.get('events') for b in blocks if b.get('events') is not None), row['condition']
-            assert row['retention_interval']['unit'] == 'speaker'
-        elif row['retention_interval']['ci95'][0] is not None and row['retention_interval']['ci95'][0] == row['retention_interval']['ci95'][1]:
-            assert row['retention_interval']['wilson95']
+        assert all(b['ci95'] == [None, None] or not b.get('events') for b in blocks if b.get('events') is not None), row['condition']
+        assert row['retention_interval']['unit'] == 'speaker'
 
 
-def lockbox_mode(**kw) -> dict:
-    return {'mode': 'single', 'rate': 0.46, 'upper95': 0.538, 'budget': 0.5, 'budget_status': 'met on covered sources only',
-            'source_weights': {'accent': 0.5, 'poetry': 0.5}, 'by_source': {'accent': 0.652, 'poetry': 0.268}, 'uncovered_sources': ['ears', 'gettysburg'],
-            'languages_above_budget': [{'language': 'amharic', 'rate': 1.28, 'readers': 5, 'comparison_minutes': 14.1}], **kw}
-
-
-def test_lockbox_note_is_plain_words_from_the_structured_fields():
-    note = gallery.budget_note(lockbox_mode())
-    assert note.startswith('Covers Speech Accent Archive readers and LibriVox poetry readers, weighted equally; EARS readers and')
-    assert 'met at the point rate (0.460) on the covered sources only; the upper 95 % bound (0.538) does not establish' in note
-    assert 'Amharic 1.28/min (5 readers)' in note and 'partition' not in note and 'upper95' not in note
-    assert 'not met' in gallery.budget_note(lockbox_mode(budget_status='not met on covered sources only'))
-    assert 'Amharic 1.28' in gallery.lockbox_text([lockbox_mode()])
-
-
-def test_limits_give_the_preregistered_per_speaker_values_first():
-    r1 = [{'split': 'test', 'speakers': 2, 'preregistered': {'f1_per_speaker': {'a': 0.8, 'b': 0.824}},
-           'count_once': {'f1_per_speaker': {'a': 0.848, 'b': 0.909}}}]
-    text = gallery.limits({'r1': r1, 'lockbox': [], 'r2_level3': [{'type': 'RUSH', 'detected': 1, 'edits': 18}]})
-    assert text[0].index('0.800 and 0.824 under the pre-registered accounting') < text[0].index('0.848 and 0.909 counting one detection')
-    assert 'rush 1 of 18' in text[1] and '625' not in text[1]
-
-
-def test_level_one_text_gives_the_preregistered_count_first():
-    rows = [{'split': 'val+test', 'preregistered': {'tp': 6, 'fn': 26}, 'count_once': {'tp': 8, 'fn': 24}}]
-    assert 'finds 6 of 32 level-1 edits in val and test under the pre-registered accounting (8 of 32 counting one detection' in gallery.level_one_text(rows)
-
-
-@needs_run
-@pytest.mark.skipif(not (RUN / 'eval/addendum.json').exists(),
-                    reason='the final-run folder (build/, git-ignored) is not distributed with the repository')
-def test_panel_shows_the_own_scales_baseline_from_the_addendum():
-    shipped = json.loads((GALLERY / gallery.EVALUATION).read_text())
-    own = {r['split']: r['f1'] for r in shipped['reference_free'] if r['method'] == gallery.OWN_SCALES}
-    assert own == {'val': 0.295, 'test': 0.407} and 'lower bound' in shipped['reference_free_note']
-    test = next(r for r in shipped['r1'] if r['split'] == 'test')
-    assert test['preregistered']['f1_per_speaker'] == {'mobama_weekly_2014': 0.8, 'nixon_resignation_1974': 0.824}
+def test_addendum_of_the_final_run_gives_the_own_scales_baseline_and_per_speaker_f1():
+    rerun = json.loads((EVIDENCE / 'addendum.json').read_text())['local']
+    own = {split: f1(*rerun['reference_free_fair']['held_out'][f'core8|{split}']['own scales and h'][:3])['f1'] for split in ('val', 'test')}
+    assert own == {'val': 0.295, 'test': 0.407}
+    speakers = rerun['pre_registered_per_speaker']['core8|headline (L2+L3)|test']['f1_per_speaker']
+    assert speakers == {'mobama_weekly_2014': 0.8, 'nixon_resignation_1974': 0.824}
 
 
 def test_off_truth_findings_are_counted_once_and_named_in_the_description():

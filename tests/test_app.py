@@ -372,8 +372,6 @@ def test_dashboard_script_copies_of_python_strings():
 
     assert literal("CANDIDATE_TEXT") == explain.CANDIDATE_CLAUSE
     assert literal("SYNTHETIC_TEXT") == explain.SYNTHETIC_ONLY_CLAUSE
-    modes = re.search(r"^const MODE_TEXT = (\{.*\});", script, re.M).group(1)
-    assert json.loads(re.sub(r"(\w+):", r'"\1":', modes)) == gallery.MODE_TEXT
     rows = re.search(r"^const LIMIT_ROWS = (\[.*\]);", script, re.M).group(1)
     assert json.loads(rows) == list(appmod.LIMIT_ROWS.values())
     stages = re.search(r"showStages\((\[[^\]]*\]), \"decode\"\)", script).group(1)

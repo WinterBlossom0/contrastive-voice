@@ -269,7 +269,8 @@ def threshold_text(reg: dict, k: str, sign: int, status: str) -> str:
 
 
 # Reader-facing reasons for the config.OWNER_LISTED entries; that text is inside the detector hash, so it cannot change.
-# Sources of the R2 speech-tempo numbers: config.OWNER_LISTED['R2']['D9'] (0 of 68) and gallery/evaluation.json r2_speech_tempo (10 of 20).
+# Sources of the R2 speech-tempo numbers: config.OWNER_LISTED['R2']['D9'] (0 of 68) and the cross_speaker single-mode check-reader
+# NATURAL_RUSH rows at levels 2 and 3 of docs/evidence_final_782d7df7/results.json (10 of 20).
 LISTED_REASON = {
     ('R1', 'D7'): 'on unedited copies of the training speeches its measured word times changed too much to set a threshold, '
                   'so no word-time detector is available for these edits',

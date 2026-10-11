@@ -73,7 +73,6 @@
   }
  ],
  "default": "L3A",
- "evaluation": "evaluation.json",
  "items": [
   {
    "audio": "audio/identity.wav",
@@ -359,6 +358,5 @@
   "eval_results_sha256": "49a306d9cf9f94bac1a441de8ddeeb386586bde166ef92defbc0a37f942100b1",
   "note": "rebuilt on CPU after the final evaluation with the frozen detector d5935d3f from the last-run dataset"
  },
- "schema": 1,
- "stress_matrix": "stress_matrix.json"
+ "schema": 1
 }

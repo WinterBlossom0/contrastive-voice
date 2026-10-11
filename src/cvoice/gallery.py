@@ -4,10 +4,9 @@
         --cache /kaggle/working/cache --eval /kaggle/working/out/eval --out /kaggle/working/out
 
     python -m cvoice.gallery site OUT_DIR [--gallery DIR]     one folder for GitHub Pages: the static page + the gallery data
-    python -m cvoice.gallery evaluation RESULTS_JSON [--record F] [--first-final F] [--addendum F] [--gallery DIR]     only the evaluation panel
 
 Examples (one speech): identity, L1-L3 clips (L3A also without a reference reading: SELF), G1 / G3 / G5, the unedited
-Greenman-vs-Reagan pair, one channel condition, and the stress-matrix table; then one example per new capability (SHOWCASE) and one R2 example with listed entries, chosen by
+Greenman-vs-Reagan pair and one channel condition; then one example per new capability (SHOWCASE) and one R2 example with listed entries, chosen by
 rule from the train and val clips. A second bundled text, the Gettysburg passage, carries a reference bank (`bank_readers`) and one
 R2 example in consensus mode: a check reader's edited clip against the median of five bank readings. A capability that no clip shows through an evaluator-matched finding is left out and
 named in index.json `left_out`; each shown example names the finding it opens on (`focus`). A bundled dataset clip against
@@ -29,13 +28,12 @@ from . import audio, patterns, selfref, stress
 from . import config as C
 from .dataset import GETTYSBURG_REFERENCE, load_dataset, sha256_file
 from .detect import decode, key, load_detector
-from .evaluate import cross_matches, languages_above_budget, listed_rank, pre_registered, speaker_stress_rows
-from .events import Run, f1, match, on_shortfall, run_pair, truth_changes, truths, whole_passage
+from .evaluate import cross_matches, listed_rank
+from .events import Run, match, on_shortfall, run_pair, truth_changes, truths, whole_passage
 from .pipeline import ROOT, analyze, detector_status, device_class, dumps, self_detector_status
 from .pool import PreparePool
 from .r2pool import reader_id
 from .reference import select_reference
-from .uncertainty import wilson
 
 STATIC = Path(__file__).parent / "static"
 GALLERY_BASELINE = "reagan_farewell_1989"
@@ -450,13 +448,11 @@ def baseline_meta(b: dict) -> dict:
 
 
 def build(dataset: Path, models: Path, cache: Path | None, eval_dir: Path, out: Path, pool=None, aligner=None,
-          first_final: Path | None = None, provenance: dict | None = None) -> dict:
+          provenance: dict | None = None) -> dict:
     """Batch-first: every example's audio and every showcase candidate clip is analysed in one pool batch, then each result
     JSON is built from the analysed recordings. Showcase examples are chosen from the candidates by `pick_showcase` and
     `pick_listed`; candidates of other baselines are analysed only for a capability that the gallery baseline cannot show.
-    A final evaluation in eval_dir with its record beside the detector also gives the evaluation panel (write_evaluation);
-    first_final is the results.json of an earlier final evaluation of the test split, shown beside it. index.json records
-    the inputs (sha256) and `provenance` (the command and a note, from main)."""
+    index.json records the inputs (sha256) and `provenance` (the command and a note, from main)."""
     ds = load_dataset(dataset, cache, pool, aligner)
     det = load_detector(models)
     device = device_class(pool)
@@ -590,258 +586,9 @@ def build(dataset: Path, models: Path, cache: Path | None, eval_dir: Path, out: 
         log(f"r2_consensus: {reason} with this detector; example left out")
         left_out.append({"id": spec["id"], "label": spec["label"], "reason": reason})
     index["left_out"] = left_out
-    if results_path.exists():
-        matrix = json.loads(results_path.read_text()).get("stress")
-        if matrix:
-            rows = dashboard_stress(matrix)
-            (gallery_dir / "stress_matrix.json").write_text(json.dumps(rows, indent=1, sort_keys=True) + "\n")
-            index["stress_matrix"] = "stress_matrix.json"
     (gallery_dir / "index.json").write_text(json.dumps(index, indent=1, sort_keys=True) + "\n")
-    record = models.parent / "final_evaluations.json"
-    if results_path.exists() and record.exists() and json.loads(results_path.read_text()).get("final"):
-        addendum = eval_dir / ADDENDUM
-        write_evaluation(gallery_dir, results_path, record, first_final, addendum if addendum.exists() else None)
-        index["evaluation"] = EVALUATION
     log(f"wrote {len(index['items'])} examples to {gallery_dir}")
     return index
-
-
-# ============================================================================================ stress panel
-def dashboard_stress(stress: dict) -> list[dict]:
-    """Stress-matrix rows of the dashboard. Val and test have 2 speakers each, so their rows use speakers as clusters
-    (per-speaker values, no interval; evaluate.speaker_stress_row, recomputed from the saved records). A kept-detection
-    interval with equal bounds gets the pooled Wilson interval beside it (wilson95)."""
-    rows = speaker_stress_rows(stress)
-    return [{**r, "retention_interval": with_wilson(r["retention_interval"]),
-             "retention_by_key": {k: with_wilson(v) for k, v in r["retention_by_key"].items()}} for r in rows]
-
-
-def with_wilson(block: dict) -> dict:
-    ci = block["ci95"]
-    if ci[0] is None or ci[0] != ci[1]:
-        return block
-    return {**block, "wilson95": [round(v, 3) for v in wilson(block["retained"], block["found"])]}
-
-
-# ============================================================================================ evaluation summary
-EVALUATION = "evaluation.json"
-ADDENDUM = "addendum.json"  # python -m cvoice.addendum, beside results.json
-SUMMARY_SPLITS = ("val", "test", "val+test")
-HEADLINE_LEVELS, L1_LEVELS = "headline (L2+L3)", "sensitivity (L1)"
-REFERENCE_FREE_METHODS = ("detector", "reference_free (detector h)")
-PRE_REGISTERED_DETECTOR = "detector (pre-registered)"
-OWN_SCALES = "reference_free (own scales and h)"
-MODE_TEXT = {"single": "one reference", "consensus5": "median of five references"}
-SOURCE_TEXT = {"accent": "Speech Accent Archive readers", "poetry": "LibriVox poetry readers", "ears": "EARS readers",
-               "gettysburg": "LibriVox Gettysburg readers"}
-
-
-def preregistered_counts(row: dict) -> dict:
-    """A strict headline row under the pre-registered accounting (evaluate.pre_registered)."""
-    return {k: v for k, v in pre_registered(row).items() if k in ("tp", "fp", "fn", "f1")}
-
-
-def strict_row(results: dict, split: str, levels: str) -> dict:
-    rows = results["headline"]["groups"]["core8"]["by_split_strict"] if "groups" in results["headline"] else results["headline"]["by_split_strict"]
-    return next(r for r in rows if r["split"] == split and r["levels"] == levels and r["group"] == "all")
-
-
-def local_part(addendum: dict | None, name: str) -> dict:
-    """A part of the addendum's CPU re-run of the frozen detector (python -m cvoice.addendum), or {} without it."""
-    return ((addendum or {}).get("local") or {}).get(name) or {}
-
-
-def r1_summary(results: dict, split: str, levels: str, addendum: dict | None = None) -> dict:
-    row = strict_row(results, split, levels)
-    speakers = local_part(addendum, "pre_registered_per_speaker").get(f"core8|{levels}|{split}") or {}
-    return {"split": split, "levels": levels, "speakers": results["n"][split]["speakers"],
-            "preregistered": {**preregistered_counts(row), "f1_per_speaker": speakers.get("f1_per_speaker"), "f1_range": speakers.get("f1_range")},
-            "count_once": {"tp": row["tp"], "fp": row["fp"], "fn": row["fn"], "same_change_duplicates": row["same_change_duplicates"],
-                           "f1": row["f1"], "f1_ci95": row["f1_ci95"], "f1_range": row["f1_range"], "f1_per_speaker": row["f1_per_speaker"]}}
-
-
-def first_final_summary(first: dict, record: dict) -> dict:
-    """The earlier final evaluation of the test split, under its own detector and accounting."""
-    config = first["detector_config_sha256"]
-    if config not in record or "test" not in record[config]["splits"]:
-        raise ValueError(f"{config[:12]} is not a final evaluation of the test split in the final record")
-    row = strict_row(first, "test", HEADLINE_LEVELS)
-    return {"config_sha256": config, "detector_sha256": record[config]["detector_sha256"], "accounting": row["accounting"],
-            "split": "test", "levels": HEADLINE_LEVELS, "tp": row["tp"], "fp": row["fp"], "fn": row["fn"], "f1": row["f1"]}
-
-
-def source_names(sources) -> str:
-    names = [SOURCE_TEXT.get(s, s) for s in sorted(sources)]
-    return names[0] if len(names) == 1 else ", ".join(names[:-1]) + " and " + names[-1]
-
-
-def budget_note(m: dict) -> str:
-    """The lockbox budget statement in plain words, from the structured fields of the lockbox summary."""
-    weights = set(m["source_weights"].values())
-    covered = f"Covers {source_names(m['by_source'])}" + (", weighted equally" if len(weights) == 1 and len(m["source_weights"]) > 1 else "")
-    uncovered = f"; {source_names(m['uncovered_sources'])} are not in the lockbox" if m["uncovered_sources"] else ""
-    met = m["budget_status"].startswith("met")
-    scope = " on the covered sources only" if m["uncovered_sources"] else ""
-    upper = ("does not establish the budget" if m["upper95"] > m["budget"] else "is within the budget")
-    text = (f"{covered}{uncovered}. The {m['budget']:g} per minute budget is {'met' if met else 'not met'} at the point rate "
-            f"({m['rate']:.3f}){scope}; the upper 95 % bound ({m['upper95']:.3f}) {upper}.")
-    if m["languages_above_budget"]:
-        text += (" First languages above the budget: " + ", ".join(f"{v['language'].capitalize()} {v['rate']:.2f}/min ({v['readers']} readers)"
-                                                                   for v in m["languages_above_budget"]) + ".")
-    return text
-
-
-def lockbox_summary(results: dict) -> list[dict]:
-    lockbox = results["lockbox"]
-    out = []
-    for mode, m in sorted(lockbox["modes"].items(), key=lambda kv: kv[0] != "single"):
-        total = m["total_local"]
-        row = {"mode": mode, "rate": total["rate"], "pooled_rate": total["pooled_rate"], "upper95": total["bootstrap_upper95"],
-               "budget": total["budget"], "budget_status": total["budget_status"], "source_weights": m["source_weights"],
-               "comparison_minutes": total["exposure"], "comparisons": lockbox["comparisons"][mode], "readers": total["readers"],
-               "by_source": {k: v["rate"] for k, v in total["by_source"].items()}, "uncovered_sources": sorted(m["uncovered_sources"]),
-               "languages_above_budget": languages_above_budget(total),
-               "whole_clip_flags_per_clip": m["false_clip_flags_per_clip"], "whole_clip_budget": C.FALSE_CLIP_RATE_BUDGET}
-        out.append({**row, "budget_note": budget_note(row)})
-    return out
-
-
-def natural_rush_listed(results: dict) -> dict:
-    """R2 single reference, check readers, natural-rush edits at levels 2 and 3: edits with a flag or a listed entry on them
-    (speech tempo is listed in R2, so it cannot flag them)."""
-    rows = [r for r in results["cross_speaker"]["modes"]["single"]["by_type"] if r[0] == "check" and r[1] == "NATURAL_RUSH" and r[2] in (2, 3)]
-    return {"flagged_or_listed": sum(r[4] for r in rows), "edits": sum(r[5] for r in rows), "detected": sum(r[3] for r in rows)}
-
-
-def r2_level3(results: dict, enabled: list[str]) -> list[dict]:
-    """R2 single reference, check readers, level-3 edits of the types whose dimension R2 scores: detected of n, most found first."""
-    rows = [{"type": r[1], "detected": r[3], "edits": r[5]} for r in results["cross_speaker"]["modes"]["single"]["by_type"]
-            if r[0] == "check" and r[2] == 3 and C.FLAW_DIM[r[1]] in enabled and r[5]]
-    return sorted(rows, key=lambda r: (-r["detected"] / r["edits"], r["type"]))
-
-
-def per_speaker_text(values: dict | None) -> str:
-    return " and ".join(f"{v:.3f}" for v in (values or {}).values())
-
-
-def limits(summary: dict) -> list[str]:
-    """Stated limits that the summary's own numbers support."""
-    test = next(r for r in summary["r1"] if r["split"] == "test")
-    pre = test["preregistered"]["f1_per_speaker"]
-    out = [f"The test split has {test['speakers']} speakers, so its F1 is given per speaker, not as an interval: "
-           + (f"{per_speaker_text(pre)} under the pre-registered accounting; " if pre else "")
-           + f"{per_speaker_text(test['count_once']['f1_per_speaker'])} counting one detection per change."]
-    first = summary.get("first_final")
-    if first:
-        out.append(f"The test split was evaluated once before, with an earlier detector ({first['config_sha256'][:12]}): "
-                   f"F1 {first['f1']:.3f} ({first['accounting']}). That result was seen before the detector was redesigned.")
-    for m in summary["lockbox"]:
-        out.append(f"R2 lockbox, {m['mode']}: {m['rate']:.3f} false regions per comparison-minute (upper 95 % bound {m['upper95']:.3f}) "
-                   f"against the {m['budget']:.1f}/min budget, over {source_names(m['by_source'])} only"
-                   + (f" ({source_names(m['uncovered_sources'])} not covered)" if m["uncovered_sources"] else "")
-                   + (". The upper bound does not establish the budget." if m["upper95"] > m["budget"] else "."))
-        if m["whole_clip_flags_per_clip"] > m["whole_clip_budget"]:
-            out.append(f"R2 lockbox, {m['mode']}: {m['whole_clip_flags_per_clip']:.3f} false whole-clip flags per clip, above the "
-                       f"{m['whole_clip_budget']:.2f} budget.")
-    out.append("Every upload is a different speaker (R2). With one reference, the R2 detector flags these level-3 edits of the "
-               "check readers: " + ", ".join(f"{r['type'].replace('_', ' ').lower()} {r['detected']} of {r['edits']}" for r in summary["r2_level3"])
-               + ". It does not score the other edit types in R2.")
-    out.append("The edits are synthetic recipe edits on recorded speeches; no human rating backs the delivery index or the cause labels.")
-    return out
-
-
-def reference_free_rows(results: dict, addendum: dict | None) -> list[dict]:
-    """The baseline rows (core8, L2+L3): the detector under the pre-registered accounting first (its duplicates are in FP),
-    then, one detection per change, the detector, the reference-free view at the detector's h and at the train-chosen h, and
-    with the addendum the reference-free view with its own scales and h."""
-    trivial = results["trivial"]["groups"]["core8"]
-    own = local_part(addendum, "reference_free_fair").get("held_out") or {}
-    rows = []
-    for split in ("val", "test"):
-        rows.append({"split": split, "method": PRE_REGISTERED_DETECTOR, "same_change_duplicates": None,
-                     **preregistered_counts(strict_row(results, split, HEADLINE_LEVELS))})
-        for method in (*REFERENCE_FREE_METHODS, f"reference_free (train-chosen h={results['trivial']['reference_free']['h']})"):
-            tp, fp, fn = trivial["totals"][split][method]
-            rows.append({"split": split, "method": method, "tp": tp, "fp": fp, "fn": fn,
-                         "same_change_duplicates": trivial["same_change_duplicates"][split][method], "f1": f1(tp, fp, fn)["f1"]})
-        cell = own.get(f"core8|{split}", {}).get("own scales and h")
-        if cell:
-            tp, fp, fn, dup = cell
-            rows.append({"split": split, "method": OWN_SCALES, "tp": tp, "fp": fp, "fn": fn, "same_change_duplicates": dup,
-                         "f1": f1(tp, fp, fn)["f1"], "source": "computed after the final evaluation (python -m cvoice.addendum)"})
-    return rows
-
-
-def level_one_text(rows: list[dict]) -> str:
-    row = next(r for r in rows if r["split"] == "val+test")
-    pre, once = row["preregistered"], row["count_once"]
-    return (f"Level 1 is the smallest edit size: the evaluation finds {pre['tp']} of {pre['tp'] + pre['fn']} level-1 edits in val and "
-            f"test under the pre-registered accounting ({once['tp']} of {once['tp'] + once['fn']} counting one detection per change).")
-
-
-def lockbox_text(lockbox: list[dict]) -> str:
-    """The lockbox line of an R2 result and of the upload panel: the rate per reference mode, by source and by first language."""
-    modes = "; ".join(f"{MODE_TEXT.get(m['mode'], m['mode'])} {m['rate']:.2f} (upper 95 % bound {m['upper95']:.2f})" for m in lockbox)
-    first = lockbox[0]
-    text = (f"On held-out readers of the same texts (lockbox, measured once), false regions per comparison-minute: {modes}. "
-            f"By source, {MODE_TEXT.get(first['mode'], first['mode'])}: "
-            + ", ".join(f"{SOURCE_TEXT.get(k, k)} {v:.2f}" for k, v in sorted(first["by_source"].items()))
-            + (f"; {source_names(first['uncovered_sources'])} are not in the lockbox." if first["uncovered_sources"] else "."))
-    if first["languages_above_budget"]:
-        text += (f" First languages above the {first['budget']:g}/min budget: "
-                 + ", ".join(f"{v['language'].capitalize()} {v['rate']:.2f}" for v in first["languages_above_budget"]) + ".")
-    return text
-
-
-def evaluation_summary(results: dict, record: dict, first: dict | None = None, addendum: dict | None = None,
-                       detector: dict | None = None) -> dict:
-    """The dashboard's evaluation panel, from the saved outputs of a final run: results.json, the final record
-    (final_evaluations.json), optionally the results.json of an earlier final evaluation of the test split, the addendum
-    (computed after the final evaluation from the same outputs) and the frozen detector (its R2 scored dimensions)."""
-    if not results.get("final"):
-        raise ValueError("results.json is not a final evaluation")
-    config = results["detector_config_sha256"]
-    if config not in record:
-        raise ValueError(f"detector {config[:12]} has no entry in the final record")
-    if addendum is not None and addendum["detector_config_sha256"] != config:
-        raise ValueError("the addendum is not computed for this detector")
-    nulls = [{"population": r[0], "false_flags": r[1], "minutes": r[2], "rate": r[3], "rule_of_three": r[4]}
-             for r in results["nulls"]["rows"] if r[0].startswith("R1 ")]
-    enabled = (detector or {}).get("regimes", {}).get("R2", {}).get("enabled") or list(C.REGIME_DIMS["R2"])
-    out = {"schema": 1, "config_sha256": config, "detector_sha256": record[config]["detector_sha256"],
-           "scope": "core8 recipe edits, R1 single-level clips; strict matching (one-to-one, time IoU >= 0.5)",
-           "accounting": {"preregistered": "all predictions counted, as the evaluation plan fixed it",
-                          "count_once": f"{results['trivial']['accounting']}, adopted after the plan"},
-           "r1": [r1_summary(results, split, HEADLINE_LEVELS, addendum) for split in SUMMARY_SPLITS],
-           "r1_level1": [r1_summary(results, split, L1_LEVELS, addendum) for split in SUMMARY_SPLITS],
-           "r1_null": nulls,
-           "reference_free": reference_free_rows(results, addendum),
-           "reference_free_note": ("Every reference-free row is a lower bound: no text (syllable) normalisation is applied. The rows at "
-                                   "the detector's h and at the train-chosen h reuse the detector's scales"
-                                   + ("; the own-scales row fits its scales and h on train and was computed after the final evaluation "
-                                      "(python -m cvoice.addendum)." if addendum else ".")),
-           "lockbox": lockbox_summary(results),
-           "r2_level3": r2_level3(results, enabled),
-           "r2_speech_tempo": natural_rush_listed(results)}
-    out["texts"] = {"level_one": level_one_text(out["r1_level1"]), "r2_lockbox": lockbox_text(out["lockbox"])}
-    if first is not None:
-        out["first_final"] = first_final_summary(first, record)
-    out["limits"] = limits(out)
-    return out
-
-
-def write_evaluation(gallery: Path, results: Path, record: Path, first: Path | None = None, addendum: Path | None = None) -> dict:
-    """gallery/evaluation.json and its index entry. The detector beside the record gives the R2 scored dimensions."""
-    detector = record.parent / "detector.json"
-    summary = evaluation_summary(json.loads(results.read_text()), json.loads(record.read_text()),
-                                 json.loads(first.read_text()) if first else None, json.loads(addendum.read_text()) if addendum else None,
-                                 json.loads(detector.read_text()) if detector.exists() else None)
-    (gallery / EVALUATION).write_text(json.dumps(summary, indent=1, sort_keys=True, ensure_ascii=False) + "\n")
-    index = json.loads((gallery / "index.json").read_text())
-    index["evaluation"] = EVALUATION
-    (gallery / "index.json").write_text(json.dumps(index, indent=1, sort_keys=True) + "\n")
-    log(f"wrote {gallery / EVALUATION} (detector {summary['config_sha256'][:12]})")
-    return summary
 
 
 def site(out: Path, gallery: Path) -> None:
@@ -864,28 +611,17 @@ def main(argv: list[str] | None = None) -> None:
         parser.add_argument("--gallery", type=Path, default=ROOT / "gallery")
         args = parser.parse_args(argv[1:])
         return site(args.out_dir, args.gallery)
-    if argv[:1] == ["evaluation"]:
-        parser = argparse.ArgumentParser(prog="python -m cvoice.gallery evaluation")
-        parser.add_argument("results", type=Path, help="eval/results.json of the final run")
-        parser.add_argument("--record", type=Path, default=ROOT / "models" / "final_evaluations.json")
-        parser.add_argument("--first-final", type=Path, default=None, help="results.json of an earlier final evaluation of the test split")
-        parser.add_argument("--addendum", type=Path, default=None, help="addendum.json of python -m cvoice.addendum for the same run")
-        parser.add_argument("--gallery", type=Path, default=ROOT / "gallery")
-        args = parser.parse_args(argv[1:])
-        write_evaluation(args.gallery, args.results, args.record, args.first_final, args.addendum)
-        return None
     parser = argparse.ArgumentParser(prog="python -m cvoice.gallery")
     parser.add_argument("--dataset", type=Path, default=ROOT / "data")
     parser.add_argument("--models", type=Path, default=ROOT / "models" / "detector.json")
     parser.add_argument("--cache", type=Path, default=None)
     parser.add_argument("--eval", type=Path, default=ROOT / "eval")
     parser.add_argument("--out", type=Path, default=ROOT)
-    parser.add_argument("--first-final", type=Path, default=None, help="results.json of an earlier final evaluation of the test split")
     parser.add_argument("--note", default=None, help="provenance note for index.json, e.g. when the gallery is rebuilt after the final evaluation")
     args = parser.parse_args(argv)
     provenance = {"command": "python -m cvoice.gallery " + shlex.join(argv), **({"note": args.note} if args.note else {})}
     with PreparePool(cache_dir=args.cache) as pool:
-        build(args.dataset, args.models, args.cache, args.eval, args.out, pool, first_final=args.first_final, provenance=provenance)
+        build(args.dataset, args.models, args.cache, args.eval, args.out, pool, provenance=provenance)
 
 
 if __name__ == "__main__":

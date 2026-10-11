@@ -24,7 +24,7 @@ $PY -m cvoice.addendum --run "$RUN" --first-final "$FIRST" --cache "$CACHE" --wo
 $PY -m cvoice.evaluate render "$RUN/eval/results.json" "$RUN/eval/tables_rendered.md"
 rm -rf "$OUT"
 CVOICE_DEVICES=cpu CVOICE_WORKERS=3 $PY -m cvoice.gallery --dataset "$RUN/data/dataset" --models models/detector.json --cache "$CACHE" \
-  --eval "$RUN/eval" --out "$OUT" --first-final "$FIRST" \
+  --eval "$RUN/eval" --out "$OUT" \
   --note "rebuilt after the final evaluation on a local CPU with the frozen detector, from the saved dataset audio and eval outputs of the final run (scripts/rebuild_after_final.sh)"
 rm -rf gallery
 cp -r "$OUT/gallery" gallery

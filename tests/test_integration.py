@@ -177,6 +177,6 @@ def test_build_calibrate_evaluate_gallery_end_to_end(world, pinned_detector):
 
     idx = gallery.build(tmp / "data", out / "models" / "detector.json", tmp / "cache", out / "eval", out)
     assert [i["id"] for i in idx["items"]][:1] == ["identity"] and {"G1", "G3", "G5", "greenman", "greenman_botched", "channel_mp3"} <= {i["id"] for i in idx["items"]}
-    assert (out / "gallery" / "index.json").exists() and (out / "gallery" / "stress_matrix.json").exists()
+    assert (out / "gallery" / "index.json").exists()
     r = json.loads((out / "gallery" / "results" / "G5.json").read_text())
     assert r["schema"] == 2 and r["truth"] and r["scores"]["overall"] is not None and r["pipeline"]["alignment_device"] == "cpu"

@@ -225,14 +225,14 @@ The second command runs 631 tests (all pass, about 94 s on a laptop CPU, 2026-10
 | `models/detector_selfref.json` | The detector of the no-reference rough check (added after the final evaluation; tested once, hashes in `docs/evidence_post_final/INDEX.txt`) |
 | `models/duration_norms.json` | Word-duration norms fitted on LibriTTS; tried for the no-reference check and not adopted |
 | `models/final_evaluations.json` | Record of test-split evaluations (configurations `32cdd86f…` and `782d7df7…`) |
-| `gallery/` | 18 precomputed examples (audio and result JSON) and the evaluation and stress-matrix data; the 17 examples of the final evaluation were rebuilt on CPU with the frozen detector (`gallery/index.json` `provenance`), and **Level 3, Set A, no reference** was added with the rough check |
+| `gallery/` | 18 precomputed examples (audio and result JSON) and `index.json` (the example list and the bundled references); the 17 examples of the final evaluation were rebuilt on CPU with the frozen detector (`gallery/index.json` `provenance`), and **Level 3, Set A, no reference** was added with the rough check |
 | `data/sources_manifest.json`, `data/transcripts/` | The 19 source recordings (URL, SHA-256, licence basis, split) and the transcript snapshots with their hashes |
 | `docs/technical.md`, `docs/technical.pdf` | Technical report |
 | `docs/PAPERS.md` | Papers used, what was taken from each, and the chain from each flaw to its method and module |
 | `docs/evidence_final_782d7df7/`, `docs/evidence_final_32cdd86f3d6e/` | Evidence of the final evaluation and of the earlier look at the test split |
 | `docs/evidence_post_final/` | Evidence of the two features added after the final evaluation (`INDEX.txt`, `SHA256SUMS`) |
 | `kaggle/run.py`, `kaggle/data/fetch.py`, `kaggle/lab/` | Build kernel, corpus fetch kernel, measurement lab kernel |
-| `scripts/` | `stage_project.sh`, `import_run.sh`, `rebuild_after_final.sh`, `build_pdf.sh`, `make_pipeline_figure.py`, `fetch_norms_corpus.py` (LibriTTS download for the duration norms) |
+| `scripts/` | `stage_project.sh`, `import_run.sh`, `rebuild_after_final.sh`, `build_pdf.sh`, `fetch_norms_corpus.py` (LibriTTS download for the duration norms) |
 | `tests/` | Unit and regression tests |
 | `pyproject.toml`, `uv.lock`, `Dockerfile`, `.dockerignore` | Locked environment and container |
 | `fly.toml`, `render.yaml` | Deploy configurations for Fly.io and Render |

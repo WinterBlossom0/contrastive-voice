@@ -1,10 +1,9 @@
-"""The shipped product after the final run: frozen detector, gallery and evaluation panel, reader-facing texts."""
+"""The shipped product after the final run: frozen detector, gallery, reader-facing texts."""
 import hashlib
 import json
 import shutil
 from pathlib import Path
 
-import pytest
 from synth import local, with_x
 
 from cvoice import audio, config as C, explain, gallery, patterns, pipeline
@@ -13,8 +12,7 @@ from cvoice.score import score
 
 ROOT = Path(__file__).resolve().parents[1]
 FINAL_CONFIG = '782d7df7589164fa7d06e10571369a28aaee6149834a346cfbe4d90e3832f092'
-RUN = ROOT / 'build/work/kaggle_runs/last_run/x'
-FIRST_FINAL = ROOT / 'docs/evidence_final_32cdd86f3d6e/results.json'
+EVIDENCE = ROOT / 'docs/evidence_final_782d7df7/results.json'
 GALLERY = ROOT / 'gallery'
 
 
@@ -27,6 +25,7 @@ def test_shipped_detector_is_the_frozen_final_detector():
     assert hashlib.sha256((ROOT / 'models/detector.json').read_bytes()).hexdigest() == record[FINAL_CONFIG]['detector_sha256']
     assert config_hash(load_detector(ROOT / 'models/detector.json')) == FINAL_CONFIG
     assert record[FINAL_CONFIG]['r2_lockbox_modes'] == ['single', 'consensus5'] and 'test' in record[FINAL_CONFIG]['splits']
+    assert json.loads(EVIDENCE.read_text())['detector_config_sha256'] == FINAL_CONFIG
 
 
 def test_gallery_results_were_made_with_the_frozen_detector():
@@ -34,7 +33,6 @@ def test_gallery_results_were_made_with_the_frozen_detector():
     assert {r['pipeline']['config_sha256'] for r in results if r['regime'] != 'SELF'} == {FINAL_CONFIG}
     self_detector = json.loads((ROOT / 'models/detector_selfref.json').read_text())
     assert {r['pipeline']['config_sha256'] for r in results if r['regime'] == 'SELF'} == {self_detector['selfref_sha256']}
-    assert json.loads((GALLERY / gallery.EVALUATION).read_text())['config_sha256'] == FINAL_CONFIG
 
 
 def test_pause_text_follows_the_measured_direction_in_a_group(base, pinned_detector):
@@ -84,8 +82,11 @@ def test_texts_carry_the_lower_case_synthetic_clause():
 
 
 def test_listing_reasons_are_reader_text_with_final_run_numbers():
-    summary = json.loads((GALLERY / gallery.EVALUATION).read_text())['r2_speech_tempo']
-    assert f"lies on {summary['flagged_or_listed']} of {summary['edits']} natural-rush edits" in pipeline.listed_reason('R2', 'D9')
+    # Row of evaluate's by_type table: [reader group, type, level, detected, flagged or listed, edits, Wilson interval].
+    rows = [r for r in json.loads(EVIDENCE.read_text())['cross_speaker']['modes']['single']['by_type']
+            if r[0] == 'check' and r[1] == 'NATURAL_RUSH' and r[2] in (2, 3)]
+    assert len(rows) == 2
+    assert f"lies on {sum(r[4] for r in rows)} of {sum(r[5] for r in rows)} natural-rush edits" in pipeline.listed_reason('R2', 'D9')
     assert '0 of 68' in C.OWNER_LISTED['R2']['D9'] and '0 of 68' in pipeline.listed_reason('R2', 'D9')
     for regime_name, k in pipeline.LISTED_REASON:
         assert 'owner decision' not in pipeline.listed_reason(regime_name, k) and 'dev v13' not in pipeline.listed_reason(regime_name, k)
@@ -103,26 +104,6 @@ def test_gallery_audio_is_already_on_the_upload_path():
     if shutil.which('ffmpeg'):
         uploaded = next(it for it in index['items'] if it['id'] == 'greenman_botched')['audio']
         assert (audio.load_audio(GALLERY / uploaded)[0] == audio.read_wav(GALLERY / uploaded)).all()
-
-
-def test_preregistered_accounting_moves_same_change_detections_and_counts_every_region():
-    row = {'split': 'test', 'levels': 'headline (L2+L3)', 'tp': 29, 'fp': 5, 'fn': 3, 'same_change_duplicates': 3, 'every_prediction': {'false_by_key': {'D1-': 2, 'D3-': 2, 'D9-': 5}, 'same_change_detections': 1}}
-    assert gallery.preregistered_counts(row) == {'tp': 28, 'fp': 9, 'fn': 4, 'f1': 0.812}
-
-
-@pytest.mark.skipif(not (RUN / 'eval/results.json').exists() or not FIRST_FINAL.exists(),
-                    reason='the final-run folder (build/, git-ignored) is not distributed with the repository')
-def test_evaluation_panel_equals_the_final_run_outputs():
-    shipped = json.loads((GALLERY / gallery.EVALUATION).read_text())
-    addendum = RUN / 'eval' / gallery.ADDENDUM
-    fresh = gallery.evaluation_summary(json.loads((RUN / 'eval/results.json').read_text()),
-                                       json.loads((ROOT / 'models/final_evaluations.json').read_text()), json.loads(FIRST_FINAL.read_text()),
-                                       json.loads(addendum.read_text()) if addendum.exists() else None,
-                                       json.loads((ROOT / 'models/detector.json').read_text()))
-    assert shipped == json.loads(json.dumps(fresh))
-    test = next(r for r in shipped['r1'] if r['split'] == 'test')
-    assert (test['preregistered']['f1'], test['count_once']['f1'], shipped['first_final']['f1']) == (0.812, 0.879, 0.879)
-    assert [round(m['rate'], 3) for m in shipped['lockbox']] == [0.46, 0.516]
 
 
 def test_flags_on_an_excluded_edit_are_named_in_the_description():
