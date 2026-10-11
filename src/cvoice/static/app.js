@@ -3,7 +3,7 @@
    Text from results is user data: it is only ever inserted with textContent. */
 
 // ---------------------------------------------------------------------------------------------------- constants
-const PLOT_L = 64, PLOT_R = 16;          // px; the wavesurfer strip uses the same insets (style.css .wave)
+const PLOT_L = 64, PLOT_R = 16;          // px; insets of the chart's plot; the hero timeline also keeps PLOT_R free on its right
 const DISPLAY_HOP_S = 0.02;              // s; frame rows are thinned to this hop before drawing
 const MIN_PLAY_S = 0.6;                  // s; a flaw's span is padded to this length for A/B playback
 const BAND_ALPHA = 0.16, BAND_ALPHA_SEL = 0.20;   // flag wash; the recording line keeps >= 3:1 on it up to 0.20
@@ -17,26 +17,16 @@ const BOTH_GAP_MS = 350;                 // ms of silence between the two spans 
 const TL_REF_TRACK_PX = 8, TL_TRACK_PX = 16;   // px; the reference word track (quiet) and this recording's word track
 const TL_LINK_GAP_PX = 10, TL_LABEL_PX = 20;  // px; gap under the reference track, and the row of the "This recording" label
 const TL_MIN_SPAN_PX = 4;                // px; a shorter span (a pause point) is widened to stay visible and clickable
-const TL_MARK_H = 22, TL_MARK_GAP = 4;   // px; height of a fault label and the gap kept around it
-const TL_MARK_FONT = 12.5;               // px; must equal .tl-mk text in style.css
-const TL_MARK_ROWS = 3;                  // label rows above this recording's track; a label that fits in none is counted under the panel
+const TL_MARK_H = 20, TL_MARK_GAP = 4;   // px; height of a strip label and the gap kept around it
+const TL_MARK_FONT = 12.5;               // px; must equal .strip-label text in style.css
+const TL_MARK_ROWS = 2;                  // label rows under the strip; a label that fits in none is counted under the panel
 const TL_MARK_REACH_PX = 48;            // px a full label may move sideways off its region; a number alone may move three times as far
 const TL_JOIN_S = 0.5;                   // s; members of one finding group closer than this share one label
-const TL_EDGE_PX = 3, TL_LANE_PX = 4;    // px from this recording's track up to a fault's marker line; px between the lines of overlapping faults
-const WAVE_BARS = { barWidth: 2, barGap: 1, barRadius: 2 };   // px; fault colours snap to the gaps between these bars
-// How a fault span looks on this recording's waveform, from calm to strong: bar colour as a share of the way from lavender
-// (--you) to bramble (--flag-bar), then on to the light bramble (--flag-text); bar opacity; opacity of the soft wash behind.
-// A piece under several faults takes the strongest look. "calm" is any fault while another one is selected or hovered.
-const FAULT_LOOKS = ["calm", "dot", "dash", "solid", "grp", "peek", "sel", "diff"];
-const FAULT_LOOK = {
-  calm: { bramble: 0.8, light: 0, alpha: 0.62, wash: 0.04 },
-  dot: { bramble: 0.55, light: 0, alpha: 0.82, wash: 0.06 },
-  dash: { bramble: 0.8, light: 0, alpha: 0.9, wash: 0.09 },
-  solid: { bramble: 1, light: 0, alpha: 0.96, wash: 0.12 },
-  grp: { bramble: 1, light: 0.25, alpha: 1, wash: 0.13 },
-  peek: { bramble: 1, light: 0.35, alpha: 1, wash: 0.16 },
-  sel: { bramble: 1, light: 1, alpha: 1, wash: 0.22 },
-};
+const STRIP_STEP_PX = 2, STRIP_FEATHER_PX = 10;   // px between the heat samples of the strip; px over which a span's glow fades out
+const STRIP_HIT_PX = 10;                 // px; a narrower span (a pause point) gets a hit area this wide
+// Strip heat of each severity tier (0 calm to 1); a finding glows at least this much, and the costliest local finding at 1.
+const TIER_HEAT = { dot: 0.35, dash: 0.55, solid: 0.75 };
+const WAVE_BARS = { barWidth: 2, barGap: 1, barRadius: 2 };   // px
 const SVG_NS = "http://www.w3.org/2000/svg";
 const RING_C = 2 * Math.PI * 52;         // circumference of the score ring (r 52 in index.html)
 const COUNT_MS = 1000;                   // ms of the score count-up on the first load
@@ -52,7 +42,6 @@ const SEVERITY_STYLES = [[1 / 3, "dot", "dotted"], [2 / 3, "dash", "dashed"], [I
 const LIBS = [  // [is it loaded?, fallback file]; the wavesurfer core must come before its plugins
   [() => typeof Plotly !== "undefined", "vendor/plotly-cartesian.min.js"],
   [() => typeof WaveSurfer === "function", "vendor/wavesurfer.min.js"],
-  [() => typeof WaveSurfer === "function" && WaveSurfer.Regions, "vendor/regions.min.js"],
   [() => typeof WaveSurfer === "function" && WaveSurfer.Timeline, "vendor/timeline.min.js"],
 ];
 const ROWS = {  // heading (wide, narrow), dimension, kind of drawing
@@ -93,7 +82,7 @@ const REGULARISED = new Set(["D3", "D7"]);
 const WHOLE_RATIO = { D1: ["speech time", "faster", "slower"], D3: ["pitch range", "narrower", "wider"] };
 const CANDIDATE_TEXT = "Automatic label; low precision on real speech; listen to the span.";
 const SYNTHETIC_TEXT = "Synthetic-only family; unvalidated on real speech.";   // explain.SYNTHETIC_ONLY_CLAUSE
-const OWN_EVIDENCE = { D9: "word_time_ln" };
+const OWN_EVIDENCE = { D9: "word_time_ln" };   // the evidence row that holds the finding's own measured difference
 // One plain name per measure group; the result JSON's brief words are Cadence, Pauses, Tone, Volume and Clarity.
 const GROUP_NAME = { Cadence: "Pace", Tone: "Pitch range", Clarity: "Clarity" };
 const groupLabel = (word) => GROUP_NAME[word] || word;
@@ -118,9 +107,9 @@ const TWINS = new Set();                 // ids of no-reference examples that re
 const exampleName = (it) => TWINS.has(it.id) ? TWIN_NAME : EXAMPLE_NAME[it.id] || `${it.group}, ${it.label}`;
 const TOP_N = 3;
 const TICK_MS = 380;                     // ms of the points tick when an example opens
-const BAND_STEPS = 7;                    // intro: at most this many band steps (style.css .intro .tl-band: 1 s, then 0.16 s each)
+const BAND_STEPS = 7;                    // intro: at most this many strip steps (style.css .intro .strip-span: 1 s, then 0.16 s each)
 const FIX_COUNT_WORDS = ["", "Your biggest fix", "Your two biggest fixes", "Your three biggest fixes"];
-const reducedMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;   // the evidence row that holds the finding's own measured difference
+const reducedMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
 // A reading graded without a reference reading (pipeline SELF mode): its words compare with the reader's own typical delivery.
 const SELF_MODE = "none";
 const isSelf = (r = S.result) => r?.detection?.reference_mode === SELF_MODE;
@@ -134,7 +123,6 @@ const SELF_COPY = {
   "#key-ref": "Your typical delivery",
 };
 const SELF_LIMIT = "A rough check: your reading is graded against itself. For better results, use a reference reading of the same text.";
-// What a fix did to one finding, in the words the page shows (app.plain_outcome gives the reason).
 const FIX_STAGES = ["edit", "check"];   // app.FIX_STAGES (tests/test_app.py compares them)
 const FIX_STAGE_TEXT = { edit: "Editing your recording…", check: "Checking the result…" };
 // "Edited", never "Fixed": an edit can leave a spot flagged or apply only part of the change (build/work/repair/FIX_CONTRACT.md).
@@ -206,12 +194,9 @@ function svgEl(tag, attrs = {}, ...kids) {
 }
 
 let measureContext = null;
-function scratchContext() {
-  if (!measureContext) measureContext = document.createElement("canvas").getContext("2d");
-  return measureContext;
-}
 function textWidth(text, px, weight = 400) {
-  scratchContext().font = `${weight} ${px}px ${css("--sans")}`;
+  if (!measureContext) measureContext = document.createElement("canvas").getContext("2d");
+  measureContext.font = `${weight} ${px}px ${css("--sans")}`;
   return measureContext.measureText(text).width;
 }
 
@@ -241,9 +226,9 @@ function showAlert(msg) {
 }
 
 // ---------------------------------------------------------------------------------------------------- state
-const S = { fix: { info: null, source: null, jobs: new Map(), busy: null, player: null }, copy: null, result: null, sel: null, filter: null, rid: 0, limits: null, flagLimits: null, ws: null, regions: null, ref: new Audio(),
+const S = { fix: { info: null, source: null, jobs: new Map(), busy: null, player: null }, copy: null, result: null, sel: null, filter: null, rid: 0, limits: null, flagLimits: null, ws: null, ref: new Audio(),
   refTimer: null, bothTimer: null, tl: null, chart: null, hasLibs: false, selKind: "flaw", allDimensions: false, openId: 0,
-  mediaId: 0, youReady: false, refReady: false, inSpan: new Set(), listenAt: null, audio: null, sources: new WeakMap(), levelOn: false, countId: 0, counted: false, side: "you", wsRef: null, playId: 0, priority: null, pattern: null, peekI: null, paintFrame: 0 };
+  mediaId: 0, youReady: false, refReady: false, inSpan: new Set(), listenAt: null, audio: null, sources: new WeakMap(), levelOn: false, countId: 0, counted: false, side: "you", wsRef: null, playId: 0, priority: null, pattern: null };
 
 // Graded on its own, the overall articulation rate is not shown: it compares the reader with other speakers, not with themselves.
 const articulationRate = (d) => d.unit === "syllables/s" || /articulation rate/i.test(d.label || "");
@@ -290,7 +275,7 @@ function showScore(o) {
   for (const id of ["#ring-value", "#ring-glow"]) $(id).style.strokeDasharray = arc;
   S.countId += 1;
   const fig = $("#overall-fig"), run = S.countId;
-  if (S.counted || o == null || matchMedia("(prefers-reduced-motion: reduce)").matches) { S.counted = true; fig.textContent = scoreText(o); return; }
+  if (S.counted || o == null || reducedMotion()) { S.counted = true; fig.textContent = scoreText(o); return; }
   S.counted = true;
   const start = performance.now();
   const step = (now) => {
@@ -468,7 +453,7 @@ function renderLedger(r) {
       el("div", { class: "bar" }, el("i", { style: `width:${Math.max(0, Math.min(100, value))}%` })),
       scored.length > 1 ? el("div", { class: "lines" }, ...scored.map((d) => el("div", { class: "line", title: `${d.note || ""} Coverage: ${num(d.coverage * 100, 0)}%.` },
         el("span", { text: SUB_NAME[d.key] || d.label }), el("span", { text: num(d.score, 1) })))) : null,
-      n ? el("div", { class: "count flagged", text: `${n} ${n === 1 ? "finding" : "findings"}` }) : null);
+      n ? el("div", { class: "count", text: `${n} ${n === 1 ? "finding" : "findings"}` }) : null);
     card.addEventListener("click", () => setFilter(S.filter && S.filter.join() === keys.join() ? null : keys));
     cards.append(card);
   }
@@ -685,7 +670,6 @@ function renderExplain() {
   void box.offsetWidth;   // restart the slide on every new selection
   box.classList.add("slide");
   $("#player-finding").textContent = !f ? "-" : diff ? findingText(f) : `#${S.sel + 1} ${findingText(f)}`;
-  box.classList.toggle("neutral", diff);
   if (!f) {
     box.append(el("h3", { text: "Your reading" }), el("p", { class: "empty", text: r.flaws.length ? "Select a finding to read it." : noRegions(r) }));
     return;
@@ -802,7 +786,6 @@ function select(i, { scroll = false, kind = "flaw", reveal = true } = {}) {
   markTimeline();
   if (S.chart && before !== rowDefs(S.result).map((d) => d.key).join()) drawChart();
   else highlight();
-  updateWaveRegions();
   const f = selected();
   if (S.youReady && f) S.ws.setTime(mediaSpan(f, "you")[0]);
 }
@@ -878,7 +861,7 @@ function pulseEntered(tp) {
   const now = new Set(S.result.flaws.map((f, i) => [f, i]).filter(([f]) => !wholePassage(f) && tp >= f.p[0] && tp <= f.p[1]).map(([, i]) => i));
   for (const i of now) {
     if (S.inSpan.has(i)) continue;
-    document.querySelectorAll(`.top-card[data-i="${i}"], #flaws button[data-i="${i}"][data-kind="flaw"], .tl-band[data-i="${i}"], .tl-mk[data-i="${i}"]`).forEach((n) => {
+    document.querySelectorAll(`.top-card[data-i="${i}"], #flaws button[data-i="${i}"][data-kind="flaw"], .strip-span[data-i="${i}"], .strip-label[data-i="${i}"]`).forEach((n) => {
       n.classList.remove("pulse");
       void n.getBoundingClientRect();   // restart the animation on a repeated entry
       n.classList.add("pulse");
@@ -893,29 +876,11 @@ function clearKaraoke() {
 }
 
 // ---------------------------------------------------------------------------------------------------- timeline
-/** A finding's span in the reference: its own b span, else its recording span carried through the word map. */
-function referenceSpan(f) {
-  const m = S.result.map;
-  return f.b || [interp(f.p[0], m.p, m.b), interp(f.p[1], m.p, m.b)];
-}
-
-const SEVERITY_DASH = { dot: "1.5 2.5", dash: "5 3", solid: "none" };
 const severityTier = (f) => sevStyle(f.severity ?? 0)[1];
 
 const atOnePoint = (p) => p[1] - p[0] < DISPLAY_HOP_S;   // a missing pause starts and ends at the same time
 const widenSpan = (a, b) => b - a >= TL_MIN_SPAN_PX ? [a, b] : [(a + b) / 2 - TL_MIN_SPAN_PX / 2, (a + b) / 2 + TL_MIN_SPAN_PX / 2];
-
-/** Marker-line lanes: a fault that overlaps an earlier one on the timeline gets its own line above it, so each span stays legible. */
-function edgeLanes(r, x) {
-  const ends = [], lane = new Map();
-  r.flaws.map((f, i) => [i, ...widenSpan(...f.p.map(x))]).filter(([i]) => !wholePassage(r.flaws[i]))
-    .sort((a, b) => a[1] - b[1] || b[2] - a[2]).forEach(([i, x0, x1]) => {
-      let k = ends.findIndex((end) => end + TL_LANE_PX <= x0);
-      if (k < 0) { k = ends.length; ends.push(x1); } else ends[k] = x1;
-      lane.set(i, k);
-    });
-  return { lane, count: Math.max(1, ends.length) };
-}
+const faultCost = (f) => f.counted === false ? 0 : f.points_lost ?? 0;
 
 /** The local findings that each word of this recording belongs to (word index -> finding indices). */
 function faultsByWord(r) {
@@ -927,32 +892,66 @@ function faultsByWord(r) {
   return out;
 }
 
-/** One finding on this recording's track: a thin marker line in the severity style (dotted, dashed, solid) above the word
- *  ticks, in its own lane where faults overlap, over a clear hit area; with a reference, its reference span and a thin link
- *  to it, which style.css shows only while the finding is hovered or selected. The waveform below recolours its bars. */
-function bandParts(f, i) {
-  const g = S.tl, [p0, p1] = widenSpan(...f.p.map(g.x)), tier = severityTier(f), edgeY = g.edgeY(i), mid = (p0 + p1) / 2;
-  // a fault at one point in time (a missing pause) gets an upright pin down to the track, as its hairline on the waveform
-  const point = atOnePoint(f.p);
-  const parts = [svgEl("rect", { class: "hit", x: p0, y: edgeY - TL_LANE_PX, width: p1 - p0, height: g.youBot - edgeY + TL_LANE_PX }),
-    svgEl("line", { class: `edge sev-${tier}${point ? " pin" : ""}`, x1: point ? mid : p0, x2: point ? mid : p1, y1: edgeY, y2: point ? g.youTop - 1 : edgeY,
-      "stroke-dasharray": SEVERITY_DASH[tier] })];
-  if (!g.own) {
-    const [b0, b1] = widenSpan(...referenceSpan(f).map(g.x)), bx = (b0 + b1) / 2, bend = (g.refBot + edgeY) / 2;
-    parts.push(svgEl("g", { class: "tl-link" },
-      svgEl("rect", { class: "ref-span", x: b0, y: g.refTop, width: b1 - b0, height: TL_REF_TRACK_PX, rx: TL_REF_TRACK_PX / 2 }),
-      svgEl("path", { class: "link", d: `M${bx},${g.refBot} C${bx},${bend} ${mid},${bend} ${mid},${edgeY}` })));
+/** Heat of each finding on the strip, 0 to 1: at least its severity tier's level, and 1 for the costliest local finding. */
+function faultHeats(r) {
+  const top = Math.max(MIN_SHOWN_POINTS, ...r.flaws.filter((f) => !wholePassage(f)).map(faultCost));
+  return r.flaws.map((f) => wholePassage(f) ? 0 : Math.min(1, Math.max(TIER_HEAT[severityTier(f)], faultCost(f) / top)));
+}
+
+/** Strip colour of a heat from 0 (calm, near the panel) through bramble to the light bramble of the worst fault. */
+function heatColor(heat) {
+  const stops = [[0, css("--strip-calm")], [0.3, css("--strip-low")], [0.6, css("--flag")], [0.85, css("--flag-bar")], [1, css("--flag-text")]];
+  const k = Math.max(1, stops.findIndex(([at]) => heat <= at));
+  const [a, from] = stops[k - 1], [b, to] = stops[k];
+  return mixHex(from, to, Math.min(1, Math.max(0, (heat - a) / (b - a))));
+}
+
+/** The strip's gradient: per STRIP_STEP_PX column the hottest finding over it (overlaps take the maximum, not the sum),
+ *  fading out over STRIP_FEATHER_PX past each span; a stop only where the level changes. */
+function heatGradient(r, heats, x, trackW) {
+  const n = Math.ceil(trackW / STRIP_STEP_PX) + 1, level = new Float32Array(n);
+  r.flaws.forEach((f, i) => {
+    if (wholePassage(f)) return;
+    const [a, b] = widenSpan(...f.p.map(x));
+    const k0 = Math.max(0, Math.floor((a - STRIP_FEATHER_PX) / STRIP_STEP_PX)), k1 = Math.min(n - 1, Math.ceil((b + STRIP_FEATHER_PX) / STRIP_STEP_PX));
+    for (let k = k0; k <= k1; k++) {
+      const outside = Math.max(a - k * STRIP_STEP_PX, k * STRIP_STEP_PX - b, 0);
+      level[k] = Math.max(level[k], Math.round(50 * heats[i] * Math.max(0, 1 - outside / STRIP_FEATHER_PX)) / 50);
+    }
+  });
+  const stops = [];
+  for (let k = 0; k < n; k++) {
+    if (k > 0 && k < n - 1 && level[k] === level[k - 1] && level[k] === level[k + 1]) continue;
+    stops.push(`${heatColor(level[k])} ${Math.min(k * STRIP_STEP_PX, trackW).toFixed(0)}px`);
   }
-  return { p0, p1, parts };
+  return `linear-gradient(90deg, ${stops.join(", ")})`;
+}
+
+/** A finding's span in the reference: its own b span, else its recording span carried through the word map. */
+function referenceSpan(f) {
+  const m = S.result.map;
+  return f.b || [interp(f.p[0], m.p, m.b), interp(f.p[1], m.p, m.b)];
+}
+
+/** With a reference, a finding's reference span and a thin link down to its words on this recording's track; style.css
+ *  shows it only while the finding is hovered or selected. */
+function tlLink(f, i) {
+  const g = S.tl, [p0, p1] = widenSpan(...f.p.map(g.x)), [b0, b1] = widenSpan(...referenceSpan(f).map(g.x));
+  const bx = (b0 + b1) / 2, mid = (p0 + p1) / 2, bend = (g.refBot + g.youTop) / 2;
+  return svgEl("g", { class: "tl-link", "data-i": i ?? "", "aria-hidden": "true" },
+    svgEl("rect", { class: "ref-span", x: b0, y: g.refTop, width: b1 - b0, height: TL_REF_TRACK_PX, rx: TL_REF_TRACK_PX / 2 }),
+    svgEl("path", { class: "link", d: `M${bx},${g.refBot} C${bx},${bend} ${mid},${bend} ${mid},${g.youTop}` }));
 }
 
 /**
- * The fault labels: members of one finding group that touch share one label ("×2"). Each label sits over its region,
- * the most costly first, in the lowest of TL_MARK_ROWS rows where it touches no other label; a label that does not fit
- * at full length tries its number alone; one that still does not fit is counted under the panel.
+ * The strip labels: members of one finding group that touch share one label ("×2"). Only the TOP_N costliest local
+ * findings are labelled, under their region, in the highest of TL_MARK_ROWS rows where a label touches no other; a label
+ * that does not fit at full length tries its number alone; the rest are counted by the "more" link under the panel.
  */
 function placeMarks(r, x, width) {
-  const top = new Map(topFindings(r).map(([, i], rank) => [i, rank]));
+  const ranked = r.flaws.map((f, i) => [f, i]).filter(([f]) => !wholePassage(f) && shownLoss(faultCost(f)))
+    .sort(([a, i], [b, j]) => faultCost(b) - faultCost(a) || i - j).slice(0, TOP_N);
+  const top = new Map(ranked.map(([, i], rank) => [i, rank]));
   const marks = [];
   r.flaws.forEach((f, i) => {
     if (wholePassage(f)) return;
@@ -961,22 +960,21 @@ function placeMarks(r, x, width) {
     if (joined) { joined.members.push(i); joined.t0 = Math.min(joined.t0, f.p[0]); joined.t1 = Math.max(joined.t1, f.p[1]); }
     else marks.push({ members: [i], t0: f.p[0], t1: f.p[1] });
   });
-  const cost = (i) => r.flaws[i].counted === false ? 0 : r.flaws[i].points_lost ?? 0;
   for (const m of marks) {
-    m.main = m.members.reduce((best, i) => cost(i) > cost(best) ? i : best, m.members[0]);
+    m.main = m.members.reduce((best, i) => faultCost(r.flaws[i]) > faultCost(r.flaws[best]) ? i : best, m.members[0]);
     m.rank = Math.min(...m.members.map((i) => top.get(i) ?? Infinity));
     const f = r.flaws[m.main];
     m.number = `#${m.main + 1}`;
     m.title = `${findingText(f)}${m.members.length > 1 ? ` ×${m.members.length}` : ""}`;
-    m.points = Number.isFinite(m.rank) ? `−${num(f.points_lost, 2)}` : "";
+    m.points = `−${num(f.points_lost, 2)}`;
     m.cx = (x(m.t0) + x(m.t1)) / 2;
   }
   const rows = Array.from({ length: TL_MARK_ROWS }, () => []), hidden = [];
-  const order = [...marks].sort((a, b) => a.rank - b.rank || cost(b.main) - cost(a.main) || a.t0 - b.t0);
+  const order = [...marks].sort((a, b) => a.rank - b.rank || a.t0 - b.t0);
   const fits = (row, x0, x1) => rows[row].every((o) => x1 + TL_MARK_GAP <= o.x0 || x0 >= o.x1 + TL_MARK_GAP);
   for (const m of order) {
-    const full = textWidth(m.number, TL_MARK_FONT, 700) + textWidth(` ${m.title}`, TL_MARK_FONT)
-      + (m.points ? textWidth(` ${m.points}`, TL_MARK_FONT, 700) + 4 : 0) + 18;
+    if (!Number.isFinite(m.rank)) { hidden.push(m); continue; }
+    const full = textWidth(m.number, TL_MARK_FONT, 700) + textWidth(` ${m.title}`, TL_MARK_FONT) + textWidth(` ${m.points}`, TL_MARK_FONT, 700) + 22;
     const short = textWidth(m.number, TL_MARK_FONT, 700) + 16;
     // a candidate costs its row and its sideways shift; a full label may move a little, a number alone further, with a leader
     const candidates = (w, compact, reach) => rows.flatMap((_, row) => Array.from({ length: 2 * Math.floor(reach / 8) + 1 }, (__, k) => {
@@ -988,12 +986,21 @@ function placeMarks(r, x, width) {
     Object.assign(m, spot);
     rows[spot.row].push({ x0: spot.x0, x1: spot.x0 + spot.w });
   }
-  return { marks: marks.filter((m) => !hidden.includes(m)), hidden, rows: Math.max(1, ...marks.filter((m) => !hidden.includes(m)).map((m) => m.row + 1)) };
+  const shown = marks.filter((m) => !hidden.includes(m));
+  return { marks: shown, hidden, rows: shown.length ? Math.max(...shown.map((m) => m.row + 1)) : 0 };
+}
+
+/** The tooltip and accessible name of a finding on the strip: number, name, words, points and times. */
+function stripText(f, i, own) {
+  const points = f.counted === false ? "shared penalty" : findingPts(f).replace(/ pts\b/, " points");
+  const words = quotedWords(S.result, f);
+  const times = `this recording ${span(f.p)}${f.b && !own ? `, reference ${span(referenceSpan(f))}` : ""}`;
+  return { tip: `#${i + 1} ${findingText(f)} · ${words} · ${points}`, label: `#${i + 1} ${findingText(f)}, ${words}, ${points}, ${times}` };
 }
 
 /**
- * The reference reading above this recording, word by word on one time scale (the longer reading sets the scale). Each local
- * finding is one region on this recording's track, labelled above it; the waveform below uses the same scale.
+ * The reference reading above this recording, word by word on one time scale (the longer reading sets the scale). Under
+ * this recording's waveform, on the same scale, one strip glows where the findings are (style.css .fault-strip).
  */
 function drawTimeline() {
   const host = $("#tl-host"), r = S.result;
@@ -1001,99 +1008,104 @@ function drawTimeline() {
   if (!r || !host.clientWidth) return;
   const width = host.clientWidth, own = isSelf(r);
   const pxPerS = Math.max(width - PLOT_R, 1) / Math.max(r.participant.duration, r.baseline.duration);
-  const x = (t) => t * pxPerS, layout = placeMarks(r, x, width - PLOT_R), lanes = edgeLanes(r, x);
-  // rows from the top: reference track, gap, the "This recording" label, the fault labels, the marker lines, this recording's track
+  const x = (t) => t * pxPerS;
+  // rows from the top: reference track, gap, the "This recording" label, this recording's track
   const refTop = 0, refBot = own ? 0 : TL_REF_TRACK_PX, labelMid = refBot + (own ? 0 : TL_LINK_GAP_PX) + TL_LABEL_PX / 2;
-  const marksTop = labelMid + TL_LABEL_PX / 2;
-  const youTop = marksTop + layout.rows * (TL_MARK_H + TL_MARK_GAP) + TL_EDGE_PX + lanes.count * TL_LANE_PX, youBot = youTop + TL_TRACK_PX;
-  const edgeY = (i) => youTop - TL_EDGE_PX - (lanes.lane.get(i) ?? 0) * TL_LANE_PX;
-  S.tl = { x, refTop, refBot, youTop, youBot, edgeY, width, own, chipOf: new Map() };
-  const g = S.tl;
+  const youTop = labelMid + TL_LABEL_PX / 2, youBot = youTop + TL_TRACK_PX;
+  S.tl = { x, refTop, refBot, youTop, youBot, width, own, chipOf: new Map() };
   const svg = svgEl("svg", { width, height: youBot, viewBox: `0 0 ${width} ${youBot}`, role: "group",
-    "aria-label": own ? "This recording, word by word, with numbered flagged regions" : "Reference and this recording, word by word, with numbered flagged regions" });
+    "aria-label": own ? "This recording, word by word" : "Reference and this recording, word by word" });
   $("#lane-ref").hidden = own;
-  svg.append(svgEl("text", { class: "tl-label you", x: 0, y: labelMid, "dominant-baseline": "central", text: "This recording" }));
-  // the words of a finding keep their ticks, tinted in the strongest severity among their findings
-  const faults = faultsByWord(r), tiers = ["dot", "dash", "solid"];
-  const tickClass = (who, k) => {
-    const of = who === "you" ? faults.get(k) : null;
-    if (!of) return { class: `tl-word ${who}` };
-    const tier = tiers[Math.max(...of.map((i) => tiers.indexOf(severityTier(r.flaws[i]))))];
-    return { class: `tl-word ${who} flag sev-${tier}`, "data-faults": of.join(",") };
-  };
+  svg.append(svgEl("text", { class: "tl-label", x: 0, y: labelMid, "dominant-baseline": "central", text: "This recording" }));
+  const faults = faultsByWord(r);
+  const tickClass = (who, k) => who === "you" && faults.has(k) ? { class: "tl-word you flag", "data-faults": faults.get(k).join(",") } : { class: `tl-word ${who}` };
   const track = (who, key, top, height) => svgEl("g", { "aria-hidden": "true" }, ...r.words.map((w, k) => [w, k]).filter(([w]) => w[key]).map(([w, k]) => {
-    const x0 = g.x(w[key][0]), wide = Math.max(g.x(w[key][1]) - x0 - 1, 1);
+    const x0 = x(w[key][0]), wide = Math.max(x(w[key][1]) - x0 - 1, 1);
     return svgEl("g", { ...tickClass(who, k), onclick: () => playSpan(who, [w[key][0], w[key][1] + 0.25]),
       onpointerenter: (e) => showTip(e.currentTarget, `${w.w}  ${span(w[key])}`), onpointerleave: hideTip },
       svgEl("rect", { x: x0, y: top, width: wide, height, rx: Math.min(4, height / 2) }));
   }));
-  svg.append(own ? "" : track("ref", "b", refTop, TL_REF_TRACK_PX), track("you", "p", youTop, TL_TRACK_PX));
-  const bands = svgEl("g", {}), stems = svgEl("g", { class: "tl-stems", "aria-hidden": "true" }), markers = svgEl("g", {});
-  const order = r.flaws.map((f, i) => i).filter((i) => !wholePassage(r.flaws[i]));   // intro order: by time
-  const seq = (i) => `--seq:${Math.min(order.indexOf(i), BAND_STEPS)}`;
-  layout.marks.concat(layout.hidden).forEach((m, k) => m.members.forEach((i) => g.chipOf.set(i, k)));
-  r.flaws.forEach((f, i) => {
-    if (wholePassage(f)) return;   // listed and explained in the whole-clip cards, not painted over the readings
-    bands.append(svgEl("g", { class: "tl-band", "data-i": i, "data-chip": g.chipOf.get(i), "data-peek": i, style: seq(i), onclick: () => select(i, { scroll: true }), "aria-hidden": "true" },
-      svgEl("title", { text: `#${i + 1} ${findingText(f)}` }), ...bandParts(f, i).parts));
-  });
-  layout.marks.forEach((m) => {
-    const f = r.flaws[m.main], y = marksTop + (layout.rows - 1 - m.row) * (TL_MARK_H + TL_MARK_GAP) + TL_MARK_H / 2;
-    const pick = () => select(m.main, { scroll: true }), tier = severityTier(f), cx = m.x0 + m.w / 2;
-    const name = `${m.number} ${m.title}${m.points ? `, ${m.points} points` : ""}`;
-    // a label moved off its region keeps a leader from its own middle to the region
-    const from = Math.min(Math.max(m.cx, m.x0 + TL_MARK_H / 2), m.x0 + m.w - TL_MARK_H / 2);
-    stems.append(svgEl("line", { class: "tl-stem", "data-chip": g.chipOf.get(m.main), style: seq(m.main), x1: from, x2: m.cx, y1: y + TL_MARK_H / 2, y2: g.edgeY(m.main) }));
-    markers.append(svgEl("g", { class: `tl-mk${Number.isFinite(m.rank) ? " top" : ""}${m.compact ? " compact" : ""}`, "data-i": m.main, "data-members": m.members.join(","),
-      "data-chip": g.chipOf.get(m.main), "data-peek": m.main, style: seq(m.main), tabindex: 0, role: "button", "aria-pressed": "false",
-      "aria-label": `${name}: this recording ${span([m.t0, m.t1])}${f.b && !own ? `, reference ${span(referenceSpan(f))}` : ""}`,
-      onclick: pick, onkeydown: (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(); } },
-      onpointerenter: m.compact ? (e) => showTip(e.currentTarget, name) : null, onpointerleave: m.compact ? hideTip : null },
-      svgEl("rect", { x: m.x0, y: y - TL_MARK_H / 2, width: m.w, height: TL_MARK_H, rx: TL_MARK_H / 2, "stroke-dasharray": SEVERITY_DASH[tier] }),
-      svgEl("text", { x: m.compact ? cx : m.x0 + 9, y, "text-anchor": m.compact ? "middle" : "start" },
-        svgEl("tspan", { class: "n", text: m.number }),
-        ...(m.compact ? [] : [svgEl("tspan", { text: ` ${m.title}` }), m.points ? svgEl("tspan", { class: "pts", dx: 4, text: ` ${m.points}` }) : null]))));
-  });
-  svg.append(svgEl("g", { id: "tl-diff" }), bands, stems, markers,
+  const links = own ? [] : r.flaws.map((f, i) => wholePassage(f) ? null : tlLink(f, i)).filter(Boolean);
+  svg.append(own ? "" : track("ref", "b", refTop, TL_REF_TRACK_PX), track("you", "p", youTop, TL_TRACK_PX), ...links, svgEl("g", { id: "tl-diff" }),
     own ? "" : svgEl("line", { id: "tl-cur-ref", class: "tl-cursor", y1: refTop - 3, y2: refBot + 3, style: "display:none" }),
     svgEl("line", { id: "tl-cur-you", class: "tl-cursor", y1: youTop - 3, y2: youBot + 3, style: "display:none" }));
   host.replaceChildren(svg);
-  const more = layout.hidden.reduce((n, m) => n + m.members.length, 0);
-  $("#tl-more").hidden = !more;
-  $("#tl-more").textContent = `${more} more ${more === 1 ? "finding" : "findings"} in the list`;
-  for (const [id, seconds] of [["#wave", r.participant.duration], ["#wave-ref", r.baseline.duration]]) {
+  for (const [id, seconds] of [["#wave", r.participant.duration], ["#wave-axis", r.participant.duration], ["#wave-ref", r.baseline.duration]]) {
     $(id).style.width = `${Math.max(seconds * pxPerS, 1)}px`;
   }
+  drawStrip(r, x, width);
   markTimeline();
-  paintWave();
+}
+
+/** The severity strip under this recording's waveform: the heat, one focusable span per local finding (a tick for a
+ *  finding at one point in time), the labels of the costliest findings, and the count of the others. */
+function drawStrip(r, x, width) {
+  const g = S.tl, trackW = Math.max(x(r.participant.duration), 1), heats = faultHeats(r), layout = placeMarks(r, x, width - PLOT_R);
+  layout.marks.concat(layout.hidden).forEach((m, k) => m.members.forEach((i) => g.chipOf.set(i, k)));
+  const local = r.flaws.map((f, i) => [f, i]).filter(([f]) => !wholePassage(f));
+  const order = local.map(([, i]) => i);   // intro order: by time
+  const seq = (i) => `--seq:${Math.min(order.indexOf(i), BAND_STEPS)}`;
+  // narrower spans lie on top, so each stays reachable inside a longer one
+  const widths = local.map(([f]) => { const [a, b] = widenSpan(...f.p.map(x)); return Math.max(b - a, STRIP_HIT_PX); });
+  const spans = local.map(([f, i], k) => {
+    const [a, b] = widenSpan(...f.p.map(x)), w = widths[k], left = b - a >= STRIP_HIT_PX ? a : (a + b) / 2 - w / 2;
+    const text = stripText(f, i, g.own);
+    return el("button", { type: "button", class: `strip-span${atOnePoint(f.p) ? " point" : ""}`, "data-i": i, "data-peek": i, "data-chip": g.chipOf.get(i),
+      "aria-pressed": "false", "aria-label": text.label, style: `left:${left.toFixed(1)}px;width:${w.toFixed(1)}px;z-index:${1 + widths.filter((v) => v > w).length};--c:${heatColor(heats[i])};${seq(i)}`,
+      onclick: () => select(i, { scroll: true }), onpointerenter: (e) => showTip(e.currentTarget, text.tip), onpointerleave: hideTip,
+      onfocus: (e) => showTip(e.currentTarget, text.tip), onblur: hideTip });
+  });
+  const heat = heatGradient(r, heats, x, trackW);
+  const stripTrack = el("div", { class: "strip-track", style: `width:${trackW.toFixed(1)}px` },
+    el("div", { class: "strip-glow", "aria-hidden": "true", style: `background-image:${heat}` }),
+    el("div", { class: "strip-heat", "aria-hidden": "true", style: `background-image:${heat}` }), ...spans, el("div", { class: "strip-diff", hidden: "" }));
+  const labelsH = layout.rows ? TL_MARK_GAP + layout.rows * (TL_MARK_H + TL_MARK_GAP) : 0;
+  const labels = svgEl("svg", { class: "strip-labels", width, height: labelsH, viewBox: `0 0 ${width} ${labelsH}`, "aria-hidden": "true" });
+  for (const m of layout.marks) {
+    const f = r.flaws[m.main], top = TL_MARK_GAP + m.row * (TL_MARK_H + TL_MARK_GAP), y = top + TL_MARK_H / 2;
+    const pick = () => select(m.main, { scroll: true }), name = `${m.number} ${m.title}, ${m.points} points`;
+    // a label moved off its region keeps a leader from its region down to the label
+    const to = Math.min(Math.max(m.cx, m.x0 + TL_MARK_H / 2), m.x0 + m.w - TL_MARK_H / 2);
+    labels.append(svgEl("line", { class: "strip-leader", "data-chip": g.chipOf.get(m.main), style: seq(m.main), x1: m.cx, x2: to, y1: 0, y2: top }),
+      svgEl("g", { class: `strip-label${m.compact ? " compact" : ""}`, "data-i": m.main, "data-members": m.members.join(","), "data-chip": g.chipOf.get(m.main),
+        "data-peek": m.main, style: seq(m.main), onclick: pick,
+        onpointerenter: m.compact ? (e) => showTip(e.currentTarget, name) : null, onpointerleave: m.compact ? hideTip : null },
+      svgEl("rect", { x: m.x0, y: top, width: m.w, height: TL_MARK_H, rx: TL_MARK_H / 2 }),
+      svgEl("text", { x: m.compact ? m.x0 + m.w / 2 : m.x0 + 10, y, "text-anchor": m.compact ? "middle" : "start" },
+        svgEl("tspan", { class: "n", text: m.number }),
+        ...(m.compact ? [] : [svgEl("tspan", { text: ` ${m.title}` }), svgEl("tspan", { class: "pts", dx: 4, text: ` ${m.points}` })]))));
+  }
+  $("#fault-strip").replaceChildren(stripTrack, labels);
+  const more = layout.hidden.reduce((n, m) => n + m.members.length, 0);
+  $("#tl-more").hidden = !more;
+  $("#tl-more").textContent = `+${more} more`;
+  $("#tl-more").setAttribute("aria-label", `${more} more ${more === 1 ? "finding" : "findings"} in the list`);
 }
 
 function markTimeline() {
-  const svg = $("#tl-host svg");
-  if (!svg || !S.tl || !S.result) return;
+  if (!S.tl || !S.result || !$("#tl-host svg")) return;
   const f = selected(), flaw = S.selKind === "flaw";
   const inGroup = (i) => flaw && !!f?.group?.includes(S.result.flaws[i].id);
-  svg.classList.toggle("has-sel", flaw && S.sel != null && S.tl.chipOf.has(S.sel));
-  svg.querySelectorAll(".tl-band[data-i]").forEach((band) => {
-    const i = +band.dataset.i, on = flaw && S.sel === i;
-    band.classList.toggle("sel", on);
-    band.classList.toggle("grp", !on && inGroup(i));
-  });
-  svg.querySelectorAll(".tl-mk").forEach((mk) => {
-    const members = mk.dataset.members.split(",").map(Number), on = flaw && members.includes(S.sel);
-    mk.classList.toggle("sel", on);
-    mk.classList.toggle("grp", !on && members.some(inGroup));
-    mk.setAttribute("aria-pressed", String(on));
-  });
-  svg.querySelectorAll(".tl-stem").forEach((stem) => stem.classList.toggle("sel", flaw && +stem.dataset.chip === S.tl.chipOf.get(S.sel)));
-  svg.querySelectorAll(".tl-word.flag").forEach((tick) => {
-    const of = tick.dataset.faults.split(",").map(Number), on = flaw && of.includes(S.sel);
-    tick.classList.toggle("sel", on);
-    tick.classList.toggle("grp", !on && of.some(inGroup));
-  });
-  const layer = svg.querySelector("#tl-diff");
-  layer.replaceChildren();
-  if (!flaw && f && !wholePassage(f)) layer.append(svgEl("g", { class: "tl-band tl-diff sel", "aria-hidden": "true" }, ...bandParts(f, null).parts));
+  const mark = (node, members) => {
+    const on = flaw && members.includes(S.sel);
+    node.classList.toggle("sel", on);
+    node.classList.toggle("grp", !on && members.some(inGroup));
+    return on;
+  };
+  document.querySelectorAll("#fault-strip .strip-span").forEach((s) => s.setAttribute("aria-pressed", String(mark(s, [+s.dataset.i]))));
+  document.querySelectorAll("#fault-strip .strip-label").forEach((m) => mark(m, m.dataset.members.split(",").map(Number)));
+  document.querySelectorAll("#fault-strip .strip-leader").forEach((l) => l.classList.toggle("sel", flaw && S.sel != null && +l.dataset.chip === S.tl.chipOf.get(S.sel)));
+  document.querySelectorAll("#tl-host .tl-link[data-i]").forEach((l) => mark(l, [+l.dataset.i]));
+  document.querySelectorAll("#tl-host .tl-word.flag").forEach((t) => mark(t, t.dataset.faults.split(",").map(Number)));
+  // a selected reference difference: a neutral span on the strip, and its link to the reference
+  const diff = !flaw && f && !wholePassage(f), box = $("#fault-strip .strip-diff");
+  $("#tl-diff").replaceChildren(diff && !S.tl.own ? tlLink(f, null) : "");
+  box.hidden = !diff;
+  if (diff) {
+    const [a, b] = widenSpan(...f.p.map(S.tl.x));
+    box.style.left = `${a.toFixed(1)}px`;
+    box.style.width = `${(b - a).toFixed(1)}px`;
+  }
 }
 
 /** Playhead on both tracks: tp in this recording, tb in the reference (s). */
@@ -1108,18 +1120,16 @@ function moveTimelineCursor(tp, tb) {
   }
 }
 
-/** Linked highlighting: one finding's words and band stay bright while the other flagged words and bands fade. */
+/** Linked highlighting: one finding's words, strip span and label stay bright while the other flagged words and labels fade. */
 function peek(i) {
   const on = i != null && i !== "";
-  const waveFault = on && S.result?.flaws[+i] && !wholePassage(S.result.flaws[+i]) ? +i : null;
-  if (waveFault !== S.peekI) { S.peekI = waveFault; paintWaveSoon(); }
   document.body.classList.toggle("peeking", on);
   document.querySelectorAll(".peek").forEach((n) => n.classList.remove("peek"));
   if (!on) return;
   const f = S.result?.flaws[+i];
   if (!f) return;
   const chip = S.tl?.chipOf.get(+i);
-  document.querySelectorAll(`.tl-band[data-i="${i}"], .tl-mk[data-i="${i}"], .top-card[data-i="${i}"]${chip == null ? "" : `, [data-chip="${chip}"]`}`).forEach((n) => n.classList.add("peek"));
+  document.querySelectorAll(`.strip-span[data-i="${i}"], .tl-link[data-i="${i}"], .top-card[data-i="${i}"]${chip == null ? "" : `, #fault-strip [data-chip="${chip}"]`}`).forEach((n) => n.classList.add("peek"));
   document.querySelectorAll("#tl-host .tl-word.flag").forEach((tick) => { if (tick.dataset.faults.split(",").includes(String(i))) tick.classList.add("peek"); });
   if (!wholePassage(f)) for (let w = f.words[0]; w <= f.words[1]; w++) document.querySelector(`#transcript .w[data-i="${w}"]`)?.classList.add("peek");
 }
@@ -1277,7 +1287,7 @@ function chartModel(r) {
     path: hatchPath(x0, x1, HATCH_STEP_PX / pxPerS, rowHeight[key] / pxPerS), line: { color, width } });
   const labelEnds = {};   // row key -> right edge (px) of the last wash number at the top and at the bottom
   // A wash number goes on the side opposite the departure, else on the free side, else after the earlier number while it
-  // still starts on its wash; otherwise it is left out, because the list and the waveform region also carry it.
+  // still starts on its wash; otherwise it is left out, because the list and the severity strip also carry it.
   const placeNumber = (key, text, delta, x0, x1) => {
     const start = x0 * pxPerS, width = LABEL_CHAR_PX * text.length + 2 * LABEL_PAD_PX;
     const taken = labelEnds[key] || (labelEnds[key] = { top: -Infinity, bottom: -Infinity });
@@ -1441,8 +1451,7 @@ function updatePlayback() {
 function invalidateMedia() {
   stopAll();
   S.mediaId += 1;
-  S.youReady = false; S.refReady = false; S.peekI = null;
-  $("#wave .wave-wash")?.replaceChildren();
+  S.youReady = false; S.refReady = false;
   setPlaying(false);
   $("#clock").textContent = "Loading audio…";
   $("#cursor").style.display = "none";
@@ -1451,115 +1460,9 @@ function invalidateMedia() {
   updatePlayback();
 }
 
-function updateWaveRegions() {
-  if (!S.youReady || !S.regions) return;
-  S.regions.clearRegions();
-  const add = (f, i, kind) => {
-    const p = mediaSpan(f, "you"), duration = S.ws.getDuration();
-    // clear: the recoloured bars and the wash layer show the fault; the region only takes the click and the hover
-    const reg = S.regions.addRegion({ start: Math.min(p[0], duration), end: Math.min(Math.max(p[1], p[0] + 0.05), duration), drag: false, resize: false,
-      color: "rgba(0, 0, 0, 0)" });
-    reg.findingIndex = i; reg.findingKind = kind;
-    if (kind === "flaw") { reg.on("over", () => peek(i)); reg.on("leave", () => peek(null)); }
-  };
-  // the narrowest region last, so it lies on top and stays reachable inside a longer one
-  const local = S.result.flaws.map((f, i) => [f, i]).filter(([f]) => !wholePassage(f));   // a whole-passage finding has no region to mark
-  local.sort(([a], [b]) => (b.p[1] - b.p[0]) - (a.p[1] - a.p[0])).forEach(([f, i]) => add(f, i, "flaw"));
-  if (S.selKind === "difference" && selected() && !wholePassage(selected())) add(selected(), S.sel, "difference");
-  paintWave();
-}
-
 function mixHex(a, b, share) {
   const channel = (hex, k) => parseInt(hex.slice(1 + 2 * k, 3 + 2 * k), 16);
   return `#${[0, 1, 2].map((k) => Math.round(channel(a, k) + (channel(b, k) - channel(a, k)) * share).toString(16).padStart(2, "0")).join("")}`;
-}
-
-/** Bar, heard-bar and wash colours of one fault look (FAULT_LOOK); "diff" is a selected reference difference, in the neutral. */
-function lookColors(look) {
-  if (look === "diff") {
-    const neutral = css("--neutral");
-    return { bar: rgba(neutral, 1), played: mixHex(neutral, css("--ink"), 0.45), wash: rgba(neutral, 0.14) };
-  }
-  const spec = FAULT_LOOK[look], light = css("--flag-text");
-  const hex = mixHex(mixHex(css("--you"), css("--flag-bar"), spec.bramble), light, spec.light);
-  return { bar: rgba(hex, spec.alpha), played: rgba(mixHex(hex, css("--ink"), 0.4), Math.min(1, spec.alpha + 0.3)), wash: rgba(css("--flag"), spec.wash) };
-}
-
-/** The renderer draws whole bars only: its canvas is the wrapper width rounded down to a whole number of bar steps (px). */
-function waveGeometry() {
-  const step = WAVE_BARS.barWidth + WAVE_BARS.barGap, width = Math.floor(S.ws.getWrapper().clientWidth / step) * step;
-  const edge = (k) => Math.min(Math.max(k * step - WAVE_BARS.barGap / 2, 0), width);   // the gap before bar k, so no bar is split
-  return { dpr: Math.max(1, devicePixelRatio || 1), width, bars: width / step, edge };
-}
-
-/** Fault spans on this recording's waveform as touching pieces [first bar, end bar, look], and the faults at one point in
- *  time (a missing pause: no bars to recolour) as points [x px, look]. A span shorter than two bars is widened to two; where
- *  faults overlap, the strongest look in FAULT_LOOKS order wins. */
-function wavePieces(geo) {
-  const r = S.result, f = selected(), flaw = S.selKind === "flaw", duration = S.ws.getDuration();
-  const busy = (flaw && S.sel != null) || S.peekI != null, best = new Int8Array(Math.ceil(geo.bars)).fill(-1), points = [];
-  const mark = (p, look) => {
-    const k0 = Math.min(Math.max(Math.round((p[0] / duration) * geo.bars), 0), best.length - 2);
-    const k1 = Math.min(Math.max(Math.round((p[1] / duration) * geo.bars), k0 + 2), best.length);
-    for (let k = k0; k < k1; k++) best[k] = Math.max(best[k], FAULT_LOOKS.indexOf(look));
-    if (atOnePoint(p)) points.push([((p[0] + p[1]) / 2 / duration) * geo.width, look]);
-  };
-  r.flaws.forEach((x, i) => {
-    if (wholePassage(x)) return;
-    const look = flaw && S.sel === i ? "sel" : S.peekI === i ? "peek" : flaw && f?.group?.includes(x.id) ? "grp" : busy ? "calm" : severityTier(x);
-    mark(x.p, look);
-  });
-  if (!flaw && f && !wholePassage(f)) mark(mediaSpan(f, "you"), "diff");
-  const pieces = [];
-  best.forEach((rank, k) => {
-    if (rank < 0) return;
-    const last = pieces.at(-1);
-    if (last && last[1] === k && last[2] === FAULT_LOOKS[rank]) last[1] = k + 1;
-    else pieces.push([k, k + 1, FAULT_LOOKS[rank]]);
-  });
-  return { pieces, points };
-}
-
-/** A horizontal gradient with hard stops in the bar gaps: plain bars outside the faults, each piece's colour inside. */
-function barGradient(pieces, geo, plain, colorOf) {
-  const grad = scratchContext().createLinearGradient(0, 0, geo.width * geo.dpr, 0), at = (k) => geo.edge(k) / geo.width;
-  grad.addColorStop(0, plain);
-  for (const [k0, k1, look] of pieces) {
-    grad.addColorStop(at(k0), plain); grad.addColorStop(at(k0), colorOf(look));
-    grad.addColorStop(at(k1), colorOf(look)); grad.addColorStop(at(k1), plain);
-  }
-  grad.addColorStop(1, plain);
-  return grad;
-}
-
-/** The faults on this recording's waveform: the bars inside a span take the fault's colour (stronger when selected, a
- *  little lighter when hovered, calmer while another fault is selected or hovered), over a soft wash that fades out toward
- *  the top and the bottom. The voice stays visible: nothing is drawn over the bars. */
-function paintWave() {
-  cancelAnimationFrame(S.paintFrame);
-  if (!S.ws || !S.youReady || !S.result || !S.ws.getWrapper().clientWidth) return;
-  const geo = waveGeometry(), { pieces, points } = wavePieces(geo), colors = new Map(FAULT_LOOKS.map((look) => [look, lookColors(look)]));
-  const plain = waveColors();
-  S.ws.setOptions(pieces.length ? { ...plain, waveColor: barGradient(pieces, geo, plain.waveColor, (look) => colors.get(look).bar),
-    progressColor: barGradient(pieces, geo, plain.progressColor, (look) => colors.get(look).played) } : plain);
-  let layer = $("#wave .wave-wash");
-  if (!layer) { layer = el("div", { class: "wave-wash", "aria-hidden": "true" }); $("#wave").prepend(layer); }
-  const runs = [];   // touching pieces share one rounded band whose colour changes along it
-  for (const piece of pieces) {
-    const run = runs.at(-1);
-    if (run && run.at(-1)[1] === piece[0]) run.push(piece); else runs.push([piece]);
-  }
-  layer.replaceChildren(...runs.map((run) => {
-    const x0 = geo.edge(run[0][0]), x1 = geo.edge(run.at(-1)[1]);
-    const stops = run.map(([k0, k1, look]) => `${colors.get(look).wash} ${geo.edge(k0) - x0}px ${geo.edge(k1) - x0}px`).join(", ");
-    return el("div", { class: "wash-run", style: `left:${x0}px;width:${x1 - x0}px;background-image:linear-gradient(90deg, ${stops})` });
-  }), ...points.map(([x, look]) => el("div", { class: "wash-point", style: `left:${x}px;--c:${colors.get(look).bar}` })));
-}
-
-/** Hovering repaints the waveform once per frame at most. */
-function paintWaveSoon() {
-  cancelAnimationFrame(S.paintFrame);
-  S.paintFrame = requestAnimationFrame(paintWave);
 }
 
 function loadMedia(r, base) {
@@ -1590,14 +1493,13 @@ function loadMedia(r, base) {
     S.wsRef.load(base + r.baseline.audio).catch(() => {});
   }
   const current = () => token === S.mediaId && S.ws === ws;
-  S.regions = ws.registerPlugin(WaveSurfer.Regions.create());
-  ws.registerPlugin(WaveSurfer.Timeline.create({ height: 16, style: { color: css("--muted"), fontSize: "11px" } }));
-  S.regions.on("region-clicked", (region, e) => { if (current()) { e.stopPropagation(); select(region.findingIndex, { scroll: true, kind: region.findingKind }); } });
+  // the time axis goes under the severity strip, so the strip lies right under the bars
+  ws.registerPlugin(WaveSurfer.Timeline.create({ container: "#wave-axis", height: 16, style: { color: css("--muted"), fontSize: "11px" } }));
   ws.on("ready", () => {
     if (!current()) return;
     S.youReady = ws.getDuration() > 0;
     $("#clock").textContent = S.youReady ? `0.00 / ${ws.getDuration().toFixed(2)} s` : "Audio unavailable";
-    updatePlayback(); updateWaveRegions();
+    updatePlayback();
   });
   ws.on("timeupdate", (t) => {
     if (!current() || !S.youReady) return;
@@ -1619,7 +1521,7 @@ function loadMedia(r, base) {
   ws.load(base + r.participant.audio).catch(failed);
 }
 
-/** This recording in the accent at moderate opacity; heard bars at full accent. paintWave adds the fault colours. */
+/** This recording in the accent at moderate opacity; heard bars at full accent. */
 const waveColors = () => ({ waveColor: rgba(css("--you"), 0.66), progressColor: css("--you-text"), cursorColor: css("--ink") });
 const refWaveColors = () => ({ waveColor: rgba(css("--ink2"), 0.22), progressColor: rgba(css("--ink2"), 0.7) });   // the reference stays neutral
 
@@ -2336,7 +2238,6 @@ function outcomeReason(x) {
 
 const playable = (x) => x && (x.outcome === "no_longer_flagged" || x.outcome === "still_flagged");
 
-/** The score before and after when the job states a change; graded on its own, the flagged spots before and after. */
 const changeText = (v) => `${v < 0 ? "−" : "+"}${Math.abs(v).toFixed(2)}`;
 
 /** The score change when the job states one (reference mode, reproduced); graded on its own, the flagged spots before and after. */
@@ -2783,7 +2684,7 @@ async function init() {
     if (S.horizon) drawRanges();   // the serif changes where the hero text ends, which bounds the ranges under it
   });
   await ensureLibs();
-  S.hasLibs = typeof Plotly !== "undefined" && typeof WaveSurfer === "function" && !!WaveSurfer.Regions && !!WaveSurfer.Timeline;
+  S.hasLibs = typeof Plotly !== "undefined" && typeof WaveSurfer === "function" && !!WaveSurfer.Timeline;
   if (!S.hasLibs) showAlert("The chart and audio libraries could not be loaded, so the chart and the waveform are unavailable. Scores, flagged regions and the transcript still work.");
   let index;
   try {

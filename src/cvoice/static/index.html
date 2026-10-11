@@ -9,16 +9,14 @@
 <link rel="icon" href="data:,">
 <link rel="preload" href="vendor/fonts/AtkinsonHyperlegibleNext-Regular.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="vendor/fonts/Newsreader-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="style.css?v=2026-10-10k">
+<link rel="stylesheet" href="style.css?v=2026-10-10l">
 <script defer src="https://cdn.jsdelivr.net/npm/plotly.js-cartesian-dist-min@4.1.1/plotly-cartesian.min.js"
         integrity="sha384-zc4SwKObGL/W0M3RUI09UPWjlgIZHfbwMgcZO6713mRh78tfUmIQKhzCyE2LIiUg" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/wavesurfer.js@8.0.1/dist/wavesurfer.min.js"
         integrity="sha384-cFoZUUrlVjbDowT5/idDYja9T/OY8JaecFDFEt6O/CHQxJjjQR440T5VhilWib4U" crossorigin="anonymous"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/wavesurfer.js@8.0.1/dist/plugins/regions.min.js"
-        integrity="sha384-Tk81r51AIztO5k+iOj/eOq9ZEGD2XVkPnZR8QVxzq1dkyEmsBSCjYpdCoeD/AZQ9" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/wavesurfer.js@8.0.1/dist/plugins/timeline.min.js"
         integrity="sha384-2l5/6KGTIt5kr+AcoXrcOzSiDUedbqv1LlHsFtQ5/ABj0cbzhpA2w6bCvc4Ns2vk" crossorigin="anonymous"></script>
-<script defer src="app.js?v=2026-10-10k"></script>
+<script defer src="app.js?v=2026-10-10l"></script>
 </head>
 <body class="intro">
 <svg width="0" height="0" class="defs" aria-hidden="true" focusable="false">
@@ -26,8 +24,6 @@
     <linearGradient id="g-signature" x1="0" y1="0" x2="1" y2="0">
       <stop offset="0" stop-color="#957fd0"/><stop offset="1" stop-color="#e0a088"/>
     </linearGradient>
-    <filter id="f-glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="4" result="b"/>
-      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
     <linearGradient id="g-far-rock" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7d6886"/><stop offset="0.7" stop-color="#9b7787"/><stop offset="1" stop-color="#ab8286"/></linearGradient>
     <linearGradient id="g-far-snow" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e2cdd0"/><stop offset="1" stop-color="#b997ab"/></linearGradient>
     <linearGradient id="g-mid-rock" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4c405a"/><stop offset="0.8" stop-color="#60495c"/><stop offset="1" stop-color="#6b505d"/></linearGradient>
@@ -48,7 +44,7 @@
   </a>
   <nav class="top-actions" aria-label="Main">
     <details id="picker-menu" class="picker">
-      <summary><span id="picker-title">Try an example</span></summary>
+      <summary>Try an example</summary>
       <div class="picker-panel">
         <div id="chips"></div>
         <details id="more-examples"><summary>More examples</summary><div id="chips-more"></div></details>
@@ -110,19 +106,21 @@
         </div>
       </div>
     </div>
-    <div class="hero-wave panel" id="hero-wave" aria-label="Your reading against the reference, over time">
+    <div class="hero-wave" id="hero-wave" aria-label="Your reading against the reference, over time">
       <div class="tl-stage">
       <p id="lane-ref" class="lane-label" aria-hidden="true">Reference</p>
       <div id="wave-ref" class="wave wave-ref" aria-hidden="true"></div>
       <div id="tl-host" class="tl-host"></div>
       <div id="wave" class="wave wave-you"></div>
+      <div id="fault-strip" class="fault-strip" role="group" aria-label="Findings over time"></div>
+      <div id="wave-axis" class="wave-axis" aria-hidden="true"></div>
       <div id="tl-tip" class="tl-tip" hidden></div>
     </div>
-      <button type="button" id="tl-more" class="text-btn tl-more" hidden></button>
+    <button type="button" id="tl-more" class="text-btn tl-more" hidden></button>
       <p id="wave-msg" class="note"></p>
     </div>
   </div>
-  <div id="fix-all-body" class="fix-all-body" aria-live="polite" aria-label="Your reading with every fix applied"></div>
+  <div id="fix-all-body" aria-live="polite" aria-label="Your reading with every fix applied"></div>
 </section>
 
 <section class="fixes" aria-labelledby="fixes-title">

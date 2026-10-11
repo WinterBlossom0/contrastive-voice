@@ -17,18 +17,19 @@
      and --flag stays apart from --action (CVD 15.8, normal vision 16.2). The chart reads these as 6-digit hex. */
   --base: #1f1e1d;
   --surface: #262624;      /* panels; Plotly hover labels and validator surface */
-  --panel: #2a2927; --panel-2: #302f2c; --panel-3: #3a3835; --border: rgba(237, 230, 218, 0.09);
+  --panel: #2a2927; --panel-3: #3a3835; --border: rgba(237, 230, 218, 0.09);
   --ink: #ede6da; --ink2: #b3aca1; --muted: #968f85;
   --rule: rgba(237, 230, 218, 0.07); --line: rgba(237, 230, 218, 0.12);
   --action: #d97757; --action-hover: #e3876a; --on-action: #1f1e1d;
   --you: #957fd0;          /* this recording and the edited take */
   --ref: #219ba1;          /* reference reading */
   --flag: #b24981;         /* flagged regions only */
-  --flag-bar: #ca6699;     /* bars and word ticks of a fault on this recording: --flag lifted to 4.1:1 on --panel (--flag is 2.9:1) */
+  --flag-bar: #ca6699;     /* the hot end of the severity strip and the reference span of a finding: --flag lifted to 4.1:1 on --panel (--flag is 2.9:1) */
   --tol: #ad7b3d;          /* tolerance band, drawn as a light fill */
+  --strip-calm: #383532;   /* the severity strip where nothing is flagged: a groove a little lighter than the panel */
+  --strip-low: #5e3349;    /* the severity strip at a mild finding, between the calm groove and --flag */
   --neutral: #8f887e;      /* unscored reference differences */
-  --you-text: #bcaef0; --ref-text: #6cc4c8; --flag-text: #ee98bf; --on-flag: #1f1e1d; --on-accent: #1f1e1d;
-  --hl: rgba(149, 127, 208, 0.13);
+  --you-text: #bcaef0; --ref-text: #6cc4c8; --flag-text: #ee98bf; --on-flag: #1f1e1d;
   --edge: #6f6a62;         /* field edges: at least 3:1 on the base */
   --well: #1a1918;         /* the inside of a field or a track */
   /* dusk sky of the hero, from the top of the page down to the horizon */
@@ -37,7 +38,7 @@
   --display: "Newsreader", "Iowan Old Style", Georgia, serif;
   --w: 1360px;
   /* spacing scale: every gap on the page is one of these; --s-6 is the rhythm between sections */
-  --s-1: 8px; --s-2: 12px; --s-3: 16px; --s-4: 24px; --s-5: 32px; --s-6: 48px;
+  --s-2: 12px; --s-3: 16px; --s-4: 24px; --s-5: 32px; --s-6: 48px;
   /* radius scale: content cards, inner panels, controls, chips; pills for buttons */
   --r-card: 20px; --r-panel: 16px; --r-ctl: 12px; --r-chip: 8px;
   /* Depth, three materials with one job each. Glass: layers that float over the page (player, header cluster, menu, the
@@ -79,12 +80,11 @@ body > * { width: min(100% - 32px, var(--w)); margin-inline: auto; }
 body > .defs { position: absolute; width: 0; height: 0; overflow: hidden; }
 main > * + * { margin-top: var(--s-6); }
 
-h1, h2, h3, h4, p, ul, ol, dl, figure { margin: 0; }
+h1, h2, h3, h4, p, ul, ol, dl { margin: 0; }
 h1, h2, h3, .wordmark, #picker-current { font-family: var(--display); font-weight: 500; letter-spacing: -0.005em; font-optical-sizing: auto; }
 h2 { font-size: 30px; line-height: 1.2; }
 h3 { font-size: 21px; line-height: 1.3; }
 .note { color: var(--ink2); font-size: 14px; }
-.sub-h { font-family: var(--sans); font-size: 14px; font-weight: 400; color: var(--ink2); letter-spacing: 0; word-spacing: normal; }
 button, select, input, textarea { font: inherit; color: inherit; }
 button { cursor: pointer; }
 button:disabled { cursor: default; opacity: 0.45; }
@@ -226,8 +226,8 @@ a:hover { text-decoration-color: var(--ink); }
 .sum-head .kicker { display: contents; }
 .sum-head #picker-current { grid-column: 2; grid-row: 1; }
 .sum-head .regime-badge { grid-column: 1 / -1; justify-self: start; }
-.sum-head .summary-line, .sum-head .sub, .sum-head .fix-all { grid-column: 1 / -1; margin-top: 0; }
-.ring-wrap { position: relative; flex: none; width: 132px; height: 132px; }
+.sum-head .summary-line, .sum-head .sub, .sum-head .fix-all { grid-column: 1 / -1; }
+.ring-wrap { position: relative; width: 132px; height: 132px; }
 .ring { width: 100%; height: 100%; transform: rotate(-90deg); overflow: visible; }
 .ring circle { fill: none; stroke-width: 8; stroke-linecap: round; }
 .ring-track { stroke: rgba(237, 230, 218, 0.08); }
@@ -241,11 +241,10 @@ a:hover { text-decoration-color: var(--ink); }
 .spots .ring-track { stroke: var(--line); stroke-width: 2; }
 .spots .ring-value, .spots .ring-glow { display: none; }
 .ring-label { font-size: 13px; line-height: 1.2; color: var(--ink2); max-width: 9em; }
-.kicker { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 12px; }
 #picker-current { font-size: 24px; color: var(--ink); font-weight: 500; }
 .regime-badge { display: inline-block; padding: 2px 12px; border-radius: 999px; font-size: 13px; color: var(--ink2); border: 1px solid var(--line); background: rgba(255, 244, 228, 0.03); }
-.summary-line { font-size: 16px; line-height: 1.5; margin-top: 8px; color: var(--ink2); }
-.sub { color: var(--ink2); font-size: 14px; margin-top: 8px; }
+.summary-line { font-size: 16px; line-height: 1.5; color: var(--ink2); }
+.sub { color: var(--ink2); font-size: 14px; }
 .limit-line { font-size: 13px; }
 .badge { display: inline-block; max-width: 100%; color: var(--ink2); font-size: 15px; overflow-wrap: anywhere; }
 /* one row: the cards stretch to one height and their actions line up along the bottom edge */
@@ -268,7 +267,6 @@ a:hover { text-decoration-color: var(--ink); }
 .card-fix { font-size: 15px; padding-left: 12px; border-left: 2px solid var(--you); }
 .listen-btn { display: inline-flex; align-items: baseline; flex-wrap: wrap; gap: 0 6px; padding: 8px 18px; text-align: left; }
 .listen-btn::before { content: ""; width: 0; height: 0; border-style: solid; border-width: 5px 0 5px 9px; border-color: transparent transparent transparent var(--ink); align-self: center; }
-.listen-btn .sub-h { font-weight: 400; font-size: 14px; }
 .listen-caption { font-size: 13px; color: var(--ink2); margin-top: 8px; }
 .nowrap { white-space: nowrap; }
 #see-all { margin-top: 16px; }
@@ -335,14 +333,13 @@ a:hover { text-decoration-color: var(--ink); }
    it, so a finding picked in any of them reads next to it. The transcript card stretches, so both columns end together. */
 .main-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(360px, 520px); gap: var(--s-4); align-items: stretch; }
 .text-col { display: flex; flex-direction: column; gap: var(--s-4); min-width: 0; }
-#text-view { flex: 1 0 auto; display: flex; flex-direction: column; }
+#text-view { flex: 1 0 auto; display: flex; flex-direction: column; padding: 26px 30px; }
 /* the key sits on the bottom edge of the transcript card, which grows to end with the finding panel */
 #text-view > .note.text-key { margin-top: auto; padding-top: var(--s-4); }
 .key-line { color: var(--flag-text); text-decoration: underline 2px var(--flag); text-underline-offset: 5px; }
 .key-line.f-dot { text-decoration-style: dotted; }
 .key-line.f-dash { text-decoration-style: dashed; }
 .main-grid .explain { align-self: start; }
-#text-view { padding: 26px 30px; }
 #text-view > .note { margin-top: 6px; }
 .transcript { font-size: 18px; line-height: 2.15; max-width: 72ch; margin-top: 14px; }
 .transcript .dim-icon { width: 15px; height: 15px; vertical-align: -2px; margin: 0 1px 0 4px; color: var(--flag-text); }
@@ -367,72 +364,62 @@ a:hover { text-decoration-color: var(--ink); }
 .tl-word.ref rect { fill: rgba(179, 172, 161, 0.16); }
 .tl-word:hover rect { fill: rgba(149, 127, 208, 0.62); }
 .tl-word.ref:hover rect { fill: rgba(179, 172, 161, 0.36); }
-/* A fault is drawn on this recording, never over it: the words of the finding keep their ticks in bramble (stronger with
-   the severity tier), a thin marker line above them carries the severity line style (dotted, dashed, solid), and the
-   waveform bars inside the span take the fault colour (FAULT_LOOK in app.js). */
-.tl-word.flag rect { fill: var(--flag-bar); fill-opacity: 0.85; }
-.tl-word.flag.sev-dot rect { fill-opacity: 0.5; }
-.tl-word.flag.sev-dash rect { fill-opacity: 0.68; }
-.tl-word.flag.grp rect { fill-opacity: 1; }
-.tl-word.flag.peek rect, .tl-word.flag:hover rect { fill: var(--flag-text); fill-opacity: 0.85; }
-.tl-word.flag.sel rect { fill: var(--flag-text); fill-opacity: 1; }
-.has-sel .tl-word.flag:not(.sel):not(.grp):not(.peek) rect, .peeking .tl-word.flag:not(.peek):not(.sel) rect { fill-opacity: 0.4; }
-.tl-band { cursor: pointer; }
-.tl-band .hit { fill: transparent; }
-.tl-band .edge { stroke: var(--flag-text); stroke-width: 1.5; stroke-opacity: 0.9; }
-.tl-band .edge.sev-dot { stroke-opacity: 0.75; }
-.tl-band .edge.pin { stroke-width: 2; }
-.tl-band.peek .edge { stroke-opacity: 1; stroke-width: 2; }
-.tl-band.sel .edge, .tl-band.grp .edge { stroke: var(--you-text); stroke-opacity: 1; stroke-width: 2; }
-.has-sel .tl-band:not(.sel):not(.grp):not(.peek) .edge { stroke-opacity: 0.5; }
-/* the link to the reference span shows only for the hovered or selected fault */
+/* The waveform and the word ticks stay clean: findings show on the severity strip under the waveform. The words of a
+   finding light up only while it is hovered (light bramble) or selected (lavender). */
+.tl-word.flag.peek rect { fill: var(--flag-text); fill-opacity: 0.85; }
+.tl-word.flag.grp rect { fill: var(--you-text); fill-opacity: 0.6; }
+.tl-word.flag.sel rect { fill: var(--you-text); fill-opacity: 1; }
+/* the link to the reference span shows only for the hovered or selected finding */
 .tl-link { opacity: 0; transition: opacity 0.2s ease; pointer-events: none; }
-.tl-band.sel .tl-link, .tl-band.peek .tl-link { opacity: 1; }
+.tl-link.sel, .tl-link.peek { opacity: 1; }
 .tl-link .ref-span { fill: var(--flag-bar); fill-opacity: 0.55; }
 .tl-link .link { fill: none; stroke: var(--flag-text); stroke-opacity: 0.55; stroke-width: 1; }
-.tl-band .edge, .tl-mk rect { transition: fill-opacity 0.2s ease, stroke-width 0.2s ease, stroke-opacity 0.2s ease, fill 0.2s ease, stroke 0.2s ease; }
-.tl-diff .hit { fill: var(--neutral); fill-opacity: 0.18; }
-.tl-diff .edge { stroke: var(--neutral); }
-.tl-diff .tl-link { opacity: 1; }
-.tl-diff .tl-link .ref-span { fill: var(--neutral); stroke: var(--neutral); }
-.tl-diff .tl-link .link { stroke: var(--neutral); }
-.tl-stem { stroke: var(--flag-text); stroke-opacity: 0.28; stroke-width: 1; }
-.tl-stem.sel, .tl-stem.peek { stroke: var(--you-text); stroke-opacity: 0.8; }
-/* Fault labels: calm outlines in the severity line style; the costliest faults (the top cards) carry their points on a
-   tinted fill; the selected one is raised with a lavender ring. */
-.tl-mk { cursor: pointer; }
-.tl-mk:focus { outline: none; }
-.tl-mk rect { fill: var(--panel-2); stroke: var(--flag); stroke-width: 1; }
-.tl-mk text { font-size: 12.5px; fill: var(--ink2); dominant-baseline: central; }
-.tl-mk .n { font-weight: 700; fill: var(--flag-text); }
-.tl-mk .pts { font-weight: 700; fill: var(--flag-text); }
-.tl-mk.top rect { fill: #3b2834; stroke: var(--flag-text); }
-.tl-mk.top text { fill: var(--ink); }
-.tl-mk.grp rect { stroke: var(--you-text); }
-.tl-mk.sel rect { fill: var(--panel-3); stroke: var(--you-text); stroke-width: 2; stroke-dasharray: none; filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.5)); }
-.tl-mk.sel text { fill: var(--ink); }
-.tl-mk.sel .n { fill: var(--you-text); }
-.has-sel .tl-mk:not(.sel):not(.grp):not(.peek) { opacity: 0.72; }
-.tl-mk:hover rect { fill: var(--panel-3); }
-.tl-mk:focus-visible rect { stroke: var(--ink); stroke-width: 2.5; }
-.tl-more { display: block; margin: 6px 0 0 auto; font-size: 14px; }
+.tl-link.sel .ref-span { fill: var(--you-text); fill-opacity: 0.7; }
+.tl-link.sel .link { stroke: var(--you-text); stroke-opacity: 0.8; }
+#tl-diff .tl-link { opacity: 1; }
+#tl-diff .tl-link .ref-span { fill: var(--neutral); stroke: var(--neutral); }
+#tl-diff .tl-link .link { stroke: var(--neutral); }
 .tl-cursor { stroke: var(--ink); stroke-width: 2; }
 .wave-ref { min-height: 36px; }
-.wave-you { min-height: 56px; position: relative; isolation: isolate; }
-/* The soft wash behind a fault's bars: under the waveform canvas, strongest on the centre line, gone at the top and the bottom.
-   bottom: the 16 px time axis under the waveform (timeline plugin height in app.js). */
-.wave-wash { position: absolute; top: 0; bottom: 16px; left: 0; right: 0; z-index: -1; pointer-events: none; }
-.wash-run { position: absolute; top: 0; bottom: 0; border-radius: 8px;
-  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 34%, #000 66%, transparent);
-  mask-image: linear-gradient(to bottom, transparent, #000 34%, #000 66%, transparent); }
-/* A fault at one point in time (a missing pause) falls in a silence, where there are no bars to recolour: a hairline marks it. */
-.wash-point { position: absolute; top: 12%; bottom: 12%; width: 2px; margin-left: -1px; border-radius: 1px; background: var(--c);
-  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 30%, #000 70%, transparent);
-  mask-image: linear-gradient(to bottom, transparent, #000 30%, #000 70%, transparent); }
+.wave-you { min-height: 56px; }
+/* Severity strip: one rounded groove under this recording's waveform, on the waveform's time scale (app.js drawStrip). It
+   glows from the calm groove colour to bramble where findings are, hotter for the costlier ones; a blurred copy of the
+   heat is the glow. Each finding is a focusable span over it; a finding at one point in time (a missing pause) is a tick. */
+.fault-strip { position: relative; margin-top: 6px; }
+.strip-track { position: relative; height: 16px; border-radius: 8px; background: var(--strip-calm); box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.45); }
+.strip-heat, .strip-glow { position: absolute; inset: 0; border-radius: 8px; pointer-events: none; transition: opacity 0.2s ease; }
+.strip-glow { inset: -4px 0; filter: blur(9px); opacity: 0.9; }
+.peeking .strip-heat { opacity: 0.6; }
+.strip-span { position: absolute; top: 0; height: 100%; padding: 0; border: 0; border-radius: 8px; background: none; cursor: pointer;
+  transition: box-shadow 0.15s ease, background-color 0.15s ease; }
+.strip-span::before { content: ""; position: absolute; inset: -6px 0 -3px; }   /* a taller hit area than the 16 px groove, clear of the labels under it */
+.strip-span.point::after { content: ""; position: absolute; left: 50%; top: -4px; bottom: -4px; width: 3px; margin-left: -1.5px; border-radius: 2px;
+  background: var(--c); box-shadow: 0 0 6px var(--c); }
+.strip-span.peek, .strip-span:hover { background-color: var(--c); box-shadow: 0 0 12px var(--c), inset 0 0 0 1px rgba(255, 240, 246, 0.6); }
+.strip-span.grp { box-shadow: inset 0 0 0 1.5px rgba(188, 174, 240, 0.7); }
+.strip-span.sel { box-shadow: 0 0 0 2px var(--you-text), 0 0 12px rgba(149, 127, 208, 0.55); }
+.strip-span.sel.peek, .strip-span.sel:hover { box-shadow: 0 0 0 2px var(--you-text), 0 0 12px var(--c); }
+.strip-span:focus-visible { outline-offset: 4px; }
+.strip-diff { position: absolute; top: -2px; bottom: -2px; border-radius: 8px; background: rgba(143, 136, 126, 0.3); box-shadow: inset 0 0 0 1.5px var(--neutral); pointer-events: none; }
+/* Labels of the costliest findings under the strip; a leader runs from the region to a label moved off it. */
+.strip-labels { display: block; overflow: visible; }
+.strip-leader { stroke: var(--flag-text); stroke-opacity: 0.45; stroke-width: 1; }
+.strip-leader.sel { stroke: var(--you-text); stroke-opacity: 0.9; }
+.strip-label { cursor: pointer; transition: opacity 0.2s ease; }
+.strip-label rect { fill: #3b2834; stroke: var(--flag); stroke-width: 1; transition: fill 0.2s ease, stroke 0.2s ease; }
+.strip-label text { font-size: 12.5px; fill: var(--ink); dominant-baseline: central; }
+.strip-label .n, .strip-label .pts { font-weight: 700; fill: var(--flag-text); }
+.strip-label.peek rect, .strip-label:hover rect { fill: #4a2f40; stroke: var(--flag-text); }
+.strip-label.grp rect { stroke: var(--you-text); }
+.strip-label.sel rect { fill: var(--panel-3); stroke: var(--you-text); stroke-width: 2; }
+.strip-label.sel .n { fill: var(--you-text); }
+.peeking .strip-label:not(.peek) { opacity: 0.45; }
+.wave-axis { margin-top: 2px; }
+.tl-more { display: block; margin: 6px 0 0 auto; font-size: 14px; }
 .tl-tip { position: absolute; z-index: 5; pointer-events: none; padding: 4px 10px; border-radius: var(--r-chip); background: var(--glass-solid); border: 1px solid var(--glass-edge);
-  font-size: 14px; white-space: nowrap; box-shadow: var(--glass-shadow); }
+  font-size: 14px; line-height: 1.4; width: max-content; max-width: min(360px, calc(100% - 16px)); box-shadow: var(--glass-shadow); }
 #wave-msg:empty { display: none; }
-.intro .wave, .intro .tl-host { animation: draw-in 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+.intro .wave, .intro .wave-axis, .intro .tl-host { animation: draw-in 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
 @keyframes draw-in { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
 
 /* finding panel */
@@ -485,8 +472,7 @@ button.plain, #clear-filter { padding: 6px 16px; font-size: 14px; }
 .fold.open .fold-toggle::before { transform: rotate(90deg); box-shadow: var(--neu-in); }
 #flaw-count { font-family: var(--sans); font-weight: 400; color: var(--ink2); font-size: 16px; }
 /* Closed: the content keeps its width at zero height, so the charts stay drawn; the body is also inert. */
-.fold-body { padding: 8px 0 12px; }
-.fold-body { position: relative; }  /* clips the absolutely placed chart layers while the section is folded */
+.fold-body { position: relative; padding: 8px 0 12px; }  /* relative: clips the absolutely placed chart layers while the section is folded */
 .fold:not(.open) > .fold-body { height: 0; padding: 0; overflow: hidden; }
 #clip-wrap { margin-bottom: 18px; }
 #clip-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr)); gap: 12px; margin-top: 10px; }
@@ -670,13 +656,13 @@ body::after { content: ""; position: fixed; inset: 0; z-index: 60; pointer-event
   box-shadow: 0 0 0 1px rgba(188, 174, 240, 0.55), 0 0 20px rgba(149, 127, 208, 0.5); }
 @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(178, 73, 129, 0.55); } 100% { box-shadow: 0 0 0 14px rgba(178, 73, 129, 0); } }
 @keyframes pulse-svg { 0%, 100% { opacity: 1; } 40% { opacity: 0.45; } }
+@keyframes pulse-strip { 0% { box-shadow: 0 0 0 0 rgba(238, 152, 191, 0.7); } 100% { box-shadow: 0 0 0 10px rgba(238, 152, 191, 0); } }
 .top-card.pulse, #flaws button.pulse { animation: pulse 0.9s ease-out 1; }
-.tl-band.pulse .edge, .tl-mk.pulse rect { animation: pulse-svg 0.7s ease-in-out 1; }
-.peeking .tl-band:not(.peek), .peeking .tl-mk:not(.peek), .peeking .tl-stem:not(.peek) { opacity: 0.35; }
+.strip-span.pulse { animation: pulse-strip 0.9s ease-out 1; }
+.strip-label.pulse rect { animation: pulse-svg 0.7s ease-in-out 1; }
 .peeking .w.f-dot:not(.peek), .peeking .w.f-dash:not(.peek), .peeking .w.f-solid:not(.peek) { opacity: 0.45; }
 .peeking .top-card:not(.peek) { opacity: 0.7; }
 .w.peek { background: rgba(178, 73, 129, 0.2); color: var(--ink); }
-.tl-band, .tl-mk { transition: opacity 0.2s ease; }
 .mark { transform: scale(calc(1 + var(--level, 0) * 0.18)); transform-origin: center; transition: transform 0.08s linear; }
 .mark-you { stroke-width: calc(2.4px + var(--level, 0) * 1.4px); }
 .listen-btn.playing::before { width: 14px; height: 12px; border: 0; background: linear-gradient(var(--you-text), var(--you-text)) 0 100% / 3px 40% no-repeat,
@@ -687,7 +673,8 @@ body::after { content: ""; position: fixed; inset: 0; z-index: 60; pointer-event
 @keyframes slide-in { from { opacity: 0; transform: translateX(14px); } to { opacity: 1; transform: none; } }
 main { transition: opacity 0.14s ease; }
 main.fading { opacity: 0.25; }
-.intro .tl-band, .intro .tl-mk, .intro .tl-stem, .intro .wave-wash { animation: band-in 0.35s ease-out both; animation-delay: calc(1s + var(--seq, 0) * 0.16s); }
+.intro .strip-heat, .intro .strip-glow { animation: band-in 0.6s ease-out 1s both; }
+.intro .strip-span, .intro .strip-label, .intro .strip-leader { animation: band-in 0.35s ease-out both; animation-delay: calc(1s + var(--seq, 0) * 0.16s); }
 @keyframes band-in { from { opacity: 0; } 60% { opacity: 1; filter: brightness(1.6); } to { opacity: 1; } }
 
 @media (prefers-reduced-motion: reduce) {
