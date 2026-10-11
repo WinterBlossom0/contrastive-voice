@@ -370,7 +370,15 @@ a:hover { text-decoration-color: var(--ink); }
 #tl-diff .tl-link .link { stroke: var(--neutral); }
 .tl-cursor { stroke: var(--ink); stroke-width: 2; }
 .wave-ref { min-height: 36px; }
-.wave-you { min-height: 56px; }
+.wave-you { min-height: 56px; position: relative; }
+/* Light tints over this recording's waveform, one per finding on the strip under it, at the same x (app.js drawStrip):
+   the strip says how serious, the tint shows which stretch of the audio, in one colour (--flag-text). A selected or
+   hovered finding's tint is firmer. */
+.wave-tints { position: absolute; inset: 0; pointer-events: none; z-index: 2; }
+.wave-tint { position: absolute; top: 0; bottom: 0; border-radius: 4px; background: rgba(238, 152, 191, 0.09);
+  box-shadow: inset 1px 0 rgba(238, 152, 191, 0.32), inset -1px 0 rgba(238, 152, 191, 0.32);
+  mix-blend-mode: screen; transition: background-color 0.15s ease; }   /* screen: overlapping tints lighten, not darken */
+.wave-tint.sel, .wave-tint.peek { background: rgba(238, 152, 191, 0.17); }
 /* Severity strip: one thin groove under this recording's waveform, on the waveform's time scale (app.js drawStrip). Each
    finding is a flat, focusable span on it, darker bramble for a mild finding and lighter for a costly one (app.js
    heatColor); a finding at one point in time (a missing pause) is a tick. */

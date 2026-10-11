@@ -2,7 +2,8 @@
 
      node video/scripts/capture.cjs [PORT] [SHOT ...]   (needs a Chromium: npx playwright-core install chromium-headless-shell, or CHROME_PATH)
 
-   Output in video/public/captures: <id>.webm (30 fps VP9), <id>_first.png and <id>.png (the first and last frames) for each moving shot, and s3_page.png
+   Output in video/public/captures: <id>.webm (30 fps VP9) and <id>.png (the last frame) for each moving shot, <id>_first.png (the first frame) for
+   each shot whose entry in video/src/data/captures.json has a "firstStill", and s3_page.png
    (the full L3A page). The fix shots run real fix jobs on the server; the recording holds the progress line for a fixed time.
    raw/<id>.json also keeps "boxes": every visible text line and control, sampled every BOX_EVERY frames, for
    scripts/check-framing.cjs, which fails a camera view that cuts one of them at its edge. raw/<id>.json keeps the frame count, the sync second and the element rects (capture px) that the camera
@@ -24,6 +25,8 @@ const RAW = path.join(ROOT, 'video/out/capture_raw');
 const OUT = path.join(ROOT, 'video/public/captures');
 const AUDIO = path.join(ROOT, 'gallery/audio');
 const NARRATION = JSON.parse(fs.readFileSync(path.join(ROOT, 'video/src/data/narration.json'), 'utf8'));
+// The video shows a first frame only where a capture names it, so other shots get no unused PNG.
+const FIRST_STILLS = new Set(JSON.parse(fs.readFileSync(path.join(ROOT, 'video/src/data/captures.json'), 'utf8')).filter((c) => c.firstStill).map((c) => c.id));
 const FPS = 30;
 const EXAMPLE = 'L3A';
 const CLEAN = 'identity';
@@ -36,7 +39,7 @@ const BOX_EVERY = 6;
 // Each visible line of text, each control and each drawn waveform as [x, y, width, height, label] in capture px; pageY
 // is the viewport offset of a full-page shot. A box under another element (the sticky player bar) is not visible, so it is left out.
 const BOX_SCRIPT = (pageY) => {
-  const atomic = '#wave, #wave-ref, .tl-host svg, .ring-wrap, .meter';
+  const atomic = '#wave, #wave-ref, .tl-host svg, .strip-track, .ring-wrap, .meter';
   const skip = '.horizon, .defs';
   const controls = 'button, input, select, summary, textarea, .chip, a';
   const out = [];
@@ -84,7 +87,7 @@ const PAGE_SETUP = `addEventListener('DOMContentLoaded', () => {
 const RECT_SELECTORS = {
   player: '.player', playAll: '#play-all', ledger: '#ledger', ring: '.ring-wrap', summary: '.summary-line', kicker: '.sum-text .kicker',
   limit: '#detect-limit', fixAllButton: '#fix-all-btn', picker: '#picker-menu', heroTitle: '.hero h1', heroWave: '#hero-wave',
-  timeView: '.tl-stage', fixesTitle: '.fixes h2', card1: '.top-card.lead', card2: '.top-card:nth-child(2)', card3: '.top-card:nth-child(3)',
+  timeView: '.tl-stage', strip: '#fault-strip', fixesTitle: '.fixes h2', card1: '.top-card.lead', card2: '.top-card:nth-child(2)', card3: '.top-card:nth-child(3)',
   textView: '#text-view', transcript: '#transcript', explain: '#explain', explainHead: '#explain h3', gauge: '#explain .gauge',
   listen: '#explain [data-listen]', hearFixed: '#explain [data-fix]', fixer: '#explain .fixer', fixHead: '#explain .fix-head',
   fixScore: '#explain .fix-score', fixPlayer: '#explain .abc', fix: '#explain .fix', chips: '#picker-menu[open]',
@@ -265,6 +268,8 @@ const SHOTS = {
   async s3_page(page) {
     await page.goto(URL);
     await ready(page);
+    // The drawn pointer stays at the top left until a mouse event, so it is moved off the page.
+    await page.mouse.move(VIEW.width + 50, VIEW.height + 50);
     await wait(1500);
     await page.screenshot({ path: path.join(OUT, 's3_page.png'), fullPage: true });
     // The full-page screenshot shows the sticky bars only at the top. Below the first viewport they would cover the content
@@ -498,7 +503,7 @@ const SHOTS = {
 function encode(id, motion) {
   const webm = path.join(OUT, id + '.webm');
   execFileSync('ffmpeg', ['-v', 'error', '-y', '-framerate', String(FPS), '-i', path.join(motion.dir, '%05d.jpg'), '-an', '-c:v', 'libvpx-vp9', '-crf', '18', '-b:v', '0', '-row-mt', '1', '-cpu-used', '2', '-pix_fmt', 'yuv420p', webm]);
-  execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', motion.file(0), path.join(OUT, id + '_first.png')]);
+  if (FIRST_STILLS.has(id)) execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', motion.file(0), path.join(OUT, id + '_first.png')]);
   execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', motion.file(motion.count - 1), path.join(OUT, id + '.png')]);
 }
 

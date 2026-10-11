@@ -1131,6 +1131,10 @@ function drawStrip(r, x, width) {
         ...(m.compact ? [] : [svgEl("tspan", { text: ` ${m.title}` }), svgEl("tspan", { class: "pts", dx: 4, text: ` ${m.points}` })]))));
   }
   $("#fault-strip").replaceChildren(stripTrack, labels);
+  // a light tint over the waveform across each finding's span, so the strip's span reads as an area of the audio
+  const tints = local.map(([, i], k) => el("div", { class: "wave-tint", "data-i": i, style: `left:${lefts[k].toFixed(1)}px;width:${widths[k].toFixed(1)}px` }));
+  $("#wave").querySelector(".wave-tints")?.remove();
+  $("#wave").append(el("div", { class: "wave-tints", "aria-hidden": "true" }, ...tints));
   const more = layout.hidden.reduce((n, m) => n + m.members.length, 0);
   $("#tl-more").hidden = !more;
   $("#tl-more").textContent = `+${more} more`;
@@ -1186,6 +1190,7 @@ function markTimeline() {
     return on;
   };
   document.querySelectorAll("#fault-strip .strip-span").forEach((s) => s.setAttribute("aria-pressed", String(mark(s, [+s.dataset.i]))));
+  document.querySelectorAll("#wave .wave-tint").forEach((t) => mark(t, [+t.dataset.i]));
   document.querySelectorAll("#fault-strip .strip-label").forEach((m) => mark(m, m.dataset.members.split(",").map(Number)));
   document.querySelectorAll("#fault-strip .strip-leader").forEach((l) => l.classList.toggle("sel", flaw && S.sel != null && +l.dataset.chip === S.tl.chipOf.get(S.sel)));
   document.querySelectorAll("#tl-host .tl-link[data-i]").forEach((l) => mark(l, [+l.dataset.i]));
@@ -1222,7 +1227,7 @@ function peek(i) {
   const f = S.result?.flaws[+i];
   if (!f) return;
   const chip = S.tl?.chipOf.get(+i);
-  document.querySelectorAll(`.strip-span[data-i="${i}"], .tl-link[data-i="${i}"], .top-card[data-i="${i}"]${chip == null ? "" : `, #fault-strip [data-chip="${chip}"]`}`).forEach((n) => n.classList.add("peek"));
+  document.querySelectorAll(`.strip-span[data-i="${i}"], .wave-tint[data-i="${i}"], .tl-link[data-i="${i}"], .top-card[data-i="${i}"]${chip == null ? "" : `, #fault-strip [data-chip="${chip}"]`}`).forEach((n) => n.classList.add("peek"));
   document.querySelectorAll("#tl-host .tl-word.flag").forEach((tick) => { if (tick.dataset.faults.split(",").includes(String(i))) tick.classList.add("peek"); });
   if (!wholePassage(f)) for (let w = f.words[0]; w <= f.words[1]; w++) document.querySelector(`#transcript .w[data-i="${w}"]`)?.classList.add("peek");
 }
