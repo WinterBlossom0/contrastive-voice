@@ -285,6 +285,7 @@ a:hover { text-decoration-color: var(--ink); }
 #fix-all-btn { margin-top: 4px; padding: 9px 20px; display: inline-flex; align-items: center; gap: 8px; }
 #fix-all-btn::before { color: var(--on-action); }
 .fix-all { min-width: 0; }
+.fix-all-status { margin-top: 10px; width: fit-content; }
 #fix-all-body:empty { display: none; }
 #fix-all-body { margin-top: 20px; padding: 22px 26px; border-radius: var(--r-card); display: grid; grid-template-columns: minmax(0, 440px) minmax(0, 1fr); gap: 10px 36px; align-items: start; }
 #fix-all-body > :not(.fix-list) { grid-column: 1; }
@@ -315,8 +316,8 @@ a:hover { text-decoration-color: var(--ink); }
 .fix-checks li { position: relative; padding-left: 20px; font-size: 13px; line-height: 1.45; color: var(--ink2); }
 .fix-checks li::before { content: ""; position: absolute; left: 3px; top: 3px; width: 5px; height: 9px; border: solid var(--you-text); border-width: 0 2px 2px 0; transform: rotate(45deg); }
 .melody { display: grid; justify-items: start; gap: 6px; margin-top: 12px; }
-.fixer-melody { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--rule); }
-.fixer-melody > * + * { margin-top: 8px; }
+.fixer-melody, .fixer-all { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--rule); }
+.fixer-melody > * + *, .fixer-all > * + * { margin-top: 8px; }
 .fix-sub { font-size: 13px; color: var(--ink2); font-weight: 700; }
 .fix-list > summary { font-size: 14px; color: var(--ink2); padding: 4px 0; }
 .fix-list ul { list-style: none; padding: 0; margin: 6px 0 0; }
@@ -426,6 +427,10 @@ a:hover { text-decoration-color: var(--ink); }
 .strip-label.sel .n { fill: var(--you-text); }
 .peeking .strip-label:not(.peek) { opacity: 0.45; }
 .wave-axis { margin-top: 2px; }
+/* The timeline plugin sets inline styles: secondary labels at opacity 0.25 (1.5:1 on the panel), and a notch line in the
+   text colour. The labels take --ink2 (6.4:1) at full opacity; the lines keep --muted. */
+.wave-axis [part~="timeline-notch"] { color: var(--ink2); border-left-color: var(--muted) !important; }
+.wave-axis [part~="timeline-notch-secondary"] { opacity: 1 !important; }
 .tl-more { display: block; margin: 6px 0 0 auto; font-size: 14px; }
 .tl-tip { position: absolute; z-index: 5; pointer-events: none; padding: 4px 10px; border-radius: var(--r-chip); background: var(--glass-solid); border: 1px solid var(--glass-edge);
   font-size: 14px; line-height: 1.4; width: max-content; max-width: min(360px, calc(100% - 16px)); box-shadow: var(--glass-shadow); }
@@ -646,7 +651,8 @@ footer p + p { margin-top: 8px; }
 .meter i:nth-child(4) { transform: scaleY(0.75); }
 .meter i:nth-child(5) { transform: scaleY(0.4); }
 /* progress: an inset track, a lavender fill and a thumb at the playing position */
-.player-progress { flex: 1 1 120px; min-width: 60px; height: 8px; border-radius: 999px; background: var(--well); box-shadow: var(--neu-in); position: relative; cursor: pointer; }
+.player-progress { flex: 1 1 120px; min-width: 60px; height: 8px; border-radius: 999px; background: var(--well); box-shadow: var(--neu-in); position: relative; cursor: pointer;
+  touch-action: none; }   /* a drag on the slider seeks; it must not scroll the page */
 .player-progress::before { content: ""; position: absolute; inset: -10px 0; }   /* a taller click target than the 8 px groove */
 .player-progress i { position: relative; display: block; height: 100%; width: 0; border-radius: 999px; background: linear-gradient(90deg, var(--you), var(--you-text)); }
 .player-progress i::after { content: ""; position: absolute; right: -7px; top: 50%; width: 14px; height: 14px; margin-top: -7px; border-radius: 50%;

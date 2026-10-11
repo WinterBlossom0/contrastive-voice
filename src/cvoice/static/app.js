@@ -17,6 +17,7 @@ const BOTH_GAP_MS = 350;                 // ms of silence between the two spans 
 const TL_REF_TRACK_PX = 8, TL_TRACK_PX = 16;   // px; the reference word track (quiet) and this recording's word track
 const TL_LINK_GAP_PX = 10, TL_LABEL_PX = 20;  // px; gap under the reference track, and the row of the "This recording" label
 const TL_HIT_PAD_PX = 4;                 // px a word's click target reaches above and below its bar
+const TL_WORD_MIN_PX = 8;                // px; the least width of a word's click target where no neighbour limits it
 const TL_MIN_SPAN_PX = 4;                // px; a shorter span (a pause point) is widened to stay visible and clickable
 const TL_MARK_H = 20, TL_MARK_GAP = 4;   // px; height of a strip label and the gap kept around it
 const TL_MARK_FONT = 12.5;               // px; must equal .strip-label text in style.css
@@ -26,6 +27,7 @@ const TL_JOIN_S = 0.5;                   // s; members of one finding group clos
 const STRIP_STEP_PX = 2, STRIP_FEATHER_PX = 10;   // px between the heat samples of the strip; px over which a span's glow fades out
 const STRIP_HIT_PX = 10;                 // px; a narrower span (a pause point) gets a hit area this wide
 const STRIP_FREE_PX = 6;                 // px; a span with no free stretch this wide beside the spans over it is covered
+const GAUGE_LABEL = "Flag threshold", GAUGE_LABEL_PX = 13;   // px; must equal .gauge-labels text in style.css
 // Strip heat of each severity tier (0 calm to 1); a finding glows at least this much, and the costliest local finding at 1.
 const TIER_HEAT = { dot: 0.35, dash: 0.55, solid: 0.75 };
 const WAVE_BARS = { barWidth: 2, barGap: 1, barRadius: 2 };   // px
@@ -184,6 +186,7 @@ const groupName = (f) => f.group_pattern ? patternText(f.group_pattern) : "Findi
 const groupPart = (f) => `Part of the ${patternText(f.group_pattern)} group`;
 // The pattern and the group have their own chips (patternTags), so the title names the measured departure.
 const findingText = (f) => f.type ? typeText(f) : f.label || f.brief_word || f.dimension;
+const findingName = (f, i) => `#${i + 1} ${findingText(f)}`;
 const unevenTempo = (f) => f.pattern === "UNEVEN_TEMPO" || f.type === "UNEVEN_TEMPO";
 // ln values carry 2 decimals (contract §1), so exp() can miss the factor that the text states from the unrounded value by 0.01.
 const statedFactor = (f, pattern, v) => { const m = (f.text || "").match(pattern); return m ? `×${m[1]}` : factor(v); };
@@ -385,7 +388,7 @@ function renderSummary(r) {
     f.fix ? el("p", { class: "card-fix", text: f.fix }) : null,
     el("div", { class: "card-actions" },
       el("button", { type: "button", class: "listen-btn", "data-audio": listenAudio(), "data-listen": i, onclick: () => listen(i),
-        title: isSelf(r) ? "Plays this spot" : "Plays yours, then the reference" }, "Listen"),
+        "aria-label": `Listen: ${findingName(f, i)}`, title: isSelf(r) ? "Plays this spot" : "Plays yours, then the reference" }, "Listen"),
       fixButton(f, i)),
     fixSource() ? el("div", { class: "card-status", "data-card-status": f.id, hidden: "" }) : null)));
   tickPoints(document.querySelectorAll("#top-cards .card-pts"));
@@ -679,7 +682,8 @@ function thresholdGauge(f) {
         : el("i", { class: "gauge-under", style: `width:${pct(multiple)}` }),
       el("i", { class: "gauge-tick", style: `left:${pct(1)}` }), el("i", { class: "gauge-knob", style: `left:${pct(multiple)}` })),
     el("div", { class: "gauge-labels" },
-      el("span", { style: `right:calc(${(100 - at(1)).toFixed(2)}% + 6px)`, text: "Flag threshold" }),
+      // the label ends at the threshold tick, but never starts left of the track (a large multiple puts the tick near the left)
+      el("span", { style: `right:min(${(100 - at(1)).toFixed(2)}% + 6px, 100% - ${Math.ceil(textWidth(GAUGE_LABEL, GAUGE_LABEL_PX))}px)`, text: GAUGE_LABEL }),
       el("span", { class: "gauge-value", style: valueLabel, text: multipleText(multiple) })));
 }
 
@@ -745,7 +749,8 @@ function renderExplain() {
     why ? el("p", { class: "ex-why", text: why }) : "",
     diff ? "" : thresholdGauge(f) ?? "",
     el("div", { class: "card-actions" },
-      el("button", { type: "button", class: "listen-btn", "data-audio": listenAudio(), ...(diff ? {} : { "data-listen": S.sel }), onclick: () => listen(S.sel, S.selKind) }, "Listen"),
+      el("button", { type: "button", class: "listen-btn", "data-audio": listenAudio(), ...(diff ? {} : { "data-listen": S.sel }), onclick: () => listen(S.sel, S.selKind),
+        "aria-label": `Listen: ${diff ? findingText(f) : findingName(f, S.sel)}` }, "Listen"),
       diff ? null : fixButton(f, S.sel)),
     // what Listen plays, as a caption under the buttons, so the time ranges never wrap inside a button
     el("p", { class: "listen-caption" }, ...(isSelf() ? (f.p ? ["Listen plays this spot, ", el("span", { class: "nowrap", text: span(f.p) }), "."] : ["Listen plays from the start."])
@@ -1088,7 +1093,10 @@ function drawTimeline() {
     return svgEl("g", { "aria-hidden": "true" }, ...timed.map(([w, k], n) => {
       const x0 = x(w[key][0]), wide = Math.max(x(w[key][1]) - x0 - 1, 1);
       const prev = timed[n - 1]?.[0][key], next = timed[n + 1]?.[0][key];
-      const left = prev ? (x(prev[1]) + x0) / 2 : x0, right = next ? (x(w[key][1]) + x(next[0])) / 2 : x0 + wide;
+      // the first and the last word have no neighbour on one side, so a short one reaches TL_WORD_MIN_PX there
+      const end = next ? (x(w[key][1]) + x(next[0])) / 2 : x0 + wide;
+      const left = prev ? (x(prev[1]) + x0) / 2 : Math.max(0, Math.min(x0, end - TL_WORD_MIN_PX));
+      const right = next ? end : Math.min(width, Math.max(end, left + TL_WORD_MIN_PX));
       return svgEl("g", { ...tickClass(who, k), onclick: () => playSpan(who, [w[key][0], w[key][1] + 0.25]),
         onpointerenter: (e) => showTip(e.currentTarget, `${w.w}  ${span(w[key])}`), onpointerleave: hideTip },
         svgEl("rect", { class: "hit", x: left, y: top - TL_HIT_PAD_PX, width: Math.max(right - left, wide), height: height + 2 * TL_HIT_PAD_PX }),
@@ -1124,7 +1132,7 @@ function drawStrip(r, x, width) {
     const text = stripText(f, i, g.own);
     return el("button", { type: "button", class: `strip-span${atOnePoint(f.p) ? " point" : ""}${halves.has(k) ? ` ${halves.get(k)}` : ""}`, "data-i": i, "data-peek": i, "data-chip": g.chipOf.get(i),
       "aria-pressed": "false", "aria-label": text.label, style: `left:${left.toFixed(1)}px;width:${w.toFixed(1)}px;z-index:${1 + widths.filter((v) => v > w).length};--c:${heatColor(heats[i])};${seq(i)}`,
-      onclick: () => select(i), onpointerenter: (e) => showTip(e.currentTarget, text.tip), onpointerleave: hideTip,
+      onclick: (e) => pickOnStrip(e, i), onpointerenter: (e) => showTip(e.currentTarget, text.tip), onpointerleave: hideTip,
       onfocus: (e) => showTip(e.currentTarget, text.tip), onblur: hideTip });
   });
   const heat = heatGradient(r, heats, x, trackW);
@@ -1152,6 +1160,19 @@ function drawStrip(r, x, width) {
   $("#tl-more").hidden = !more;
   $("#tl-more").textContent = `+${more} more`;
   $("#tl-more").setAttribute("aria-label", `${more} more ${more === 1 ? "finding" : "findings"} in the list`);
+}
+
+/**
+ * A press on the strip selects the span on top. When the selected finding also lies under the pointer, it selects the next
+ * span down at that point instead, so repeated presses reach a span that others cover at any width. A key selects its own span.
+ */
+function pickOnStrip(e, own) {
+  const stack = e.detail ? document.elementsFromPoint(e.clientX, e.clientY).filter((n) => n.classList.contains("strip-span")).map((n) => +n.dataset.i) : [];
+  const at = S.selKind === "flaw" ? stack.indexOf(S.sel) : -1;
+  const pick = at < 0 ? own : stack[(at + 1) % stack.length];
+  select(pick);
+  // the focus, and with it the tooltip, moves to the span selected under the one pressed
+  if (pick !== own) document.querySelector(`#fault-strip .strip-span[data-i="${pick}"]`).focus({ preventScroll: true });
 }
 
 /**
@@ -1521,7 +1542,8 @@ function onChartClick(ev) {   // clickanywhere: off-trace clicks carry xvals in 
   if (!hits.length) return;
   const width = (f) => { const p = mediaSpan(f, "you"); return p[1] - p[0]; };
   hits.sort((a, b) => width(a[0]) - width(b[0]));   // the narrowest region under the click
-  select(hits[0][1], { scroll: true, kind: hits[0][2] });
+  // no scroll: the chart stays under the pointer; the wide-screen panel is sticky, and the announcement names the finding
+  select(hits[0][1], { kind: hits[0][2] });
 }
 
 function moveCursor(tp) {
@@ -1552,7 +1574,7 @@ function invalidateMedia() {
   setPlaying();
   showProgress("you", 0);
   document.documentElement.style.removeProperty("--t");   // the hero light returns to its rest place (style.css .glow)
-  $("#clock").textContent = "Loading audio…";
+  clockStatus("Loading audio…");
   $("#cursor").style.display = "none";
   hideTimelineCursor();
   clearKaraoke();
@@ -1565,10 +1587,10 @@ function mixHex(a, b, share) {
 }
 
 function loadMedia(r, base) {
+  showSide("you");   // before invalidateMedia, whose setPlaying labels the main button by the side
   invalidateMedia();
   const token = S.mediaId;
   $("#wave-msg").textContent = "";
-  showSide("you");
   const ref = S.ref = new Audio();
   const own = !r.baseline?.audio;   // no reference reading: nothing to load or draw in the reference lane
   const refCurrent = () => token === S.mediaId && S.ref === ref;
@@ -1578,7 +1600,7 @@ function loadMedia(r, base) {
   ref.addEventListener("error", () => { if (refCurrent()) { S.refReady = false; updatePlayback(); $("#wave-msg").textContent = "The reference audio could not be loaded."; } });
   ref.preload = "auto";
   if (!own) ref.src = base + r.baseline.audio;
-  if (!S.hasLibs) { $("#clock").textContent = "Recording playback unavailable"; return; }
+  if (!S.hasLibs) { clockStatus("Recording playback unavailable"); return; }
   if (S.ws) S.ws.destroy();
   if (S.wsRef) S.wsRef.destroy();
   S.wsRef = null;
@@ -1597,12 +1619,12 @@ function loadMedia(r, base) {
   ws.on("ready", () => {
     if (!current()) return;
     S.youReady = ws.getDuration() > 0;
-    $("#clock").textContent = S.youReady ? `0.00 / ${ws.getDuration().toFixed(2)} s` : "Audio unavailable";
+    if (S.youReady) clockAt("you", 0, ws.getDuration()); else clockStatus("Audio unavailable");
     updatePlayback();
   });
   ws.on("timeupdate", (t) => {
     if (!current() || !S.youReady) return;
-    $("#clock").textContent = `${t.toFixed(2)} / ${ws.getDuration().toFixed(2)} s`;
+    clockAt("you", t, ws.getDuration());
     showProgress("you", t / ws.getDuration());
     moveCursor(t); markPlaying(t);
     showReferenceAt(interp(t, S.result.map.p, S.result.map.b));
@@ -1613,7 +1635,7 @@ function loadMedia(r, base) {
   const failed = (e) => {
     if (!current() || e?.name === "AbortError") return;
     S.youReady = false; updatePlayback();
-    $("#clock").textContent = "Audio unavailable";
+    clockStatus("Audio unavailable");
     $("#wave-msg").textContent = "The recording audio could not be loaded.";
   };
   ws.on("error", failed);
@@ -1675,6 +1697,18 @@ function showReferenceAt(tb) {
   if (S.wsRef && S.wsRef.getDuration() > 0) S.wsRef.setTime(Math.min(tb, S.wsRef.getDuration()));
 }
 
+function clockStatus(text) {
+  $("#clock").textContent = text;
+  $("#player-progress").setAttribute("aria-valuetext", text);
+}
+
+/** The clock and the slider's spoken value at t (s) of a reading `length` s long; who: "you" or "ref". */
+function clockAt(who, t, length) {
+  const name = who === "ref" ? "Reference " : "";
+  $("#clock").textContent = `${name}${t.toFixed(2)} / ${length.toFixed(2)} s`;
+  $("#player-progress").setAttribute("aria-valuetext", `${name}${t.toFixed(2)} of ${length.toFixed(2)} seconds`);
+}
+
 /** The player's progress groove: the share of the playing reading heard so far, in its own colour. */
 function showProgress(who, share) {
   const bar = $("#player-progress");
@@ -1682,7 +1716,6 @@ function showProgress(who, share) {
   bar.classList.toggle("ref", who === "ref");
   bar.firstElementChild.style.width = `${(100 * clamped).toFixed(2)}%`;
   bar.setAttribute("aria-valuenow", (100 * clamped).toFixed(0));
-  bar.setAttribute("aria-valuetext", $("#clock").textContent);
   document.documentElement.style.setProperty("--t", clamped.toFixed(4));   // the hero light follows the playback position
 }
 
@@ -2059,15 +2092,26 @@ function togglePlay() {
 /** The reference's position on the clock and the progress groove. */
 function showReferenceClock(t) {
   if (!Number.isFinite(S.ref.duration)) return;
-  $("#clock").textContent = `Reference ${t.toFixed(2)} / ${S.ref.duration.toFixed(2)} s`;
+  clockAt("ref", t, S.ref.duration);
   showProgress("ref", t / S.ref.duration);
+}
+
+/**
+ * Seek this recording to t (s). wavesurfer 8.0.1 keeps a seek made while the audio is not ready (readyState < 3, as during
+ * an earlier seek) as pending, and the "seeking" event of that earlier seek drops it; so quick seeks (a drag, a held key)
+ * kept only the first. The media element takes the time at once, so the pending time already matches it.
+ */
+function seekYours(t) {
+  const media = S.ws.getMediaElement();
+  if (media.readyState < 3) media.currentTime = t;
+  S.ws.setTime(t);
 }
 
 /** Seek the chosen reading to a share (0 to 1) of its length; a reading that plays continues from there. */
 function seekShare(share) {
   const at = Math.min(Math.max(share, 0), 1);
   if (S.side === "you") {
-    if (S.youReady) S.ws.setTime(at * S.ws.getDuration());
+    if (S.youReady) seekYours(at * S.ws.getDuration());
     return;
   }
   if (!S.refReady) return;
@@ -2204,7 +2248,9 @@ const findingNumber = (id) => S.result.flaws.findIndex((f) => f.id === id) + 1;
 
 function fixButton(f, i) {
   if (!fixSource()) return null;
-  const button = el("button", { type: "button", class: "fix-btn", "data-fix": f.id, onclick: () => hearFixed(i) }, HEAR_FIXED[isSelf() ? "self" : "reference"]);
+  const text = HEAR_FIXED[isSelf() ? "self" : "reference"];
+  // the name says which finding: a page has one such button per card and one in the panel
+  const button = el("button", { type: "button", class: "fix-btn", "data-fix": f.id, onclick: () => hearFixed(i), "aria-label": `${text}: ${findingName(f, i)}` }, text);
   showFixWait(button);
   return button;
 }
@@ -2217,8 +2263,17 @@ function busyText() {
 }
 
 function showFixWait(button) {
+  // a finding that "Fix everything" has fixed shows that result instead of a second fix
+  const f = S.result.flaws.find((x) => x.id === button.dataset.fix);
+  if (f) button.hidden = !S.fix.jobs.has(f.id) && !!fixAllItem(f);
   button.disabled = !!S.fix.busy;
   if (S.fix.busy) button.title = busyText(); else button.removeAttribute("title");
+}
+
+/** The outcome of finding f in a finished "Fix everything" job of the open result, or null. */
+function fixAllItem(f) {
+  const all = S.fix.jobs.get("all");
+  return all?.state === "done" ? all.fix.fixes.find((x) => x.finding === f.id) || null : null;
 }
 
 /** The session cache key of a result's fixes: the finished fixes of an example stay when the user opens it again. */
@@ -2292,7 +2347,10 @@ async function tryMelody(i) {
 
 async function fixEverything() {
   const entry = startFix("all", { all: true });
-  if (!entry || !(await entry.done)) return;
+  if (!entry) return;
+  // the button is disabled while the job runs, so the focus moves to the progress beside it
+  if (entry.state === "running") $("#fix-all-status").focus({ preventScroll: true });
+  if (!(await entry.done)) return;
   // the button hides itself, so the focus moves to the result, which also scrolls into view
   const body = $("#fix-all-body");
   body.tabIndex = -1;
@@ -2314,12 +2372,12 @@ function refreshFix() {
 
 /** The fix of a top card's finding at the card itself: progress while it runs, then its outcome and a link to the result. */
 function cardStatus(box) {
-  const id = box.dataset.cardStatus, entry = S.fix.jobs.get(id);
-  box.hidden = !entry;
-  if (!entry) return box.replaceChildren();
-  if (entry.state === "running") return box.replaceChildren(progressLine(entry, false));
-  if (entry.state === "error") return box.replaceChildren(el("p", { class: "fix-error", text: entry.error }));
-  const fx = entry.fix.fixes.find((x) => x.finding === id);
+  const id = box.dataset.cardStatus, entry = S.fix.jobs.get(id), fromAll = entry ? null : fixAllItem(S.result.flaws.find((f) => f.id === id));
+  box.hidden = !entry && !fromAll;
+  if (box.hidden) return box.replaceChildren();
+  if (entry?.state === "running") return box.replaceChildren(progressLine(entry, false));
+  if (entry?.state === "error") return box.replaceChildren(el("p", { class: "fix-error", text: entry.error }));
+  const fx = fromAll || entry.fix.fixes.find((x) => x.finding === id);
   box.replaceChildren(el("p", { class: "fix-head", text: fx ? outcomeHead(fx) : "Finished" }),
     el("button", { type: "button", class: "text-btn", onclick: () => showFixResult(id) }, "See result"));
 }
@@ -2410,15 +2468,21 @@ function playerControls(player, sides, note) {
     play.classList.toggle("playing", player.playing);
     play.textContent = player.playing ? "Stop" : player.loop ? "Play, looping" : "Play";
   };
-  player.onchange = show;
   show();
-  return el("div", { class: "abc" }, el("div", { class: "ab-toggle", role: "group", "aria-label": "Listen to" }, ...buttons), play,
+  const root = el("div", { class: "abc" }, el("div", { class: "ab-toggle", role: "group", "aria-label": "Listen to" }, ...buttons), play,
     note ? el("p", { class: "note", text: note }) : null);
+  // One player can show in two places (an edit of "Fix everything" in its list and in the finding panel); a redraw drops
+  // the controls that left the page.
+  player.views = (player.views || []).filter((view) => view.root.isConnected).concat({ root, show });
+  player.onchange = () => player.views.forEach((view) => view.show());
+  return root;
 }
 
 /** The heading of one fix (app.fix_entry outcomes). It never says "Fixed" alone: a spot can stop being flagged with only part of the change. */
 function outcomeHead(x) {
-  if (x.outcome === "no_longer_flagged") return x.share != null && x.share < 1 ? `No longer flagged · ${Math.round(x.share * 100)}% of the change applied` : "No longer flagged";
+  // a spot covered by another finding's edit states that edit's share in its reason (app.fix_entry)
+  const share = x.share != null && x.share < 1 && x.covered_by == null;
+  if (x.outcome === "no_longer_flagged") return share ? `No longer flagged · ${Math.round(x.share * 100)}% of the change applied` : "No longer flagged";
   if (x.outcome === "still_flagged") return "Still flagged · partly changed";
   if (x.outcome === "unfixable") return `Can't be fixed by editing: ${numbered(x.reason || "")}`;
   return `Not edited · ${numbered(x.reason || "")}`;
@@ -2477,6 +2541,7 @@ function fixResult(f, entry, key) {
 /** The fix of one finding, and below it the fix with the reference's melody once asked for. */
 function fixerView(f) {
   const entry = fixSource() ? S.fix.jobs.get(f.id) : null;
+  if (!entry && fixSource() && fixAllItem(f)) return fixAllView(f);
   if (!entry && fixSource() && S.fix.busy) return el("div", { class: "fixer is-waiting", "data-fixer": f.id }, el("p", { class: "note", text: busyText() }));
   if (!entry) return el("div", { class: "fixer", "data-fixer": f.id, hidden: "" });
   const box = el("div", { class: "fixer", "data-fixer": f.id }, ...fixResult(f, entry, f.id));
@@ -2484,7 +2549,30 @@ function fixerView(f) {
   box.classList.add(`is-${fx?.outcome || entry.state}`);
   const melody = S.fix.jobs.get(melodyKey(f));
   if (melody) box.append(el("div", { class: "fixer-melody" }, el("p", { class: "fix-sub", text: "With the reference's melody" }), ...fixResult(f, melody, melodyKey(f))));
+  if (fixAllItem(f)) box.append(el("div", { class: "fixer-all" }, ...fixAllParts(f)));
   return box;
+}
+
+/** Finding f as "Fix everything" edited it, in the panel of a finding without a fix of its own. */
+function fixAllView(f) {
+  return el("div", { class: `fixer is-${fixAllItem(f).outcome}`, "data-fixer": f.id }, ...fixAllParts(f));
+}
+
+/** The outcome of finding f in "Fix everything" and, for an edit, its own loop (the same player as in "What each fix did"). */
+function fixAllParts(f) {
+  const x = fixAllItem(f);
+  return [el("p", { class: "fix-sub", text: "From “Fix everything”" }), el("p", { class: "fix-head", text: outcomeHead(x) }),
+    outcomeReason(x) ? el("p", { class: "fix-reason", text: outcomeReason(x) }) : null, playable(x) ? editControls(S.fix.jobs.get("all"), f) : null].filter(Boolean);
+}
+
+/** One edit of the whole-reading fix as its own loop (yours or edited, with a second of context), kept across redraws. */
+function editControls(entry, f) {
+  const pair = entry.fix.listen.find((p) => p.finding === f.id);
+  if (!pair) return null;
+  entry.edits = entry.edits || new Map();
+  if (!entry.edits.has(f.id)) entry.edits.set(f.id, new LoopPlayer({ yours: regionTrack(S.base + S.result.participant.audio, pair.original_context),
+    fixed: regionTrack(entry.audio, pair.edited_context) }, true, () => {}));
+  return playerControls(entry.edits.get(f.id), LISTEN_SIDES.slice(0, 2), null);
 }
 
 // live: false where the same progress also shows in the finding panel, so a screen reader hears it once
@@ -2524,15 +2612,15 @@ function renderFixAll() {
   $("#fix-all-btn").hidden = entry?.state === "done";
   showFixWait($("#fix-all-btn"));
   // the reason shows in words too: a disabled button gets no hover in every browser
-  const ownRun = S.fix.busy?.key === "all" && S.fix.busy.source === fixKey(S.fix.source);   // its progress shows below instead
+  const ownRun = S.fix.busy?.key === "all" && S.fix.busy.source === fixKey(S.fix.source);   // its progress shows in #fix-all-status instead
   $("#fix-wait").textContent = ownRun ? "" : busyText();
   $("#fix-wait").hidden = !$("#fix-wait").textContent || $("#fix-all-btn").hidden;
   body.replaceChildren();
-  if (!entry) return;
-  if (entry.state !== "done") {
-    body.append(entry.state === "running" ? progressLine(entry) : el("p", { class: "fix-error", role: "alert", text: entry.error }));
-    return;
-  }
+  // progress and errors show beside the button, where the user pressed it; the result shows below
+  const status = $("#fix-all-status");
+  status.hidden = !entry || entry.state === "done";
+  status.replaceChildren(...(status.hidden ? [] : [entry.state === "running" ? progressLine(entry) : el("p", { class: "fix-error", role: "alert", text: entry.error })]));
+  if (entry?.state !== "done") return;
   const fix = entry.fix;
   if (!entry.player) {
     const map = editMap(fix.listen, r.participant.duration, fix.duration);
@@ -2540,15 +2628,6 @@ function renderFixAll() {
       fixed: { url: entry.audio, span: [0, fix.duration], toCommon: (t) => interp(t, map.ys, map.xs), fromCommon: (t) => interp(t, map.xs, map.ys) } }, false, () => {});
   }
   const items = r.flaws.map((f, i) => [f, i, fix.fixes.find((x) => x.finding === f.id)]).filter(([, , x]) => x);
-  // Each edit of the whole reading as its own loop (yours or fixed, with a second of context), kept across redraws.
-  entry.edits = entry.edits || new Map();
-  const editControls = (f) => {
-    const pair = fix.listen.find((p) => p.finding === f.id);
-    if (!pair) return null;
-    if (!entry.edits.has(f.id)) entry.edits.set(f.id, new LoopPlayer({ yours: regionTrack(S.base + r.participant.audio, pair.original_context),
-      fixed: regionTrack(entry.audio, pair.edited_context) }, true, () => {}));
-    return playerControls(entry.edits.get(f.id), LISTEN_SIDES.slice(0, 2), null);
-  };
   const spots = fix.score_change == null && fix.mode === "self" && fix.flags_after != null;
   body.append(...[
     fix.score_change != null ? el("p", { class: "fix-all-score", "aria-label": `Score ${num(fix.score_before, 2)} before the edits, ${num(fix.score_after, 2)} after` },
@@ -2564,9 +2643,9 @@ function renderFixAll() {
     ...fixNotes(fix),
     el("details", { class: "fix-list" }, el("summary", { text: "What each fix did" }),
       el("ul", {}, ...items.map(([f, i, x]) => el("li", { class: `is-${x.outcome}` },
-        el("button", { type: "button", class: "plain", onclick: () => select(i, { scroll: true }), text: `#${i + 1} ${findingText(f)}` }),
+        el("button", { type: "button", class: "plain", onclick: () => showFixResult(f.id), text: findingName(f, i) }),
         el("span", { text: [outcomeHead(x), outcomeReason(x)].filter(Boolean).join(". ") }),
-        playable(x) ? editControls(f) : null))))].filter(Boolean));
+        playable(x) ? editControls(entry, f) : null))))].filter(Boolean));
 }
 
 // ---------------------------------------------------------------------------------------------------- render
@@ -2737,7 +2816,7 @@ async function openExample(it) {
 function loadFailed(text) {
   showAlert(text);
   if (S.shown) loadMedia(S.shown.r, S.shown.base);
-  else $("#clock").textContent = "Audio unavailable";
+  else clockStatus("Audio unavailable");
 }
 
 // Reference modes in plain words.
@@ -2914,6 +2993,9 @@ async function submitUpload(ev) {
   } catch (e) {
     if (S.upload) showStages(S.upload.stages, S.upload.now, true, S.upload.labels);
     fail(e.message);
+    // the disabled Analyse button lost the focus during the request
+    $("#stage-msg").tabIndex = -1;
+    $("#stage-msg").focus();
   } finally {
     $("#submit").disabled = false;
     document.body.classList.remove("busy");
@@ -2950,15 +3032,35 @@ async function poll(id) {
 }
 
 // ---------------------------------------------------------------------------------------------------- start
-const SEEK_STEP_S = 5;   // s per arrow key on the progress groove
+const SEEK_STEP_S = 5;    // s per arrow key on the progress groove
+const SEEK_PAGE_S = 15;   // s per Page Up or Page Down key
 
+/** The slider's keys: Space plays and pauses (as on the page), the arrows and Page Up/Down seek, Home and End go to the ends. */
 function grooveKeys(e) {
+  if (e.key === " ") {
+    e.preventDefault();
+    togglePlay();
+    return;
+  }
   const length = S.side === "you" ? S.ws?.getDuration() : S.ref.duration, at = S.side === "you" ? S.ws?.getCurrentTime() : S.ref.currentTime;
   if (!(length > 0)) return;
-  const to = { ArrowRight: at + SEEK_STEP_S, ArrowUp: at + SEEK_STEP_S, ArrowLeft: at - SEEK_STEP_S, ArrowDown: at - SEEK_STEP_S, Home: 0, End: length }[e.key];
+  const to = { ArrowRight: at + SEEK_STEP_S, ArrowUp: at + SEEK_STEP_S, ArrowLeft: at - SEEK_STEP_S, ArrowDown: at - SEEK_STEP_S,
+    PageUp: at + SEEK_PAGE_S, PageDown: at - SEEK_PAGE_S, Home: 0, End: length }[e.key];
   if (to == null) return;
   e.preventDefault();
   seekShare(to / length);
+}
+
+/** A press on the slider seeks there, and the position follows the pointer until it is released. */
+function grooveDrag(groove) {
+  const seekTo = (e) => { const box = groove.getBoundingClientRect(); seekShare((e.clientX - box.left) / box.width); };
+  groove.addEventListener("pointerdown", (e) => {
+    if (e.button !== 0) return;
+    groove.setPointerCapture(e.pointerId);
+    groove.focus({ preventScroll: true });
+    seekTo(e);
+  });
+  groove.addEventListener("pointermove", (e) => { if (groove.hasPointerCapture(e.pointerId)) seekTo(e); });
 }
 
 /** Space plays or pauses, unless the focus is on a control that uses Space itself. */
@@ -2982,9 +3084,8 @@ async function init() {
   $("#dimension-filter").addEventListener("change", (e) => setFilter(e.target.value ? e.target.value.split(",") : null));
   $("#pattern-filter").addEventListener("change", (e) => setPattern(e.target.value || null));
   $("#play-all").addEventListener("click", togglePlay);
-  const groove = $("#player-progress");
-  groove.addEventListener("click", (e) => { const box = groove.getBoundingClientRect(); seekShare((e.clientX - box.left) / box.width); });
-  groove.addEventListener("keydown", grooveKeys);
+  grooveDrag($("#player-progress"));
+  $("#player-progress").addEventListener("keydown", grooveKeys);
   document.addEventListener("keydown", spaceToPlay);
   $("#transcript").addEventListener("keydown", wordKeys);
   linkPeek();
