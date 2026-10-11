@@ -1724,13 +1724,16 @@ function fitHeroWave() {
 const RIDGE_DB = [-40, 10];        // loudness range (dB re voiced median) mapped from silence to the loudest
 const LIGHT_AT = 0.7;              // rest position of the low sun, as a share of the width (style.css .glow, --t)
 const SKY_STEP = 2;                // px between the samples of a skyline
-// Ranges, back to front. top, low: summit height as a share of the horizon height for the loudest and the quietest
-// summit; spacing: px of width per main summit; rough: midpoint displacement of the ridge as a share of a segment's length;
-// snowAt: snow lies above this share of the horizon height; snowShare: snow depth as a share of the height above snowAt.
+// Ranges, back to front, with aerial perspective: the far range is a faint, shadowy silhouette across the whole width (it
+// may stand behind the text), the massif in front of it is sharp, snowy and lit by the low sun, the near ridge is dark.
+// top, low: summit height as a share of the horizon height for the loudest and the quietest summit; spacing: px of width
+// per main summit; rough: midpoint displacement of the ridge as a share of a segment's length; underText: share of the
+// height a range keeps behind the hero text; snowAt: snow lies above this share of the horizon height; snowShare: snow
+// depth as a share of the height above snowAt; detail: lit and shaded faces, rock ribs and couloirs.
 const RANGES = {
-  far: { top: 0.9, low: 0.5, spacing: 170, rough: 0.22, rock: "#6e6390", snow: "#e3d9e8", snowAt: 0.5, snowShare: 0.5 },
-  mid: { top: 1, low: 0.5, spacing: 230, rough: 0.26, rock: "#221e2d", snow: "#f6ece8", snowAt: 0.46, snowShare: 0.55 },
-  near: { top: 0.5, low: 0.3, spacing: 380, rough: 0.08, rock: "#141119" },
+  far: { top: 0.96, low: 0.56, spacing: 150, rough: 0.24, underText: 1, rock: "#3c3352", snow: "#5d5174", snowAt: 0.62, snowShare: 0.3 },
+  mid: { top: 1, low: 0.56, spacing: 260, rough: 0.26, underText: 0.32, rock: "#1c1925", snow: "#f4ede9", snowAt: 0.42, snowShare: 0.62, detail: true },
+  near: { top: 0.46, low: 0.3, spacing: 380, rough: 0.1, underText: 0.7, rock: "#121017" },
 };
 const SNOW_SHADE = "#2a2440";      // laid over the faces turned away from the sun, so rock and snow both fall into shade
 
@@ -1818,14 +1821,14 @@ function sampleLine(line, width) {
 }
 
 /** The main summits of a range from a loudness contour, then cols between them, then a jagged ridge by midpoint
- *  displacement. share(x) scales the heights down under the hero text. */
-function rangeSkyline(contour, spec, width, height, share, salt) {
+ *  displacement. keep(x) scales the heights down behind the hero text. */
+function rangeSkyline(contour, spec, width, height, keep, salt) {
   // a narrow screen gets narrower summits too, so a phone shows a few peaks and not one long ridge
   const n = contour.length, count = Math.max(3, Math.round(width / (spec.spacing * Math.min(1, width / 1000))));
   const peaks = pickSummits(contour, count, Math.round(0.6 * n / count)).map((i) => {
     const x = (i + 0.5) * width / n;
     // the power spreads the summit heights: a contour scaled to its percentiles puts many summits near the top
-    return [x, height * (spec.low + (spec.top - spec.low) * contour[i] ** 1.8) * share(x)];
+    return [x, height * (spec.low + (spec.top - spec.low) * contour[i] ** 1.8) * keep(x)];
   });
   const line = [[-8, 0.5 * peaks[0][1]]];
   peaks.forEach((peak, k) => {
@@ -1857,20 +1860,51 @@ function snowDepths(skyline, spec, height, salt) {
   });
 }
 
-/** Couloirs: streaks of snow down a gully from just under a summit, one on each side, as in a real face where snow lies in
- *  the gullies between ribs of rock. Each is a tapered ribbon with ragged edges, as [x, h] points around its outline. */
+/** Couloirs: streaks of snow down a gully from the foot of a summit's snowfield, one on each side, as in a real face where
+ *  snow lies in the gullies between ribs of rock. Each is a tapered ribbon with ragged edges, as [x, h] points. */
 function couloirs(peaks, spec, height, salt) {
   return peaks.filter(([, h]) => h > height * spec.snowAt).flatMap(([x, h], k) => [-1, 1].map((side, j) => {
     const r = (m) => rockNoise(k * 2 + j, salt + m);
-    const h0 = h * (0.8 - 0.08 * r(0)), x0 = x + side * (h - h0) * 0.75, length = h * (0.14 + 0.14 * r(1));
+    const h0 = h * (0.74 - 0.08 * r(0)), x0 = x + side * (h - h0) * 0.7, length = h * (0.16 + 0.14 * r(1));
     // the fall line is steeper than the ridge: about 65 to 75 degrees from the horizontal
-    const run = side * length * (0.28 + 0.16 * r(2)), top = 6 + 6 * r(3);
-    const edge = (sideOfRibbon) => Array.from({ length: 6 }, (_, i) => {
-      const f = i / 5, w = top * (1 - f) + 0.6;
-      return [x0 + run * f + sideOfRibbon * w * (0.7 + 0.6 * rockNoise(i + 7 * k, salt + 4 + j + sideOfRibbon)), h0 - length * f];
+    const run = side * length * (0.28 + 0.16 * r(2)), top = 7 + 7 * r(3);
+    const edge = (sideOfRibbon) => Array.from({ length: 7 }, (_, i) => {
+      const f = i / 6, w = top * (1 - f) ** 1.3 + 0.6;
+      return [x0 + run * f + sideOfRibbon * w * (0.6 + 0.8 * rockNoise(i + 7 * k, salt + 4 + j + sideOfRibbon)), h0 - length * f];
     });
     return [...edge(-1), ...edge(1).reverse()];
   }));
+}
+
+/** Ribs of rock that break through the snow: thin dark wedges from the ridge down the fall line, a few on each slope of
+ *  a summit, each about as long as the snow is deep there, so the snowfield reads as snow lying on a rock face. */
+function rockRibs(skyline, depth, peaks, salt) {
+  const at = (x) => Math.min(skyline.length - 1, Math.max(0, Math.round((x + 8) / SKY_STEP)));
+  return peaks.flatMap(([x, h], k) => [-1, 1].flatMap((side) => [0.18, 0.4, 0.62].map((f, j) => {
+    const r = (m) => rockNoise(k * 6 + j * 2 + (side > 0 ? 1 : 0), salt + m);
+    const x0 = x + side * h * (f + 0.08 * (r(0) - 0.5)), i = at(x0), [, top] = skyline[i];
+    if (!depth[i]) return null;
+    const length = depth[i] * (0.8 + 0.6 * r(1)) + 3, w = 1.2 + 2.2 * r(2), run = side * length * (0.25 + 0.2 * r(3));
+    return [[x0 - w, top + 1], [x0 + w, top + 1], [x0 + run + 0.4, top - length], [x0 + run - 0.4, top - length]];
+  }))).filter(Boolean);
+}
+
+/** The face of each summit turned away from the sun: from the summit down a ragged crest line to the floor, along the
+ *  floor to the col on that side, then back up the skyline. Laid over rock and snow alike. */
+function shadedFaces(skyline, peaks, sunX, salt) {
+  const at = (x) => Math.min(skyline.length - 1, Math.max(0, Math.round((x + 8) / SKY_STEP)));
+  return peaks.map(([x, h], k) => {
+    const away = x < sunX ? -1 : 1, start = at(x);
+    // the col on the shaded side: the lowest point of the skyline before the next summit on that side
+    const next = peaks[k + away];
+    const stop = next ? at(next[0]) : away < 0 ? 0 : skyline.length - 1;
+    let col = start;
+    for (let i = start; i !== stop; i += away) if (skyline[i][1] < skyline[col][1]) col = i;
+    const crest = [0, 0.2, 0.4, 0.6, 0.8, 1].map((t, j) => [x + away * 0.07 * h * t + (rockNoise(k * 6 + j, salt) - 0.5) * 5 * t, h * (1 - t) - (t === 1 ? 2 : 0)]);
+    const ridge = [];
+    for (let i = col; i !== start; i -= away) ridge.push(skyline[i]);
+    return [...crest, [skyline[col][0], -2], ...ridge];
+  });
 }
 
 const skyPath = (points, height) => `M${points.map(([x, h]) => `${x.toFixed(1)} ${(height - h).toFixed(1)}`).join(" L")} Z`;
@@ -1903,35 +1937,33 @@ function drawRanges() {
   box.style.setProperty("--text-right", `${Math.round(right)}px`);
   box.style.setProperty("--text-bottom", `${Math.round(bottom)}px`);
   document.body.style.setProperty("--floor", `${Math.round(at.bottom - document.body.getBoundingClientRect().top)}px`);
-  // behind the hero text the ranges stand a little lower and carry no snow: dark rock keeps the cream text readable
-  // on a phone the horizon starts under the text, so no range stands behind it
+  // 0 behind the hero text, 1 from 200 px right of it; on a phone the horizon starts under the text, so it is 1 everywhere
   const pastText = (x) => {
     if (bottom <= 0) return 1;
     const f = Math.min(1, Math.max(0, (x - right - 16) / 200));
     return f * f * (3 - 2 * f);
   };
-  const share = (x) => 0.82 + 0.18 * pastText(x);
   const samples = Math.max(64, Math.round(width / 4));
   const source = { far: self ? [energy.p, 14] : [energy.b, 8], mid: self ? [energy.p, 9] : [energy.b, 5], near: [energy.p, 10] };
   const sunX = LIGHT_AT * width;
   Object.entries(RANGES).forEach(([name, spec], salt) => {
     const [frames, sigma] = source[name];
-    const { peaks, skyline } = rangeSkyline(loudnessContour(frames, samples, sigma), spec, width, height, share, 31 * salt + 5);
+    const keep = (x) => spec.underText + (1 - spec.underText) * pastText(x);
+    const { peaks, skyline } = rangeSkyline(loudnessContour(frames, samples, sigma), spec, width, height, keep, 31 * salt + 5);
     const outline = skyPath([[-8, -2], ...skyline, [width + 8, -2]], height);
     const parts = [svgEl("path", { d: outline, fill: spec.rock })];
     if (spec.snow) {
-      const depth = snowDepths(skyline, spec, height, 31 * salt + 9).map((d, j) => d * pastText(skyline[j][0]));
+      // behind the hero text the massif stands low in the cloud, so it carries no snow there
+      const depth = snowDepths(skyline, spec, height, 31 * salt + 9).map((d, j) => (spec.detail ? d * pastText(skyline[j][0]) : d));
       const lower = skyline.map(([x, h], j) => [x, h - depth[j]]).reverse();
-      const snowy = peaks.filter(([x]) => pastText(x) > 0.5);
-      const streaks = couloirs(snowy, spec, height, 31 * salt + 13).map((ribbon) => skyPath(ribbon, height)).join(" ");
+      const streaks = spec.detail ? couloirs(peaks.filter(([x]) => pastText(x) > 0.5), spec, height, 31 * salt + 13).map((ribbon) => skyPath(ribbon, height)).join(" ") : "";
       parts.push(svgEl("path", { d: `${skyPath([...skyline, ...lower], height)} ${streaks}`, fill: spec.snow }));
-      // the faces turned away from the sun: from each summit down to the floor on its far side
-      const shade = peaks.map(([x, h]) => {
-        const away = x < sunX ? -1 : 1;
-        return skyPath([[x, h], [x + away * 1.2 * h, -2], [x + away * 0.12 * h, -2]], height);
-      }).join(" ");
-      parts.push(svgEl("path", { d: shade, fill: SNOW_SHADE, opacity: 0.5 }));
-      parts.push(svgEl("rect", { class: "alpenglow", x: 0, y: 0, width, height }));
+      if (spec.detail) {
+        const snowy = peaks.filter(([x]) => pastText(x) > 0.5);
+        parts.push(svgEl("path", { d: rockRibs(skyline, depth, snowy, 31 * salt + 17).map((rib) => skyPath(rib, height)).join(" "), fill: spec.rock }));
+        parts.push(svgEl("path", { d: shadedFaces(skyline, peaks, sunX, 31 * salt + 21).map((face) => skyPath(face, height)).join(" "), fill: SNOW_SHADE, opacity: 0.55 }));
+        parts.push(svgEl("rect", { class: "alpenglow", x: 0, y: 0, width, height }));
+      }
     }
     const svg = $(`#range-${name}`);
     svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
@@ -1941,26 +1973,26 @@ function drawRanges() {
 }
 
 // ---------------------------------------------------------------------------------------------------- hero cloud sea
-// Rows of rolling cloud, back to front. Each billow's height is the loudness of the reading at the billow's time (the
-// width of the hero is the whole reading), so the crests of the sea are its sound. While audio plays, the billows at the
-// playback position swell with the live level, and the sea rolls slowly. at: the row's base as a share of the canvas
-// height; w: billow width in px; amp: billow height in px for the loudest stretch; round: billow height to width, from
-// flat far rolls to round near ones; blur: px of soft edge; colours of a billow from its sunlit top to its shadow.
-// The hero cards cover about the lowest fifth of the canvas, so the nearest row sits above that.
+// Rows of rolling cloud, back to front. Each mound's height is the loudness of the reading at the mound's time (the
+// width of the hero is the whole reading), so the crests of the sea are its sound. While audio plays, the mounds at the
+// playback position swell and light up with the live level; style.css sways the sea slowly. at: the row's base as a share of
+// the canvas height; w: px between mounds; amp: mound height in px for the loudest stretch;
+// blur: px of soft edge; haze: the mist laid over the row, so far rows fade; colours of the shadow, the side and the
+// sunlit cap. The hero cards cover about the lowest fifth of the canvas, so the nearest row sits above that.
 const SEA_ROWS = [
-  { at: 0.3, w: 84, amp: 12, round: 0.7, blur: 3, top: "#dcbccb", mid: "#9a8ab3", low: "#776c9b", source: "b" },
-  { at: 0.46, w: 116, amp: 20, round: 0.85, blur: 2.5, top: "#eac4c6", mid: "#a291ba", low: "#74699a", source: "b" },
-  { at: 0.64, w: 154, amp: 30, round: 1, blur: 2, top: "#f5cdc1", mid: "#ab99be", low: "#776c9c", source: "p" },
-  { at: 0.84, w: 196, amp: 40, round: 1.05, blur: 1.7, top: "#fbd8c8", mid: "#b4a2c4", low: "#7c70a0", source: "p" },
+  { at: 0.26, w: 44, amp: 11, blur: 2.2, haze: 0.45, low: "#6d6491", side: "#9888b2", cap: "#d9bccb", source: "b" },
+  { at: 0.44, w: 62, amp: 17, blur: 1.8, haze: 0.28, low: "#71679a", side: "#a08fb8", cap: "#e9c5c6", source: "b" },
+  { at: 0.63, w: 84, amp: 25, blur: 1.5, haze: 0.12, low: "#74699b", side: "#aa98bd", cap: "#f4cfc2", source: "p" },
+  { at: 0.83, w: 110, amp: 34, blur: 1.2, haze: 0, low: "#786c9e", side: "#b3a1c3", cap: "#fad9c9", source: "p" },
 ];
-const SEA_MIST = "#7f739f";        // the haze where the sea meets the mountains, fading out upwards
+const SEA_MIST = "#7f739f";        // the haze where the sea meets the mountains and over the far rows (rgba(127, 115, 159))
 const SEA_SUN = "#ffd6bd";         // billow tops near the low sun take on its colour
-const SEA_ROLL = 5;                // px per second the billows roll while idle; playback rolls them three times as fast
-const SEA_SWELL = 1.8;             // extra billow height at the playback position, per unit of live level
+const SEA_SWELL = 1.2;             // how far the crest at the playback position rises, in row heights, per unit of live level
 const SEA_REACH = 90;              // px; how far the swell spreads from the playback position (Gaussian sigma)
-const SEA_IDLE_MS = 50;            // ms between idle frames
 
-/** Starts (or restarts) the cloud sea for the current result; one animation loop at a time. */
+/** Starts (or restarts) the cloud sea for the current result: each row is drawn once into its own image, because its soft
+ *  edges (canvas blur) cost too much to draw every frame on a computer without a graphics card. While audio plays, a frame
+ *  loop puts the rows together with the voice's swell and light; otherwise the sea stays as drawn. */
 function startSea() {
   const canvas = $("#cloud-sea"), { energy, self } = S.horizon;
   const width = canvas.clientWidth, height = canvas.clientHeight;
@@ -1970,69 +2002,122 @@ function startSea() {
   canvas.height = Math.round(height * ratio);
   const columns = Math.max(64, Math.round(width / 6));
   const loud = { p: loudnessContour(energy.p, columns, 1.5), b: loudnessContour(self ? energy.p : energy.b, columns, self ? 6 : 1.5) };
-  S.sea = { canvas, width, height, ratio, loud, ground: css("--base"), id: (S.sea?.id ?? 0) + 1, roll: 0, last: performance.now() };
+  const rows = SEA_ROWS.map((row, k) => {
+    const image = document.createElement("canvas");
+    image.width = canvas.width;
+    image.height = canvas.height;
+    const ctx = image.getContext("2d");
+    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+    drawSeaRow(ctx, row, k, width, height, loud[row.source]);
+    return image;
+  });
+  const lift = document.createElement("canvas");
+  lift.width = Math.round(6 * SEA_REACH * ratio);
+  lift.height = canvas.height;
+  S.sea = { canvas, width, height, ratio, rows, lift, id: (S.sea?.id ?? 0) + 1, drawn: -1 };
   const id = S.sea.id;
-  const frame = (now) => {
+  const frame = () => {
     if (!S.sea || S.sea.id !== id) return;
-    const playing = !!playingMedia(), still = reducedMotion();
-    // idle, the sea is redrawn about 20 times a second, and not at all while it is scrolled out of view
-    const due = playing || now - S.sea.last >= SEA_IDLE_MS || still;
-    if (due && canvas.getBoundingClientRect().bottom > 0) {
-      S.sea.roll += still ? 0 : ((now - S.sea.last) / 1000) * SEA_ROLL * (playing ? 3 : 1);
-      drawSea(playing && !still ? S.level || 0 : 0);
+    const level = playingMedia() && !reducedMotion() ? S.level || 0 : 0;
+    // a still sea is drawn once; while the voice plays it is drawn every frame, but not while scrolled out of view
+    if ((level > 0 || S.sea.drawn !== 0) && canvas.getBoundingClientRect().bottom > 0) {
+      composeSea(level);
+      S.sea.drawn = level;
     }
-    if (due) S.sea.last = now;
-    if (!still && !document.hidden) requestAnimationFrame(frame);
+    if (!document.hidden) requestAnimationFrame(frame);
   };
   requestAnimationFrame(frame);
 }
 
-/** One frame of the sea, back row first. A row is a band of shadowed cloud with billows on its crest; each billow is an
- *  ellipse lit from above and from the low sun, so the crest reads as rolling volumes and not as a cut-out line. */
-function drawSea(level) {
-  const { canvas, width, height, ratio, loud, roll } = S.sea;
+/** One row of the sea. Its crest is a run of mounds, each with smaller lobes on top, as on cumulus. Every lobe is drawn
+ *  three times: in shadow, then smaller and higher in its side colour, then as a rounded cap over its upper half in its
+ *  sunlit colour, so each lobe has a lit top and a shaded underside. */
+function drawSeaRow(ctx, row, k, width, height, contour) {
+  const base = row.at * height, n = contour.length, sunX = LIGHT_AT * width;
+  const lobes = [];
+  // the gap to the next mound varies, so the crest has no regular beat
+  for (let c = -2 * row.w, j = 0; c < width + 2 * row.w; c += row.w * (0.65 + 0.7 * rockNoise(j, 55 + k)), j++) {
+    const a = contour[Math.min(n - 1, Math.max(0, Math.floor(c / width * n)))];
+    const h = row.amp * (0.3 + 0.7 * a ** 1.2) * (0.6 + 0.8 * rockNoise(j, 60 + k));
+    // a mound wider than the gap to the next one, so the crest is one rolling surface, then two or three lobes on top
+    lobes.push({ x: c, y: base - 0.3 * h, rx: row.w * (0.55 + 0.5 * rockNoise(j, 65 + k)), ry: h });
+    for (let m = 0; m < 2 + (j % 2); m++) {
+      const f = rockNoise(j * 3 + m, 80 + k) - 0.5, rx = row.w * (0.2 + 0.16 * rockNoise(j * 3 + m, 90 + k)) * (0.6 + 0.4 * a);
+      const ry = Math.min(0.8 * rx, 0.75 * h);
+      lobes.push({ x: c + f * 0.8 * row.w, y: base - 1.1 * h + 0.5 * ry + Math.abs(f) * 0.6 * h, rx, ry });
+    }
+  }
+  const pass = (scaleX, scaleY, up, toSun) => {
+    const path = new Path2D();
+    for (const { x, y, rx, ry } of lobes) {
+      const cx = x + toSun * rx * Math.sign(sunX - x), cy = y - up * ry;
+      path.moveTo(cx + rx * scaleX, cy);
+      path.ellipse(cx, cy, rx * scaleX, ry * scaleY, 0, 0, 2 * Math.PI);
+    }
+    return path;
+  };
+  // the body under the crest, so a row has no gaps between its mounds
+  ctx.filter = `blur(${row.blur}px)`;
+  ctx.fillStyle = row.low;
+  ctx.fillRect(0, base - 0.2 * row.amp, width, height);
+  ctx.fill(pass(1, 1, 0, 0));
+  ctx.fillStyle = row.side;
+  ctx.fill(pass(0.88, 0.88, 0.12, 0.05));
+  // the caps: a little lighter than the side far from the sun, glowing near it, so one fill takes a horizontal gradient
+  const caps = ctx.createLinearGradient(0, 0, width, 0);
+  for (let step = 0; step <= 24; step++) {
+    const sun = Math.exp(-((((step / 24) * width - sunX) / (0.3 * width)) ** 2));
+    caps.addColorStop(step / 24, mixHex(mixHex(row.side, row.cap, 0.45 + 0.55 * sun), SEA_SUN, 0.4 * sun));
+  }
+  ctx.filter = `blur(${row.blur + 2}px)`;
+  ctx.fillStyle = caps;
+  ctx.fill(pass(0.78, 0.55, 0.48, 0.1));
+  ctx.filter = "none";
+}
+
+/** The sea for one frame: the mist, then each row with the mist laid over it (so far rows fade), the voice's swell and
+ *  light at the playback position, and the fade into the page ground. The swell is a copy of the row near the playback
+ *  position, lifted by the live level and faded out to each side, so the crest rises there like a wave. */
+function composeSea(level) {
+  const { canvas, width, height, ratio, rows } = S.sea;
   const ctx = canvas.getContext("2d");
   ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
   ctx.clearRect(0, 0, width, height);
-  const playX = (S.heroT ?? LIGHT_AT) * width, sunX = LIGHT_AT * width;
+  const playX = (S.heroT ?? LIGHT_AT) * width;
   const mist = ctx.createLinearGradient(0, 0, 0, 0.36 * height);
   mist.addColorStop(0, "rgba(127, 115, 159, 0)");
   mist.addColorStop(1, SEA_MIST);
   ctx.fillStyle = mist;
   ctx.fillRect(0, 0, width, height);
+  const span = 6 * SEA_REACH, x0 = playX - span / 2, lift = S.sea.lift;
   SEA_ROWS.forEach((row, k) => {
-    const base = row.at * height, contour = loud[row.source], n = contour.length;
-    // the front rows roll faster than the back rows, so the sea has depth
-    const shift = (roll * (0.4 + 0.6 * k / (SEA_ROWS.length - 1))) % (0.5 * row.w);
-    ctx.filter = `blur(${row.blur}px)`;
-    ctx.fillStyle = row.low;
-    ctx.fillRect(0, base - 0.25 * row.amp, width, height);
-    for (let c = -row.w + shift, j = 0; c < width + row.w; c += 0.5 * row.w, j++) {
-      const x = c + (rockNoise(j, 50 + k) - 0.5) * 0.4 * row.w;
-      const a = contour[Math.min(n - 1, Math.max(0, Math.floor(x / width * n)))];
-      const voice = level * Math.exp(-(((x - playX) / SEA_REACH) ** 2) / 2), swell = 1 + SEA_SWELL * voice;
-      // big rolls and small lobes alternate, each a little higher or lower, so the crest is not a row of scallops
-      const big = j % 3 !== 1, lift = (rockNoise(j, 60 + k) - 0.5) * 0.35 * row.amp;
-      const h = row.amp * (big ? 1 : 0.6) * (0.25 + 0.75 * a ** 1.2) * swell, w = row.w * (big ? 0.8 + 0.5 * rockNoise(j, 70 + k) : 0.5);
-      // far rolls are long and flat, near ones rounder, as in a sea of cloud seen from a summit
-      const cy = base - lift - 0.1 * h, ry = row.round * (0.85 * h + 0.25 * row.amp);
-      const light = ctx.createRadialGradient(x + 0.2 * w, cy - 0.9 * ry, 0, x, cy - 0.3 * ry, w * 1.1);
-      const sun = Math.exp(-(((x - sunX) / (0.3 * width)) ** 2));
-      // the low sun warms the tops near it, and the voice lights the tops where it is speaking
-      light.addColorStop(0, mixHex(row.top, SEA_SUN, Math.min(1, 0.55 * sun + 1.2 * voice)));
-      light.addColorStop(0.4, row.mid);
-      light.addColorStop(0.85, row.low);
-      ctx.fillStyle = light;
-      ctx.beginPath();
-      ctx.ellipse(x, cy, w, ry, 0, 0, 2 * Math.PI);
-      ctx.fill();
+    ctx.drawImage(rows[k], 0, 0, width, height);
+    if (level > 0) {
+      const tctx = lift.getContext("2d");
+      tctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+      tctx.clearRect(0, 0, span, height);
+      tctx.drawImage(rows[k], x0 * ratio, 0, span * ratio, height * ratio, 0, -SEA_SWELL * level * row.amp, span, height);
+      // a Gaussian-like fade to each side, so the lifted crest joins the row without an edge
+      const fade = tctx.createLinearGradient(0, 0, span, 0);
+      [[0, 0], [0.25, 0.13], [0.38, 0.6], [0.5, 1], [0.62, 0.6], [0.75, 0.13], [1, 0]].forEach(([at, alpha]) => fade.addColorStop(at, `rgba(0, 0, 0, ${alpha})`));
+      tctx.globalCompositeOperation = "destination-in";
+      tctx.fillStyle = fade;
+      tctx.fillRect(0, 0, span, height);
+      tctx.globalCompositeOperation = "source-over";
+      ctx.drawImage(lift, 0, 0, span * ratio, height * ratio, x0, 0, span, height);
+    }
+    if (row.haze) {
+      const base = row.at * height, haze = ctx.createLinearGradient(0, base - 2.2 * row.amp, 0, base - row.amp);
+      haze.addColorStop(0, "rgba(127, 115, 159, 0)");
+      haze.addColorStop(1, `rgba(127, 115, 159, ${row.haze})`);
+      ctx.fillStyle = haze;
+      ctx.fillRect(0, base - 2.2 * row.amp, width, height);
     }
   });
-  ctx.filter = "none";
   // the voice lights the sea where it is speaking
   if (level > 0) {
-    const glow = ctx.createRadialGradient(playX, 0.5 * height, 0, playX, 0.5 * height, 2 * SEA_REACH);
-    glow.addColorStop(0, `rgba(255, 224, 202, ${(0.7 * level).toFixed(3)})`);
+    const glow = ctx.createRadialGradient(playX, 0.55 * height, 0, playX, 0.55 * height, 2 * SEA_REACH);
+    glow.addColorStop(0, `rgba(255, 224, 202, ${(0.55 * level).toFixed(3)})`);
     glow.addColorStop(1, "rgba(255, 224, 202, 0)");
     // only on the cloud already drawn, so the light never shows on the empty sky above the sea
     ctx.globalCompositeOperation = "source-atop";
@@ -2041,9 +2126,10 @@ function drawSea(level) {
     ctx.globalCompositeOperation = "source-over";
   }
   // the sea sinks into the page ground at the floor, so the horizon has no seam
-  const ground = ctx.createLinearGradient(0, 0.62 * height, 0, height);
+  const ground = ctx.createLinearGradient(0, 0.7 * height, 0, height);
   ground.addColorStop(0, "rgba(31, 30, 29, 0)");
-  ground.addColorStop(1, S.sea.ground);
+  // read at draw time with a fallback: a stylesheet that failed to load must not stop the page
+  ground.addColorStop(1, css("--base") || "#1f1e1d");
   ctx.fillStyle = ground;
   ctx.fillRect(0, 0, width, height);
 }

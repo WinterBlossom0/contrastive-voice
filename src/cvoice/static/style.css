@@ -181,14 +181,17 @@ a:hover { text-decoration-color: var(--ink); }
    the shaded faces and the alpenglow are clipped to the massif's outline. */
 .range { position: absolute; left: 0; bottom: 0; width: 100%; height: 100%; display: block; overflow: hidden; }
 .alpenglow { fill: url(#g-alpenglow); }
-/* The cloud sea (app.js drawSea) fills the lower part of the horizon. Under the hero text it starts below the value line
-   (--text-bottom, from the top of the horizon box; the canvas starts 44 % down the box). */
-.cloud-sea { position: absolute; left: 0; bottom: 0; width: 100%; height: 56%; display: block;
-  -webkit-mask-image: linear-gradient(to bottom, transparent calc(var(--text-bottom, 0px) - 78.6% + 4px), #000 calc(var(--text-bottom, 0px) - 78.6% + 26px)),
-    linear-gradient(to right, transparent calc(var(--text-right, 100%) + 24px), #000 calc(var(--text-right, 100%) + 120px));
-          mask-image: linear-gradient(to bottom, transparent calc(var(--text-bottom, 0px) - 78.6% + 4px), #000 calc(var(--text-bottom, 0px) - 78.6% + 26px)),
-    linear-gradient(to right, transparent calc(var(--text-right, 100%) + 24px), #000 calc(var(--text-right, 100%) + 120px)); }
-.intro .cloud-sea { animation: dawn 2.6s ease-out 0.3s both; }
+/* The cloud sea (app.js composeSea) fills the lower part of the horizon. It is 24 px wider than the horizon on each side
+   and sways by up to 16 px, so its edges never show. Under the hero text it starts below the value line (--text-bottom,
+   from the top of the horizon box; the canvas starts 38 % down the box, 24 px left of the horizon). */
+.cloud-sea { position: absolute; left: -24px; bottom: 0; width: calc(100% + 48px); height: 62%; display: block;
+  animation: sea-sway 70s ease-in-out infinite alternate;
+  -webkit-mask-image: linear-gradient(to bottom, transparent calc(var(--text-bottom, 0px) - 61.3% + 4px), #000 calc(var(--text-bottom, 0px) - 61.3% + 26px)),
+    linear-gradient(to right, transparent calc(var(--text-right, 100%) + 48px), #000 calc(var(--text-right, 100%) + 144px));
+          mask-image: linear-gradient(to bottom, transparent calc(var(--text-bottom, 0px) - 61.3% + 4px), #000 calc(var(--text-bottom, 0px) - 61.3% + 26px)),
+    linear-gradient(to right, transparent calc(var(--text-right, 100%) + 48px), #000 calc(var(--text-right, 100%) + 144px)); }
+@keyframes sea-sway { from { transform: translateX(-16px); } to { transform: translateX(16px); } }
+.intro .cloud-sea { animation: dawn 2.6s ease-out 0.3s both, sea-sway 70s ease-in-out infinite alternate; }
 .intro #range-far { animation: rise 1.6s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
 .intro #range-mid { animation: rise 1.6s cubic-bezier(0.2, 0.7, 0.2, 1) 0.1s both; }
 .intro #range-near { animation: rise 1.6s cubic-bezier(0.2, 0.7, 0.2, 1) 0.2s both; }
