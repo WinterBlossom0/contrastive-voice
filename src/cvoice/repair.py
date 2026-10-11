@@ -77,7 +77,6 @@ UNFIXABLE_REASON = {
 APPLIED, CAPPED, COVERED, SKIPPED, UNFIXABLE = "applied", "capped", "covered", "skipped", "unfixable"
 # Fix.cause: why a fix stopped short (capped) or was skipped.
 CAP, HEADROOM, FLAT_PITCH, INAUDIBLE, SHARED_CAP = "cap", "headroom", "flat_pitch", "inaudible", "shared_cap"
-TIME_KINDS = ("stretch", "emphasis")
 PITCH_KINDS = ("pitch_scale", "pitch_contour")
 
 
