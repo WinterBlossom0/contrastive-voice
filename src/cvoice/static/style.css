@@ -69,7 +69,7 @@ body { margin: 0; padding-bottom: 48px; color: var(--ink); font: 16px/1.6 var(--
   font-variant-numeric: tabular-nums; min-height: 100vh; position: relative; isolation: isolate; container-type: inline-size;
   /* The dusk light carries on faintly over the ground below the horizon, so the glass layers have colour to blur. It is a
      body background, not a layer, so it never makes the page longer. --floor: the horizon floor (app.js drawRanges); every
-     pool is zero at the floor, so the near range, which ends in the ground colour, shows no seam. */
+     pool is zero at the floor, so the cloud sea, which ends in the ground colour, shows no seam. */
   background:
     radial-gradient(ellipse 34% 420px at 72% calc(var(--floor, 560px) + 420px), rgba(214, 140, 112, 0.10), rgba(214, 140, 112, 0) 100%),
     radial-gradient(ellipse 30% 380px at 18% calc(var(--floor, 560px) + 520px), rgba(149, 127, 208, 0.09), rgba(149, 127, 208, 0) 100%),
@@ -161,9 +161,8 @@ a:hover { text-decoration-color: var(--ink); }
 /* lighter than --ink2: it sits on the sky, and keeps 4.5:1 down to the lilac band */
 .value-line { margin-top: 14px; color: #ddd5c9; font-size: 18px; line-height: 1.55; max-width: 62ch; }
 /* --range-h: the mountains, from the horizon floor to the highest summit. --rise: how far the horizon reaches up behind
-   the value line; app.js keeps the ranges under the text below it and lets them climb right of the text.
-   --cloud-up: cloud room above the horizon box, right of the text. */
-.horizon { --range-h: 232px; --rise: 120px; --cloud-up: 64px; position: relative; height: var(--range-h);
+   the value line; app.js keeps the ranges under the text below it and lets them climb right of the text. */
+.horizon { --range-h: 232px; --rise: 120px; position: relative; height: var(--range-h);
   margin: calc(0px - var(--rise)) calc(50% - 50cqw) 0; pointer-events: none; overflow-x: clip; }
 /* The sky is taller than any hero; its top fades into the page ground, so the hero height can change freely. The stops
    scale with the range height, so the ember band always glows in the cols of the far range. */
@@ -178,38 +177,18 @@ a:hover { text-decoration-color: var(--ink); }
   transition: left 0.35s linear; }
 .glow::after { content: ""; position: absolute; left: 50%; top: 50%; width: 22px; height: 22px; margin: -11px 0 0 -11px; border-radius: 50%;
   background: #f6dcc4; box-shadow: 0 0 18px 4px rgba(246, 205, 170, 0.45); }
-/* Mountains from the reading's loudness (app.js drawRanges): a viewBox in px, so the slopes keep their angles. */
+/* Ranges from the reading's loudness (app.js drawRanges): a viewBox in px, so the slopes keep their angles. The snow,
+   the shaded faces and the alpenglow are clipped to the massif's outline. */
 .range { position: absolute; left: 0; bottom: 0; width: 100%; height: 100%; display: block; overflow: hidden; }
-.range path { transition: d 1.4s cubic-bezier(0.3, 0.6, 0.2, 1); }
-#range-far .rock { fill: url(#g-far-rock); }
-#range-far .snow { fill: url(#g-far-snow); opacity: 0.66; }
-#range-far .shade { fill: #3b3159; opacity: 0.34; }
-#range-mid .rock { fill: url(#g-mid-rock); }
-#range-mid .snow { fill: url(#g-mid-snow); opacity: 0.92; }
-#range-mid .shade { fill: #1e1838; opacity: 0.5; }
-#range-near .rock { fill: url(#g-near-rock); stroke: rgba(240, 196, 170, 0.3); stroke-width: 1; stroke-linejoin: miter; }
-#range-near .snow { fill: url(#g-near-snow); }
-#range-near .shade { fill: url(#g-near-shade); }
-/* Clouds made of the reading's amplitude (app.js drawClouds). The far bank floats behind the far summits, the near bank
-   fills the valleys in front of the far range. The mask keeps them off the hero text: they show below the value line
-   across the width, and right of the text up into the sky (app.js sets --text-right and --text-bottom). */
-.clouds { position: absolute; left: 0; right: 0; bottom: 0; top: calc(0px - var(--cloud-up));
-  -webkit-mask-image: linear-gradient(to bottom, transparent calc(var(--cloud-up) + var(--text-bottom, 0px) + 4px), #000 calc(var(--cloud-up) + var(--text-bottom, 0px) + 30px)),
-    linear-gradient(to right, transparent calc(var(--text-right, 100%) + 24px), #000 calc(var(--text-right, 100%) + 160px));
-          mask-image: linear-gradient(to bottom, transparent calc(var(--cloud-up) + var(--text-bottom, 0px) + 4px), #000 calc(var(--cloud-up) + var(--text-bottom, 0px) + 30px)),
-    linear-gradient(to right, transparent calc(var(--text-right, 100%) + 24px), #000 calc(var(--text-right, 100%) + 160px)); }
-/* the image is 40 px wider on each side (CLOUD_PAD in app.js), so the sway never shows a cut edge */
-.drift { position: absolute; top: 0; bottom: 0; left: -40px; right: -40px; animation: sway 76s ease-in-out infinite alternate; will-change: transform; }
-.clouds-near .drift { animation-duration: 58s; animation-direction: alternate-reverse; }
-.drift img { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
-.drift img:not([src]) { visibility: hidden; }
-.clouds-far { opacity: 0.95; }
-@keyframes sway { from { transform: translateX(-16px); } to { transform: translateX(16px); } }
-/* While audio plays, the cloud over the playback position (--t) brightens with the live level (--level, 0 to 1). */
-.cloud-lit { opacity: min(0.85, var(--level, 0) * 2); transition: opacity 0.12s linear;
-  -webkit-mask-image: radial-gradient(ellipse 170px 60% at calc(40px + var(--t, 0.7) * (100% - 80px)) 76%, #000 0, rgba(0, 0, 0, 0.4) 55%, transparent 100%);
-          mask-image: radial-gradient(ellipse 170px 60% at calc(40px + var(--t, 0.7) * (100% - 80px)) 76%, #000 0, rgba(0, 0, 0, 0.4) 55%, transparent 100%); }
-.intro .clouds { animation: dawn 2.6s ease-out 0.3s both; }
+.alpenglow { fill: url(#g-alpenglow); }
+/* The cloud sea (app.js drawSea) fills the lower part of the horizon. Under the hero text it starts below the value line
+   (--text-bottom, from the top of the horizon box; the canvas starts 44 % down the box). */
+.cloud-sea { position: absolute; left: 0; bottom: 0; width: 100%; height: 56%; display: block;
+  -webkit-mask-image: linear-gradient(to bottom, transparent calc(var(--text-bottom, 0px) - 78.6% + 4px), #000 calc(var(--text-bottom, 0px) - 78.6% + 26px)),
+    linear-gradient(to right, transparent calc(var(--text-right, 100%) + 24px), #000 calc(var(--text-right, 100%) + 120px));
+          mask-image: linear-gradient(to bottom, transparent calc(var(--text-bottom, 0px) - 78.6% + 4px), #000 calc(var(--text-bottom, 0px) - 78.6% + 26px)),
+    linear-gradient(to right, transparent calc(var(--text-right, 100%) + 24px), #000 calc(var(--text-right, 100%) + 120px)); }
+.intro .cloud-sea { animation: dawn 2.6s ease-out 0.3s both; }
 .intro #range-far { animation: rise 1.6s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
 .intro #range-mid { animation: rise 1.6s cubic-bezier(0.2, 0.7, 0.2, 1) 0.1s both; }
 .intro #range-near { animation: rise 1.6s cubic-bezier(0.2, 0.7, 0.2, 1) 0.2s both; }
@@ -336,12 +315,12 @@ a:hover { text-decoration-color: var(--ink); }
 
 /* your text and the time view, with the finding panel beside */
 /* The text column holds the transcript, the list of every finding and every measurement; the finding panel sticks beside
-   it, so a finding picked in any of them reads next to it. The transcript card stretches, so both columns end together. */
-.main-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(360px, 520px); gap: var(--s-4); align-items: stretch; }
+   it, so a finding picked in any of them reads next to it. The transcript card keeps its own height: stretched to the
+   panel, it left an empty block under a short text. */
+.main-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(360px, 520px); gap: var(--s-4); align-items: start; }
 .text-col { display: flex; flex-direction: column; gap: var(--s-4); min-width: 0; }
-#text-view { flex: 1 0 auto; display: flex; flex-direction: column; padding: 26px 30px; }
-/* the key sits on the bottom edge of the transcript card, which grows to end with the finding panel */
-#text-view > .note.text-key { margin-top: auto; padding-top: var(--s-4); }
+#text-view { display: flex; flex-direction: column; padding: 26px 30px; }
+#text-view > .note.text-key { padding-top: var(--s-3); }
 .key-line { color: var(--flag-text); text-decoration: underline 2px var(--flag); text-underline-offset: 5px; }
 .key-line.f-dot { text-decoration-style: dotted; }
 .key-line.f-dash { text-decoration-style: dashed; }
@@ -389,41 +368,36 @@ a:hover { text-decoration-color: var(--ink); }
 .tl-cursor { stroke: var(--ink); stroke-width: 2; }
 .wave-ref { min-height: 36px; }
 .wave-you { min-height: 56px; }
-/* Severity strip: one rounded groove under this recording's waveform, on the waveform's time scale (app.js drawStrip). It
-   glows from the calm groove colour to bramble where findings are, hotter for the costlier ones; a blurred copy of the
-   heat is the glow. Each finding is a focusable span over it; a finding at one point in time (a missing pause) is a tick. */
-.fault-strip { position: relative; margin-top: 6px; }
-.strip-track { position: relative; height: 16px; border-radius: 8px; background: var(--strip-calm); box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.45); }
-.strip-heat, .strip-glow { position: absolute; inset: 0; border-radius: 8px; pointer-events: none; transition: opacity 0.2s ease; }
-.strip-glow { inset: -4px 0; filter: blur(9px); opacity: 0.9; }
-.peeking .strip-heat { opacity: 0.6; }
-.strip-span { position: absolute; top: 0; height: 100%; padding: 0; border: 0; border-radius: 8px; background: none; cursor: pointer;
-  transition: box-shadow 0.15s ease, background-color 0.15s ease; }
-.strip-span::before { content: ""; position: absolute; inset: -6px 0 -3px; }   /* a taller hit area than the 16 px groove, clear of the labels under it */
+/* Severity strip: one thin groove under this recording's waveform, on the waveform's time scale (app.js drawStrip). Each
+   finding is a flat, focusable span on it, darker bramble for a mild finding and lighter for a costly one (app.js
+   heatColor); a finding at one point in time (a missing pause) is a tick. */
+.fault-strip { position: relative; margin-top: 8px; }
+.strip-track { position: relative; height: 8px; border-radius: 4px; background: var(--strip-calm); }
+.strip-span { position: absolute; top: 0; height: 100%; padding: 0; border: 0; border-radius: 4px; background: var(--c); cursor: pointer;
+  transition: box-shadow 0.15s ease, filter 0.15s ease; }
+.strip-span::before { content: ""; position: absolute; inset: -8px 0 -5px; }   /* a taller hit area than the 8 px groove, clear of the labels under it */
 .strip-span.point::after { content: ""; position: absolute; left: 50%; top: -4px; bottom: -4px; width: 3px; margin-left: -1.5px; border-radius: 2px;
-  background: var(--c); box-shadow: 0 0 6px var(--c); }
-.strip-span.peek, .strip-span:hover { background-color: var(--c); box-shadow: 0 0 12px var(--c), inset 0 0 0 1px rgba(255, 240, 246, 0.6); }
-.strip-span.grp { box-shadow: inset 0 0 0 1.5px rgba(188, 174, 240, 0.7); }
-.strip-span.sel { box-shadow: 0 0 0 2px var(--you-text), 0 0 12px rgba(149, 127, 208, 0.55); }
-.strip-span.sel.peek, .strip-span.sel:hover { box-shadow: 0 0 0 2px var(--you-text), 0 0 12px var(--c); }
+  background: var(--c); }
+.strip-span.peek, .strip-span:hover { filter: brightness(1.2); }
+.strip-span.grp { box-shadow: inset 0 0 0 1px rgba(188, 174, 240, 0.6); }
+.strip-span.sel { box-shadow: 0 0 0 2px var(--panel), 0 0 0 3.5px var(--you-text); }
 .strip-span:focus-visible { outline-offset: 4px; }
 /* spans that cover another span from end to end take half the height, so each stays reachable (app.js stripHalves) */
-.strip-span.lower { top: 50%; height: 50%; border-radius: 0 0 8px 8px; }
-.strip-span.lower::before { inset: 0 0 -3px; }
-.strip-span.upper { height: 50%; border-radius: 8px 8px 0 0; }
-.strip-span.upper::before { inset: -6px 0 0; }
-.strip-diff { position: absolute; top: -2px; bottom: -2px; border-radius: 8px; background: rgba(143, 136, 126, 0.3); box-shadow: inset 0 0 0 1.5px var(--neutral); pointer-events: none; }
+.strip-span.lower { top: 50%; height: 50%; border-radius: 0 0 4px 4px; }
+.strip-span.lower::before { inset: 0 0 -5px; }
+.strip-span.upper { height: 50%; border-radius: 4px 4px 0 0; }
+.strip-span.upper::before { inset: -8px 0 0; }
+.strip-diff { position: absolute; top: -2px; bottom: -2px; border-radius: 4px; background: rgba(143, 136, 126, 0.3); box-shadow: inset 0 0 0 1.5px var(--neutral); pointer-events: none; }
 /* Labels of the costliest findings under the strip; a leader runs from the region to a label moved off it. */
 .strip-labels { display: block; overflow: visible; }
-.strip-leader { stroke: var(--flag-text); stroke-opacity: 0.45; stroke-width: 1; }
+.strip-leader { stroke: var(--flag-text); stroke-opacity: 0.3; stroke-width: 1; }
 .strip-leader.sel { stroke: var(--you-text); stroke-opacity: 0.9; }
 .strip-label { cursor: pointer; transition: opacity 0.2s ease; }
-.strip-label rect { fill: #3b2834; stroke: var(--flag); stroke-width: 1; transition: fill 0.2s ease, stroke 0.2s ease; }
-.strip-label text { font-size: 12.5px; fill: var(--ink); dominant-baseline: central; }
+.strip-label rect { fill: rgba(0, 0, 0, 0); stroke: none; }   /* no pill: the box only takes the pointer */
+.strip-label text { font-size: 13px; fill: var(--ink2); dominant-baseline: central; transition: fill 0.2s ease; }
 .strip-label .n, .strip-label .pts { font-weight: 700; fill: var(--flag-text); }
-.strip-label.peek rect, .strip-label:hover rect { fill: #4a2f40; stroke: var(--flag-text); }
-.strip-label.grp rect { stroke: var(--you-text); }
-.strip-label.sel rect { fill: var(--panel-3); stroke: var(--you-text); stroke-width: 2; }
+.strip-label.peek text, .strip-label:hover text { fill: var(--ink); }
+.strip-label.sel text { fill: var(--ink); font-weight: 700; }
 .strip-label.sel .n { fill: var(--you-text); }
 .peeking .strip-label:not(.peek) { opacity: 0.45; }
 .wave-axis { margin-top: 2px; }
@@ -678,7 +652,7 @@ body::after { content: ""; position: fixed; inset: 0; z-index: 60; pointer-event
 @keyframes pulse-strip { 0% { box-shadow: 0 0 0 0 rgba(238, 152, 191, 0.7); } 100% { box-shadow: 0 0 0 10px rgba(238, 152, 191, 0); } }
 .top-card.pulse, #flaws button.pulse { animation: pulse 0.9s ease-out 1; }
 .strip-span.pulse { animation: pulse-strip 0.9s ease-out 1; }
-.strip-label.pulse rect { animation: pulse-svg 0.7s ease-in-out 1; }
+.strip-label.pulse text { animation: pulse-svg 0.7s ease-in-out 1; }
 .peeking .w.f-dot:not(.peek), .peeking .w.f-dash:not(.peek), .peeking .w.f-solid:not(.peek) { opacity: 0.45; }
 .peeking .top-card:not(.peek) { opacity: 0.7; }
 .w.peek { background: rgba(178, 73, 129, 0.2); color: var(--ink); }
@@ -692,7 +666,6 @@ body::after { content: ""; position: fixed; inset: 0; z-index: 60; pointer-event
 @keyframes slide-in { from { opacity: 0; transform: translateX(14px); } to { opacity: 1; transform: none; } }
 main { transition: opacity 0.14s ease; }
 main.fading { opacity: 0.25; }
-.intro .strip-heat, .intro .strip-glow { animation: band-in 0.6s ease-out 1s both; }
 .intro .strip-span, .intro .strip-label, .intro .strip-leader { animation: band-in 0.35s ease-out both; animation-delay: calc(1s + var(--seq, 0) * 0.16s); }
 @keyframes band-in { from { opacity: 0; } 60% { opacity: 1; filter: brightness(1.6); } to { opacity: 1; } }
 
@@ -700,7 +673,6 @@ main.fading { opacity: 0.25; }
   *, *::before, *::after { animation: none !important; transition: none !important; }
   .mark { transform: none; }
   .ring-glow { opacity: 0; }
-  .drift .cloud-lit { display: none; }
 }
 @media (max-width: 1060px) {
   .main-grid, .hero-grid, #fix-all-body { grid-template-columns: minmax(0, 1fr); }
@@ -725,8 +697,8 @@ main.fading { opacity: 0.25; }
   .hero { margin-top: 20px; }
   .hero h1 { font-size: 36px; line-height: 1.1; }
   .value-line { font-size: 16px; margin-top: 12px; }
-  /* phone: the text spans the width, so the horizon starts under it and the clouds keep below it */
-  .horizon { --range-h: 128px; --rise: 0px; --cloud-up: 0px; margin-top: 8px; }
+  /* phone: the text spans the width, so the horizon starts under it */
+  .horizon { --range-h: 150px; --rise: 0px; margin-top: 8px; }
   .glow { width: 260px; height: 150px; }
   .glow::after { width: 16px; height: 16px; margin: -8px 0 0 -8px; }
   h2 { font-size: 26px; }
