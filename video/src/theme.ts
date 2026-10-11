@@ -25,6 +25,11 @@ export const color = {
   flag: "#b24981",
   flagText: "#ee98bf",
   flagWash: "rgba(178, 73, 129, 0.16)",
+  flagBar: "#ca6699",
+  stripCalm: "#383532",
+  // The light tint over a flagged stretch of the waveform (style.css .wave-tint), firmer when selected.
+  tint: "rgba(238, 152, 191, 0.12)",
+  tintFirm: "rgba(238, 152, 191, 0.22)",
   // The dusk sky of the dashboard hero, from the top of the frame down to the ground.
   night: "#1c1d2b",
   dusk: "#2b2a43",
@@ -34,6 +39,7 @@ export const color = {
 export const font = {
   display: "Newsreader, Georgia, serif",
   text: "'Atkinson Hyperlegible Next', sans-serif",
+  mono: "'JetBrains Mono', 'DejaVu Sans Mono', monospace",
 } as const;
 
 export const fontsReady = Promise.all([
@@ -41,6 +47,8 @@ export const fontsReady = Promise.all([
   loadFont({ family: "Newsreader", url: staticFile("fonts/Newsreader-latin.woff2"), weight: "200 800" }),
   loadFont({ family: "Atkinson Hyperlegible Next", url: staticFile("fonts/AtkinsonHyperlegibleNext-Regular.woff2"), weight: "400" }),
   loadFont({ family: "Atkinson Hyperlegible Next", url: staticFile("fonts/AtkinsonHyperlegibleNext-Bold.woff2"), weight: "700" }),
+  // A variable font: the one latin file serves weights 100 to 800.
+  loadFont({ family: "JetBrains Mono", url: staticFile("fonts/JetBrainsMono-latin.woff2"), weight: "100 800" }),
 ]);
 
 // Key content stays above this line; the subtitle band sits below it.

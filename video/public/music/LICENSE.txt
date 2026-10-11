@@ -1,0 +1,14 @@
+Music of the launch video. src/components/MusicBed.tsx (constant MUSIC) names the track in use.
+
+inspired.mp3
+  "Inspired" by Kevin MacLeod (incompetech.com), ISRC USUAN1600022, 4:46.
+  Source: https://incompetech.com/music/royalty-free/mp3-royaltyfree/Inspired.mp3
+  Piece page: https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1600022
+  Licence: Creative Commons Attribution 4.0 International (CC BY 4.0), https://creativecommons.org/licenses/by/4.0/
+  Verified 2026-10-11 on https://incompetech.com/music/royalty-free/faq.html and .../licenses/, which state
+  "Licensed under Creative Commons: By Attribution 4.0". The credit the author asks for:
+    "Inspired" Kevin MacLeod (incompetech.com)
+    Licensed under Creative Commons: By Attribution 4.0
+    https://creativecommons.org/licenses/by/4.0/
+  The end card of the video shows the credit; the video description must carry it too.
+  The file is the author's MP3, unchanged.

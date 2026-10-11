@@ -1,14 +1,26 @@
 import React from "react";
-import { AbsoluteFill } from "remotion";
+import { AbsoluteFill, Img, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
 import { color, font } from "../theme";
 
-// Every scene sits under a faint version of the dashboard's dusk sky: night at the top, a low ember glow, then the ground.
+// The dashboard hero landscape, blurred and dimmed (public/plates/backdrop.jpg, made from the plates). It sits under
+// every scene and stays still during transitions, so a slide moves only the content. It drifts slowly over the whole video.
+export const Backdrop: React.FC = () => {
+  const frame = useCurrentFrame();
+  const { durationInFrames } = useVideoConfig();
+  const progress = frame / Math.max(1, durationInFrames);
+  return (
+    <AbsoluteFill style={{ backgroundColor: color.base, overflow: "hidden" }}>
+      <Img
+        src={staticFile("plates/backdrop.jpg")}
+        style={{ width: "100%", height: "100%", scale: String(1.06 + 0.04 * progress), translate: `${-30 + 60 * progress}px 0px` }}
+      />
+    </AbsoluteFill>
+  );
+};
+
+// A scene layer: transparent, so the backdrop shows through.
 export const SceneShell: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <AbsoluteFill style={{ backgroundColor: color.base, color: color.ink, fontFamily: font.text }}>
-    <AbsoluteFill style={{ background: `linear-gradient(180deg, ${color.night} 0%, ${color.dusk}66 18%, ${color.base} 46%)` }} />
-    <AbsoluteFill style={{ background: "radial-gradient(40% 26% at 78% 30%, rgba(168, 116, 104, 0.16), transparent 70%)" }} />
-    {children}
-  </AbsoluteFill>
+  <AbsoluteFill style={{ color: color.ink, fontFamily: font.text }}>{children}</AbsoluteFill>
 );
 
 export const Heading: React.FC<{ children: React.ReactNode; style?: React.CSSProperties }> = ({ children, style }) => (

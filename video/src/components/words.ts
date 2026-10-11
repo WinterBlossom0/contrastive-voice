@@ -24,3 +24,5 @@ export const yourWords = layoutWords(
   (index) => (index >= RUSH_FIRST && index <= RUSH_LAST ? 0.7 : 1.0),
   (index) => (index === 5 ? 0.9 : index >= RUSH_FIRST && index <= RUSH_LAST ? 0.03 : 0.12),
 );
+// The reading fades over "a new nation", the last three words.
+export const FADE_FIRST = 13;

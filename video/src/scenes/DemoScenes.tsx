@@ -1,67 +1,38 @@
 import React from "react";
 import { interpolate, useCurrentFrame, useVideoConfig } from "remotion";
-import { fadeOut, rise } from "../components/anim";
+import { fadeOut, pop, rise } from "../components/anim";
 import { CaptureFrame, FRAME } from "../components/CaptureFrame";
-import { Heading, SceneShell } from "../components/SceneShell";
-import { color } from "../theme";
-import { beatFrame, type SceneTiming } from "../timeline";
+import { ChapterMarker } from "../components/ChapterMarker";
+import { SceneShell } from "../components/SceneShell";
+import { color, font } from "../theme";
+import type { SceneId, SceneTiming } from "../timeline";
 
-// A heading appears with the narration line `atLine`, or with the clip when `atLine` is "clip".
-type DemoHeading = { text: string; atLine: number | "clip" };
+type DemoSpec = { chapter: number; title: string; shows: string };
 
-const headingStart = (scene: SceneTiming, heading: DemoHeading): number => {
-  if (heading.atLine === "clip") {
-    return scene.clip === null ? scene.durationInFrames : scene.clip.from;
-  }
-  return heading.atLine === 0 ? 0 : beatFrame(scene, heading.atLine);
+// One chapter per demo scene; `shows` is the placeholder text while the scene has no capture yet (build/work/video_v2/PLAN.md).
+export const DEMO_SCENES: Partial<Record<SceneId, DemoSpec>> = {
+  s3_open_example: { chapter: 1, title: "Try an example", shows: "The page loads; the examples menu opens; L3A scores 86.11, with its summary and the three biggest fixes." },
+  s4_listen: { chapter: 2, title: "Listen along", shows: "Play: the clouds rise with the voice, the transcript follows, tints and the severity strip." },
+  s5_finding: { chapter: 3, title: "Open a finding", shows: "Finding #3, Rushed: 0.87 s against 1.62 s, the gauge, Listen to yours and the reference, How to fix." },
+  s6_hear_fixed: { chapter: 4, title: "Hear it fixed", shows: "Hear it fixed: progress, the result card, Yours / Edited / Target, partly changed, +3.07." },
+  s7_melody: { chapter: 5, title: "Borrow the melody", shows: "A pitch finding: Try the reference's melody, then the result." },
+  s8_fix_all: { chapter: 6, title: "Fix everything", shows: "Fix everything and listen: 86.11 becomes 96.17; What each fix did." },
+  s9_text_lists: { chapter: 7, title: "Every word, every finding", shows: "Transcript underlines, a word played on click, Every finding with a filter, Every measurement zoomed." },
+  s10_fair: { chapter: 8, title: "Careful with flags", shows: "The identity example scores 100 with nothing flagged; r2_consensus compares with five readers." },
+  s11_upload: { chapter: 9, title: "Upload your own", shows: "Analyse your reading: file, bundled reference, transcript; a wrong transcript is refused; then the stages run." },
+  s12_no_reference: { chapter: 10, title: "No reference", shows: "L3A_self: three spots stand out, with the rough-check note." },
 };
-
-const DemoScene: React.FC<{ scene: SceneTiming; headings: DemoHeading[]; children?: React.ReactNode }> = ({ scene, headings, children }) => {
-  const frame = useCurrentFrame();
-  return (
-    <SceneShell>
-      {headings.map((heading, index) => {
-        const start = headingStart(scene, heading);
-        const end = index === headings.length - 1 ? scene.durationInFrames : headingStart(scene, headings[index + 1]);
-        return (
-          <Heading
-            key={heading.text}
-            style={{
-              position: "absolute",
-              left: FRAME.left,
-              top: 30,
-              fontSize: 50,
-              opacity: rise(frame, start, 16) * fadeOut(frame, end, 10),
-              translate: `0px ${interpolate(rise(frame, start, 16), [0, 1], [14, 0])}px`,
-            }}
-          >
-            {heading.text}
-          </Heading>
-        );
-      })}
-      <CaptureFrame captures={scene.captures} sceneDuration={scene.durationInFrames} />
-      {children}
-    </SceneShell>
-  );
-};
-
-export const S3DemoSummary: React.FC<{ scene: SceneTiming }> = ({ scene }) => (
-  <DemoScene scene={scene} headings={[
-      { text: "A gallery example: an edited speech", atLine: 0 },
-      { text: "Biggest fixes first", atLine: 3 },
-      { text: "Delivery score: 86.11", atLine: 4 },
-    ]} />
-);
 
 // Lavender is this recording and its edited take, lake the reference (the dashboard's colour jobs).
 const SEGMENT_TINT: Record<string, { line: string; text: string; wash: string }> = {
   Yours: { line: color.you, text: color.youText, wash: color.youWash },
   Edited: { line: color.you, text: color.youText, wash: color.youWash },
   Target: { line: color.ref, text: color.refText, wash: "rgba(33, 155, 161, 0.14)" },
+  Reference: { line: color.ref, text: color.refText, wash: "rgba(33, 155, 161, 0.14)" },
 };
 const PLAYING_TINT = { line: color.action, text: color.action, wash: color.actionWash };
 
-// The pill names what the clip plays: "Listen", or the take of a clip of several takes (it keeps a take's name through the gap after it).
+// While the scene's clip plays real app audio, a pill names what plays: "Listening", or the take of a clip of several takes.
 const ListeningPill: React.FC<{ scene: SceneTiming }> = ({ scene }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -71,25 +42,28 @@ const ListeningPill: React.FC<{ scene: SceneTiming }> = ({ scene }) => {
   const { from, durationInFrames, segments } = scene.clip;
   const visible = rise(frame, from, 12) * fadeOut(frame, from + durationInFrames, 12);
   const playing = (segments ?? []).filter((segment) => frame >= from + Math.round(segment.startSec * fps)).pop();
-  const label = playing === undefined ? "Listen" : playing.label;
+  const label = playing === undefined ? "Listening" : playing.label;
   const tint = playing === undefined ? PLAYING_TINT : SEGMENT_TINT[playing.label] ?? PLAYING_TINT;
+  const enter = pop(frame, from, true);
   return (
     <div
       style={{
         position: "absolute",
         right: FRAME.left,
-        top: 30,
+        top: 34,
         display: "flex",
         alignItems: "center",
         gap: 14,
-        padding: "10px 22px",
+        padding: "9px 22px",
         borderRadius: 999,
         backgroundColor: tint.wash,
-        border: `1px solid ${tint.line}`,
+        border: `1.5px solid ${tint.line}`,
         color: tint.text,
-        fontSize: 30,
+        fontFamily: font.text,
+        fontSize: 28,
         fontWeight: 700,
         opacity: visible,
+        scale: String(interpolate(enter, [0, 1], [0.8, 1])),
       }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: 4, height: 28 }}>
@@ -102,80 +76,16 @@ const ListeningPill: React.FC<{ scene: SceneTiming }> = ({ scene }) => {
   );
 };
 
-// The features that came after the frozen evaluation say so on screen while the narration introduces them.
-const AddedLaterBadge: React.FC<{ scene: SceneTiming }> = ({ scene }) => {
-  const frame = useCurrentFrame();
-  const end = scene.lines.length > 1 ? scene.lines[1].from : scene.durationInFrames;
-  return (
-    <div
-      style={{
-        position: "absolute",
-        right: FRAME.left,
-        top: 36,
-        padding: "8px 20px",
-        borderRadius: 999,
-        border: `1px solid ${color.line}`,
-        backgroundColor: color.surface,
-        color: color.ink2,
-        fontSize: 26,
-        opacity: rise(frame, 8, 14) * fadeOut(frame, end, 10),
-      }}
-    >
-      Added after the frozen evaluation
-    </div>
-  );
-};
+// The first demo scene: the browser window springs into view there, and stays in place for the later demo scenes.
+const FIRST_DEMO: SceneId = "s3_open_example";
 
-export const S4DemoListen: React.FC<{ scene: SceneTiming }> = ({ scene }) => (
-  <DemoScene scene={scene} headings={[
-      { text: "The transcript follows the audio", atLine: 0 },
-      { text: "Flags mark the exact words", atLine: 2 },
-    ]}>
+// The frame of a demo scene at which its chapter marker pops in; later in the first scene, after the window's entry.
+export const chapterFrame = (id: SceneId): number => (id === FIRST_DEMO ? 18 : 4);
+
+export const DemoScene: React.FC<{ scene: SceneTiming; spec: DemoSpec }> = ({ scene, spec }) => (
+  <SceneShell>
+    <ChapterMarker index={spec.chapter} title={spec.title} left={FRAME.left} top={30} start={chapterFrame(scene.id)} />
+    <CaptureFrame captures={scene.captures} enter={scene.id === FIRST_DEMO} pendingTitle={`Capture pending: ${scene.id}`} pendingDetail={spec.shows} />
     <ListeningPill scene={scene} />
-  </DemoScene>
-);
-
-export const S5DemoFinding: React.FC<{ scene: SceneTiming }> = ({ scene }) => (
-  <DemoScene scene={scene} headings={[
-      { text: "One finding in detail", atLine: 0 },
-      { text: "Measured against the reference", atLine: 1 },
-      { text: "One concrete fix", atLine: 3 },
-    ]} />
-);
-
-export const S5bDemoHearFixed: React.FC<{ scene: SceneTiming }> = ({ scene }) => (
-  <DemoScene scene={scene} headings={[
-      { text: "Hear it fixed", atLine: 0 },
-      { text: "Yours, edited, target", atLine: "clip" },
-      { text: "Still flagged · partly changed", atLine: 2 },
-      { text: "An edited preview, not a guarantee", atLine: 3 },
-    ]}>
-    <AddedLaterBadge scene={scene} />
-    <ListeningPill scene={scene} />
-  </DemoScene>
-);
-
-export const S5cDemoFixAll: React.FC<{ scene: SceneTiming }> = ({ scene }) => (
-  <DemoScene scene={scene} headings={[
-      { text: "Fix everything and listen", atLine: 0 },
-      { text: "What each fix did", atLine: 1 },
-    ]}>
-    <AddedLaterBadge scene={scene} />
-  </DemoScene>
-);
-
-export const S6DemoCleanAndUpload: React.FC<{ scene: SceneTiming }> = ({ scene }) => (
-  <DemoScene scene={scene} headings={[
-      { text: "Placebo check", atLine: 0 },
-      { text: "Upload your own pair", atLine: 1 },
-    ]} />
-);
-
-export const S6bDemoNoReference: React.FC<{ scene: SceneTiming }> = ({ scene }) => (
-  <DemoScene scene={scene} headings={[
-      { text: "Without a reference", atLine: 0 },
-      { text: "A rough check", atLine: 1 },
-    ]}>
-    <AddedLaterBadge scene={scene} />
-  </DemoScene>
+  </SceneShell>
 );

@@ -1,0 +1,6 @@
+click.wav, whoosh.wav, pop.wav, rise.wav, chime.wav, typing.wav
+
+Source: synthesized for this project by make_sfx.py in this folder (sine waves and seeded noise; no samples and no
+third-party recording).
+Licence: CC0 1.0 Universal (public domain dedication), https://creativecommons.org/publicdomain/zero/1.0/
+Rebuild: python3 make_sfx.py

@@ -1,28 +1,240 @@
 {
-  "voice": "af_heart",
+  "voice": "Qwen3-TTS-12Hz-1.7B-CustomVoice, built-in speaker Sohee, per-line direction in the instruct field, temperature 0.7, one take per line chosen from four to eight seeds",
   "scenes": [
     {
       "id": "s1_hook",
       "lines": [
         {
-          "text": "You practise a speech and record it.",
+          "text": "You've practised a speech for days.",
           "file": "narration/s1_hook_01.wav",
-          "durationSec": 2.122
+          "durationSec": 2.23,
+          "direction": "Intimate and warm, like talking to one friend. Calm, unhurried pace; soft emphasis on 'days'.",
+          "words": [
+            [
+              "You've",
+              0.08,
+              0.3
+            ],
+            [
+              "practised",
+              0.36,
+              0.8
+            ],
+            [
+              "a",
+              0.9,
+              0.92
+            ],
+            [
+              "speech",
+              0.98,
+              1.28
+            ],
+            [
+              "for",
+              1.38,
+              1.48
+            ],
+            [
+              "days.",
+              1.58,
+              1.92
+            ]
+          ]
         },
         {
-          "text": "It sounds a little off, but you cannot say where.",
+          "text": "You record it, play it back... and something feels off.",
           "file": "narration/s1_hook_02.wav",
-          "durationSec": 2.626
+          "durationSec": 5.56,
+          "direction": "Intimate and curious. Short pause before 'and something feels off', then lower and slower on 'feels off'.",
+          "words": [
+            [
+              "You",
+              0.08,
+              0.16
+            ],
+            [
+              "record",
+              0.26,
+              0.66
+            ],
+            [
+              "it,",
+              0.9,
+              0.96
+            ],
+            [
+              "play",
+              1.44,
+              1.62
+            ],
+            [
+              "it",
+              1.68,
+              1.72
+            ],
+            [
+              "back...",
+              1.8,
+              2.32
+            ],
+            [
+              "and",
+              3.28,
+              3.36
+            ],
+            [
+              "something",
+              3.5,
+              3.96
+            ],
+            [
+              "feels",
+              5.02,
+              5.26
+            ],
+            [
+              "off.",
+              5.36,
+              5.46
+            ]
+          ]
         },
         {
-          "text": "Too fast? A pause in the wrong place? Too quiet at the end?",
+          "text": "Too fast? A pause in the wrong place? Fading at the end?",
           "file": "narration/s1_hook_03.wav",
-          "durationSec": 3.585
+          "durationSec": 5.22,
+          "direction": "Curious and a little playful. Three quick questions, each with a rising, questioning tone and a short pause between them.",
+          "words": [
+            [
+              "Too",
+              0.1,
+              0.26
+            ],
+            [
+              "fast?",
+              0.38,
+              0.76
+            ],
+            [
+              "A",
+              1.68,
+              1.7
+            ],
+            [
+              "pause",
+              1.76,
+              2.04
+            ],
+            [
+              "in",
+              2.1,
+              2.14
+            ],
+            [
+              "the",
+              2.2,
+              2.28
+            ],
+            [
+              "wrong",
+              2.32,
+              2.48
+            ],
+            [
+              "place?",
+              2.6,
+              2.94
+            ],
+            [
+              "Fading",
+              4.16,
+              4.48
+            ],
+            [
+              "at",
+              4.54,
+              4.6
+            ],
+            [
+              "the",
+              4.64,
+              4.74
+            ],
+            [
+              "end?",
+              4.84,
+              4.98
+            ]
+          ]
         },
         {
-          "text": "Contrastive Voice shows you which words to fix, and how.",
+          "text": "Contrastive Voice shows you exactly which words, and how to fix them.",
           "file": "narration/s1_hook_04.wav",
-          "durationSec": 3.361
+          "durationSec": 4.77,
+          "direction": "Confident and clear, with a smile. Lean on 'exactly which words'; finish firmly on 'how to fix them'.",
+          "words": [
+            [
+              "Contrastive",
+              0.08,
+              0.8
+            ],
+            [
+              "Voice",
+              0.86,
+              1.18
+            ],
+            [
+              "shows",
+              1.38,
+              1.68
+            ],
+            [
+              "you",
+              1.74,
+              1.84
+            ],
+            [
+              "exactly",
+              1.94,
+              2.5
+            ],
+            [
+              "which",
+              2.62,
+              2.82
+            ],
+            [
+              "words,",
+              2.92,
+              3.3
+            ],
+            [
+              "and",
+              3.56,
+              3.64
+            ],
+            [
+              "how",
+              3.74,
+              3.88
+            ],
+            [
+              "to",
+              3.96,
+              4.06
+            ],
+            [
+              "fix",
+              4.12,
+              4.26
+            ],
+            [
+              "them.",
+              4.4,
+              4.56
+            ]
+          ]
         }
       ],
       "clip": null,
@@ -32,339 +244,3133 @@
       "id": "s2_what",
       "lines": [
         {
-          "text": "Give it two readings of the same text: yours, and a reference you want to sound like.",
+          "text": "Give it your reading, and a reference reading of the same text: your best take, a coach, or a speaker you admire.",
           "file": "narration/s2_what_01.wav",
-          "durationSec": 4.904
+          "durationSec": 8.06,
+          "direction": "Clear and inviting, at an easy pace. Short pauses at the commas; light emphasis on 'reference reading'.",
+          "words": [
+            [
+              "Give",
+              0.08,
+              0.22
+            ],
+            [
+              "it",
+              0.26,
+              0.3
+            ],
+            [
+              "your",
+              0.34,
+              0.44
+            ],
+            [
+              "reading,",
+              0.5,
+              0.78
+            ],
+            [
+              "and",
+              1.02,
+              1.1
+            ],
+            [
+              "a",
+              1.16,
+              1.18
+            ],
+            [
+              "reference",
+              1.24,
+              1.62
+            ],
+            [
+              "reading",
+              1.68,
+              1.92
+            ],
+            [
+              "of",
+              1.98,
+              2.02
+            ],
+            [
+              "the",
+              2.08,
+              2.16
+            ],
+            [
+              "same",
+              2.22,
+              2.42
+            ],
+            [
+              "text:",
+              2.5,
+              2.8
+            ],
+            [
+              "your",
+              3.8,
+              3.92
+            ],
+            [
+              "best",
+              3.98,
+              4.2
+            ],
+            [
+              "take,",
+              4.3,
+              4.54
+            ],
+            [
+              "a",
+              5.18,
+              5.2
+            ],
+            [
+              "coach,",
+              5.28,
+              5.56
+            ],
+            [
+              "or",
+              6.22,
+              6.3
+            ],
+            [
+              "a",
+              6.38,
+              6.4
+            ],
+            [
+              "speaker",
+              6.46,
+              6.9
+            ],
+            [
+              "you",
+              7.38,
+              7.48
+            ],
+            [
+              "admire.",
+              7.56,
+              7.94
+            ]
+          ]
         },
         {
-          "text": "It lines them up word by word.",
+          "text": "It lines the two up word by word, and marks every place where your delivery drifts.",
           "file": "narration/s2_what_02.wav",
-          "durationSec": 1.958
-        },
-        {
-          "text": "Then it marks each place where your delivery departs from the reference.",
-          "file": "narration/s2_what_03.wav",
-          "durationSec": 3.917
-        },
-        {
-          "text": "Pace, pauses, pitch, emphasis, volume and clarity, pinned to the exact words and times.",
-          "file": "narration/s2_what_04.wav",
-          "durationSec": 5.758
-        },
-        {
-          "text": "Every finding comes with a concrete fix.",
-          "file": "narration/s2_what_05.wav",
-          "durationSec": 2.541
-        }
-      ],
-      "clip": null,
-      "gapAfterSec": 0.8
-    },
-    {
-      "id": "s3_demo_summary",
-      "lines": [
-        {
-          "text": "Here is an example from the gallery.",
-          "file": "narration/s3_demo_summary_01.wav",
-          "durationSec": 2.217
-        },
-        {
-          "text": "The reference is Ronald Reagan's farewell address from 1989.",
-          "file": "narration/s3_demo_summary_02.wav",
-          "durationSec": 4.52,
-          "spoken": "The reference is Ronald Reagan's farewell address, from nineteen eighty-nine."
-        },
-        {
-          "text": "The other reading is a copy of that recording with four delivery edits added.",
-          "file": "narration/s3_demo_summary_03.wav",
-          "durationSec": 4.492
-        },
-        {
-          "text": "The biggest fixes come first: rushed words, a fade, and a dropped pause.",
-          "file": "narration/s3_demo_summary_04.wav",
-          "durationSec": 4.336
-        },
-        {
-          "text": "The score is 86 out of 100, measured against the reference.",
-          "file": "narration/s3_demo_summary_05.wav",
-          "durationSec": 4.122,
-          "spoken": "The score is eighty-six out of a hundred, measured against the reference."
-        }
-      ],
-      "clip": null,
-      "gapAfterSec": 0.8
-    },
-    {
-      "id": "s4_demo_listen",
-      "lines": [
-        {
-          "text": "Now listen to the edited reading while the transcript follows along.",
-          "file": "narration/s4_demo_listen_01.wav",
-          "durationSec": 3.84
-        },
-        {
-          "text": "The pause after 'morning' is gone, the monument phrase is rushed, and the last words fade.",
-          "file": "narration/s4_demo_listen_02.wav",
-          "durationSec": 5.375,
-          "spoken": "The pause after morning is gone, the monument phrase is rushed, and the last words fade."
-        },
-        {
-          "text": "Each highlight sits on the words where you heard the problem.",
-          "file": "narration/s4_demo_listen_03.wav",
-          "durationSec": 3.143
-        }
-      ],
-      "clip": {
-        "file": "clips/L3A_listen.wav",
-        "durationSec": 12.18,
-        "caption": "Edited reading, 12.0 to 24.2 s",
-        "sourceStartSec": 12.02,
-        "sourceEndSec": 24.2
-      },
-      "gapAfterSec": 0.8,
-      "clipAfterLine": 1
-    },
-    {
-      "id": "s5_demo_finding",
-      "lines": [
-        {
-          "text": "Click a flag to open its finding.",
-          "file": "narration/s5_demo_finding_01.wav",
-          "durationSec": 2.077
-        },
-        {
-          "text": "It shows both measured values and the threshold.",
-          "file": "narration/s5_demo_finding_02.wav",
-          "durationSec": 3.113
-        },
-        {
-          "text": "Here, five words took 0.87 s. In the reference they take 1.62 s.",
-          "file": "narration/s5_demo_finding_03.wav",
-          "durationSec": 6.407,
-          "spoken": "Here, five words took point eight seven seconds. In the reference, they take one point six two seconds."
-        },
-        {
-          "text": "The fix: give these words about 1.6 s, and lengthen the stressed words rather than adding gaps.",
-          "file": "narration/s5_demo_finding_04.wav",
-          "durationSec": 6.75,
-          "spoken": "The fix: give these words about one point six seconds, and lengthen the stressed words, rather than adding gaps."
-        }
-      ],
-      "clip": null,
-      "gapAfterSec": 0.6
-    },
-    {
-      "id": "s5b_demo_hear_fixed",
-      "lines": [
-        {
-          "text": "Added after the frozen evaluation: 'Hear it fixed' edits your own recording toward the reference.",
-          "file": "narration/s5b_demo_hear_fixed_01.wav",
-          "durationSec": 5.996,
-          "spoken": "Added after the frozen evaluation: Hear it fixed, edits your own recording toward the reference."
-        },
-        {
-          "text": "Listen to yours, the edited take, then the target.",
-          "file": "narration/s5b_demo_hear_fixed_02.wav",
-          "durationSec": 2.876
-        },
-        {
-          "text": "Still flagged, partly changed: the score rises 3.07 points.",
-          "file": "narration/s5b_demo_hear_fixed_03.wav",
-          "durationSec": 5.066,
-          "spoken": "Still flagged, partly changed. The score rises three point zero seven points."
-        },
-        {
-          "text": "It is an edited preview of the change, not a guarantee.",
-          "file": "narration/s5b_demo_hear_fixed_04.wav",
-          "durationSec": 3.333
-        }
-      ],
-      "clip": {
-        "file": "clips/L3A_hear_fixed.wav",
-        "durationSec": 12.088,
-        "caption": "Yours, edited, then the target: 'over the grounds here to the Washington Monument and then the Mall'",
-        "segments": [
-          {
-            "label": "Yours",
-            "startSec": 0.0,
-            "endSec": 3.34,
-            "sourceStartSec": 14.8,
-            "sourceEndSec": 18.14
-          },
-          {
-            "label": "Edited",
-            "startSec": 3.84,
-            "endSec": 7.488,
-            "sourceStartSec": 14.8,
-            "sourceEndSec": 18.448
-          },
-          {
-            "label": "Target",
-            "startSec": 7.988,
-            "endSec": 12.088,
-            "sourceStartSec": 15.52,
-            "sourceEndSec": 19.62
-          }
-        ]
-      },
-      "gapAfterSec": 0.6,
-      "clipAfterLine": 2
-    },
-    {
-      "id": "s5c_demo_fix_all",
-      "lines": [
-        {
-          "text": "'Fix everything and listen' edits the whole reading: 86.11 becomes 96.17.",
-          "file": "narration/s5c_demo_fix_all_01.wav",
-          "durationSec": 7.308,
-          "spoken": "Fix everything and listen, edits the whole reading. Eighty-six point one one becomes ninety-six point one seven."
-        },
-        {
-          "text": "The list says what each fix did: two spots are no longer flagged, three are still flagged.",
-          "file": "narration/s5c_demo_fix_all_02.wav",
-          "durationSec": 5.384
-        }
-      ],
-      "clip": null,
-      "gapAfterSec": 0.8
-    },
-    {
-      "id": "s6_demo_clean_and_upload",
-      "lines": [
-        {
-          "text": "A clean reading should get no flags: the identity example scores 100, with nothing flagged.",
-          "file": "narration/s6_demo_clean_and_upload_01.wav",
-          "durationSec": 5.93,
-          "spoken": "A clean reading should get no flags. The identity example scores a hundred, with nothing flagged."
-        },
-        {
-          "text": "To check your own speech, upload your reading and a reference reading of the same text.",
-          "file": "narration/s6_demo_clean_and_upload_02.wav",
-          "durationSec": 4.888
-        }
-      ],
-      "clip": null,
-      "gapAfterSec": 0.6
-    },
-    {
-      "id": "s6b_demo_no_reference",
-      "lines": [
-        {
-          "text": "Also added after the evaluation: with no reference, the reading is graded against itself, and three spots stand out.",
-          "file": "narration/s6b_demo_no_reference_01.wav",
-          "durationSec": 7.332
-        },
-        {
-          "text": "That is a rough check. A reference reading of the same text gives better results.",
-          "file": "narration/s6b_demo_no_reference_02.wav",
-          "durationSec": 4.935
+          "durationSec": 5.85,
+          "direction": "Clear and inviting. Lean on 'word by word' and 'drifts'; end with a gentle, settled fall.",
+          "words": [
+            [
+              "It",
+              0.12,
+              0.18
+            ],
+            [
+              "lines",
+              0.24,
+              0.5
+            ],
+            [
+              "the",
+              0.58,
+              0.66
+            ],
+            [
+              "two",
+              0.72,
+              0.86
+            ],
+            [
+              "up",
+              1.12,
+              1.18
+            ],
+            [
+              "word",
+              1.36,
+              1.62
+            ],
+            [
+              "by",
+              1.76,
+              1.9
+            ],
+            [
+              "word,",
+              2.0,
+              2.22
+            ],
+            [
+              "and",
+              2.8,
+              2.88
+            ],
+            [
+              "marks",
+              2.96,
+              3.22
+            ],
+            [
+              "every",
+              3.5,
+              3.7
+            ],
+            [
+              "place",
+              3.82,
+              4.12
+            ],
+            [
+              "where",
+              4.34,
+              4.48
+            ],
+            [
+              "your",
+              4.52,
+              4.64
+            ],
+            [
+              "delivery",
+              4.68,
+              5.12
+            ],
+            [
+              "drifts.",
+              5.2,
+              5.6
+            ]
+          ]
         }
       ],
       "clip": null,
       "gapAfterSec": 1.0
     },
     {
-      "id": "s7_how",
+      "id": "s3_open_example",
       "lines": [
         {
-          "text": "How does it work?",
-          "file": "narration/s7_how_01.wav",
-          "durationSec": 1.234
+          "text": "Let's try it with an example from the gallery.",
+          "file": "narration/s3_open_example_01.wav",
+          "durationSec": 2.76,
+          "direction": "Friendly, upbeat guide with a natural smile, slightly brisk. Lean on 'example'.",
+          "words": [
+            [
+              "Let's",
+              0.12,
+              0.34
+            ],
+            [
+              "try",
+              0.54,
+              0.8
+            ],
+            [
+              "it",
+              0.9,
+              0.96
+            ],
+            [
+              "with",
+              1.04,
+              1.22
+            ],
+            [
+              "an",
+              1.38,
+              1.42
+            ],
+            [
+              "example",
+              1.48,
+              1.92
+            ],
+            [
+              "from",
+              2.0,
+              2.12
+            ],
+            [
+              "the",
+              2.16,
+              2.22
+            ],
+            [
+              "gallery.",
+              2.26,
+              2.6
+            ]
+          ]
         },
         {
-          "text": "Forced alignment times every word in both recordings, at 20 ms resolution.",
-          "file": "narration/s7_how_02.wav",
-          "durationSec": 5.61,
-          "spoken": "Forced alignment times every word in both recordings, at twenty millisecond resolution."
+          "text": "This is Ronald Reagan's farewell address, with four delivery slips added on purpose.",
+          "file": "narration/s3_open_example_02.wav",
+          "durationSec": 5.41,
+          "direction": "Friendly, upbeat guide, slightly brisk. Lean on 'four delivery slips' and 'on purpose'.",
+          "words": [
+            [
+              "This",
+              0.12,
+              0.24
+            ],
+            [
+              "is",
+              0.36,
+              0.42
+            ],
+            [
+              "Ronald",
+              0.52,
+              0.82
+            ],
+            [
+              "Reagan's",
+              0.9,
+              1.32
+            ],
+            [
+              "farewell",
+              1.4,
+              1.78
+            ],
+            [
+              "address,",
+              1.84,
+              2.24
+            ],
+            [
+              "with",
+              2.68,
+              2.82
+            ],
+            [
+              "four",
+              2.94,
+              3.18
+            ],
+            [
+              "delivery",
+              3.26,
+              3.64
+            ],
+            [
+              "slips",
+              3.72,
+              4.02
+            ],
+            [
+              "added",
+              4.2,
+              4.4
+            ],
+            [
+              "on",
+              4.6,
+              4.64
+            ],
+            [
+              "purpose.",
+              4.74,
+              5.12
+            ]
+          ]
         },
         {
-          "text": "Nine delivery measures are taken on the same words in both, over five-word windows.",
-          "file": "narration/s7_how_03.wav",
-          "durationSec": 5.018
-        },
-        {
-          "text": "Volume and pitch are relative to your own median, so a deep voice is not a flaw.",
-          "file": "narration/s7_how_04.wav",
-          "durationSec": 4.822
-        },
-        {
-          "text": "Only a difference past a threshold fitted on flawless comparisons is flagged.",
-          "file": "narration/s7_how_05.wav",
-          "durationSec": 4.656
+          "text": "It scores 86 out of 100: rushed in the middle, then fading. And the three biggest fixes come first.",
+          "file": "narration/s3_open_example_03.wav",
+          "durationSec": 7.84,
+          "direction": "Friendly, upbeat guide. Lean on 'eighty-six'; brief pause before 'And the three biggest fixes come first'.",
+          "words": [
+            [
+              "It",
+              0.12,
+              0.16
+            ],
+            [
+              "scores",
+              0.22,
+              0.52
+            ],
+            [
+              "86",
+              0.66,
+              1.14
+            ],
+            [
+              "out",
+              1.38,
+              1.46
+            ],
+            [
+              "of",
+              1.5,
+              1.54
+            ],
+            [
+              "100:",
+              1.6,
+              2.02
+            ],
+            [
+              "rushed",
+              2.72,
+              2.98
+            ],
+            [
+              "in",
+              3.1,
+              3.14
+            ],
+            [
+              "the",
+              3.2,
+              3.26
+            ],
+            [
+              "middle,",
+              3.3,
+              3.52
+            ],
+            [
+              "then",
+              4.0,
+              4.14
+            ],
+            [
+              "fading.",
+              4.3,
+              4.62
+            ],
+            [
+              "And",
+              5.42,
+              5.5
+            ],
+            [
+              "the",
+              5.56,
+              5.62
+            ],
+            [
+              "three",
+              5.7,
+              5.92
+            ],
+            [
+              "biggest",
+              6.06,
+              6.34
+            ],
+            [
+              "fixes",
+              6.42,
+              6.78
+            ],
+            [
+              "come",
+              7.1,
+              7.28
+            ],
+            [
+              "first.",
+              7.4,
+              7.68
+            ]
+          ]
         }
       ],
       "clip": null,
-      "gapAfterSec": 0.8
+      "gapAfterSec": 0.6
     },
     {
-      "id": "s8_evidence",
+      "id": "s4_listen",
       "lines": [
         {
-          "text": "2,410 audio files: nine public-domain speeches, with edits of known type, place and size.",
-          "file": "narration/s8_evidence_01.wav",
-          "durationSec": 7.931,
-          "spoken": "Two thousand, four hundred and ten audio files: nine public-domain speeches, with edits of known type, place and size."
+          "text": "Press play, and watch the sky. The clouds are drawn from the voice, and they rise and glow as it speaks.",
+          "file": "narration/s4_listen_01.wav",
+          "durationSec": 8.84,
+          "direction": "Friendly, upbeat guide with a hint of wonder. Lean on 'watch the sky'; light and flowing on 'rise and glow'.",
+          "words": [
+            [
+              "Press",
+              0.06,
+              0.28
+            ],
+            [
+              "play,",
+              0.42,
+              0.76
+            ],
+            [
+              "and",
+              1.18,
+              1.26
+            ],
+            [
+              "watch",
+              1.32,
+              1.54
+            ],
+            [
+              "the",
+              1.64,
+              1.72
+            ],
+            [
+              "sky.",
+              1.78,
+              2.14
+            ],
+            [
+              "The",
+              3.24,
+              3.32
+            ],
+            [
+              "clouds",
+              3.4,
+              3.8
+            ],
+            [
+              "are",
+              3.86,
+              3.94
+            ],
+            [
+              "drawn",
+              4.0,
+              4.34
+            ],
+            [
+              "from",
+              4.44,
+              4.58
+            ],
+            [
+              "the",
+              4.64,
+              4.7
+            ],
+            [
+              "voice,",
+              4.76,
+              5.1
+            ],
+            [
+              "and",
+              5.84,
+              5.92
+            ],
+            [
+              "they",
+              5.96,
+              6.08
+            ],
+            [
+              "rise",
+              6.16,
+              6.6
+            ],
+            [
+              "and",
+              6.9,
+              7.0
+            ],
+            [
+              "glow",
+              7.1,
+              7.44
+            ],
+            [
+              "as",
+              7.8,
+              7.84
+            ],
+            [
+              "it",
+              7.96,
+              8.0
+            ],
+            [
+              "speaks.",
+              8.1,
+              8.52
+            ]
+          ]
         },
         {
-          "text": "On held-out speakers, F1 is 0.812 as pre-registered; 0.879 with one detection per change.",
-          "file": "narration/s8_evidence_02.wav",
-          "durationSec": 7.814,
-          "spoken": "On held-out speakers, F one is point eight one two as pre-registered. Point eight seven nine, with one detection per change."
-        },
-        {
-          "text": "Zero false flags in 5.89 minutes of unedited and placebo copies.",
-          "file": "narration/s8_evidence_03.wav",
-          "durationSec": 5.255,
-          "spoken": "Zero false flags, in five point eight nine minutes of unedited and placebo copies."
-        },
-        {
-          "text": "Gain and MP3 keep every detection; 10 dB babble keeps 60 %.",
-          "file": "narration/s8_evidence_04.wav",
-          "durationSec": 5.685,
-          "spoken": "Gain and M P three keep every detection. Ten decibel babble keeps sixty percent."
+          "text": "Below, each finding is a tinted stretch of the waveform, with its bar on the strip. A brighter bar costs more.",
+          "file": "narration/s4_listen_02.wav",
+          "durationSec": 7.65,
+          "direction": "Friendly, upbeat guide, slightly brisk and clear. Lean on 'tinted stretch' and 'brighter bar costs more'.",
+          "words": [
+            [
+              "Below,",
+              0.06,
+              0.34
+            ],
+            [
+              "each",
+              1.06,
+              1.2
+            ],
+            [
+              "finding",
+              1.3,
+              1.62
+            ],
+            [
+              "is",
+              1.68,
+              1.74
+            ],
+            [
+              "a",
+              1.82,
+              1.84
+            ],
+            [
+              "tinted",
+              1.88,
+              2.16
+            ],
+            [
+              "stretch",
+              2.26,
+              2.52
+            ],
+            [
+              "of",
+              2.56,
+              2.6
+            ],
+            [
+              "the",
+              2.66,
+              2.72
+            ],
+            [
+              "waveform,",
+              2.76,
+              3.22
+            ],
+            [
+              "with",
+              3.9,
+              4.02
+            ],
+            [
+              "its",
+              4.08,
+              4.18
+            ],
+            [
+              "bar",
+              4.24,
+              4.44
+            ],
+            [
+              "on",
+              4.52,
+              4.56
+            ],
+            [
+              "the",
+              4.62,
+              4.68
+            ],
+            [
+              "strip.",
+              4.74,
+              4.98
+            ],
+            [
+              "A",
+              6.0,
+              6.02
+            ],
+            [
+              "brighter",
+              6.08,
+              6.4
+            ],
+            [
+              "bar",
+              6.48,
+              6.7
+            ],
+            [
+              "costs",
+              6.84,
+              7.2
+            ],
+            [
+              "more.",
+              7.3,
+              7.56
+            ]
+          ]
         }
       ],
       "clip": null,
-      "gapAfterSec": 0.8
+      "gapAfterSec": 0.6
     },
     {
-      "id": "s9_open",
+      "id": "s5_finding",
       "lines": [
         {
-          "text": "Run it yourself with one Docker command.",
-          "file": "narration/s9_open_01.wav",
-          "durationSec": 2.409
+          "text": "Click a finding to open it.",
+          "file": "narration/s5_finding_01.wav",
+          "durationSec": 1.9,
+          "direction": "Friendly, upbeat guide; short and inviting. Lean on 'Click'.",
+          "words": [
+            [
+              "Click",
+              0.1,
+              0.32
+            ],
+            [
+              "a",
+              0.52,
+              0.54
+            ],
+            [
+              "finding",
+              0.64,
+              1.08
+            ],
+            [
+              "to",
+              1.22,
+              1.3
+            ],
+            [
+              "open",
+              1.48,
+              1.66
+            ],
+            [
+              "it.",
+              1.74,
+              1.82
+            ]
+          ]
         },
         {
-          "text": "Open the page in your browser, then try the examples or your own reading.",
-          "file": "narration/s9_open_02.wav",
-          "durationSec": 4.328
+          "text": "These five words took 0.87 seconds. The reference takes 1.62.",
+          "file": "narration/s5_finding_02.wav",
+          "durationSec": 6.98,
+          "direction": "Friendly, upbeat guide. Slow down a little and lean on 'zero point eight seven' and 'one point six two'.",
+          "words": [
+            [
+              "These",
+              0.12,
+              0.3
+            ],
+            [
+              "five",
+              0.42,
+              0.68
+            ],
+            [
+              "words",
+              0.78,
+              1.1
+            ],
+            [
+              "took",
+              1.34,
+              1.5
+            ],
+            [
+              "0.87",
+              1.62,
+              2.92
+            ],
+            [
+              "seconds.",
+              3.06,
+              3.48
+            ],
+            [
+              "The",
+              4.24,
+              4.3
+            ],
+            [
+              "reference",
+              4.38,
+              4.78
+            ],
+            [
+              "takes",
+              4.9,
+              5.16
+            ],
+            [
+              "1.62.",
+              5.5,
+              6.84
+            ]
+          ]
         },
         {
-          "text": "The detector is on Hugging Face, and the code is on GitHub.",
-          "file": "narration/s9_open_03.wav",
-          "durationSec": 3.631
+          "text": "Listen: yours first, then the reference.",
+          "file": "narration/s5_finding_03.wav",
+          "durationSec": 2.47,
+          "direction": "Friendly and inviting. Small pause after 'Listen'; lean on 'yours first'.",
+          "words": [
+            [
+              "Listen:",
+              0.1,
+              0.36
+            ],
+            [
+              "yours",
+              0.6,
+              0.86
+            ],
+            [
+              "first,",
+              0.98,
+              1.24
+            ],
+            [
+              "then",
+              1.54,
+              1.64
+            ],
+            [
+              "the",
+              1.72,
+              1.78
+            ],
+            [
+              "reference.",
+              1.84,
+              2.24
+            ]
+          ]
+        },
+        {
+          "text": "The fix: give these words about 1.6 seconds, and stretch the stressed words, not the gaps.",
+          "file": "narration/s5_finding_04.wav",
+          "durationSec": 6.58,
+          "direction": "Friendly, helpful guide. Lean on 'one point six seconds' and 'stressed words'; light contrast on 'not the gaps'.",
+          "words": [
+            [
+              "The",
+              0.08,
+              0.16
+            ],
+            [
+              "fix:",
+              0.22,
+              0.38
+            ],
+            [
+              "give",
+              1.5,
+              1.66
+            ],
+            [
+              "these",
+              1.72,
+              1.88
+            ],
+            [
+              "words",
+              1.96,
+              2.22
+            ],
+            [
+              "about",
+              2.28,
+              2.48
+            ],
+            [
+              "1.6",
+              2.6,
+              3.16
+            ],
+            [
+              "seconds,",
+              3.26,
+              3.64
+            ],
+            [
+              "and",
+              3.86,
+              3.94
+            ],
+            [
+              "stretch",
+              4.04,
+              4.34
+            ],
+            [
+              "the",
+              4.42,
+              4.5
+            ],
+            [
+              "stressed",
+              4.58,
+              4.92
+            ],
+            [
+              "words,",
+              4.98,
+              5.28
+            ],
+            [
+              "not",
+              5.7,
+              5.84
+            ],
+            [
+              "the",
+              5.9,
+              5.98
+            ],
+            [
+              "gaps.",
+              6.02,
+              6.34
+            ]
+          ]
         }
       ],
       "clip": null,
-      "gapAfterSec": 1.2
+      "gapAfterSec": 0.6
     },
     {
-      "id": "s10_close",
+      "id": "s6_hear_fixed",
+      "lines": [
+        {
+          "text": "Hard to imagine? Press Hear it fixed.",
+          "file": "narration/s6_hear_fixed_01.wav",
+          "durationSec": 4.0,
+          "direction": "Playful, upbeat guide. A curious question, then a bright lean on 'Hear it fixed'.",
+          "words": [
+            [
+              "Hard",
+              0.12,
+              0.3
+            ],
+            [
+              "to",
+              0.36,
+              0.44
+            ],
+            [
+              "imagine?",
+              0.54,
+              0.94
+            ],
+            [
+              "Press",
+              2.0,
+              2.36
+            ],
+            [
+              "Hear",
+              2.92,
+              3.14
+            ],
+            [
+              "it",
+              3.24,
+              3.3
+            ],
+            [
+              "fixed.",
+              3.46,
+              3.8
+            ]
+          ]
+        },
+        {
+          "text": "It edits your own recording toward the reference, then checks the result again.",
+          "file": "narration/s6_hear_fixed_02.wav",
+          "durationSec": 4.92,
+          "direction": "Friendly, upbeat guide, slightly brisk. Lean on 'your own recording' and 'checks'.",
+          "words": [
+            [
+              "It",
+              0.14,
+              0.18
+            ],
+            [
+              "edits",
+              0.32,
+              0.56
+            ],
+            [
+              "your",
+              0.62,
+              0.76
+            ],
+            [
+              "own",
+              0.92,
+              1.02
+            ],
+            [
+              "recording",
+              1.1,
+              1.54
+            ],
+            [
+              "toward",
+              1.62,
+              1.92
+            ],
+            [
+              "the",
+              1.98,
+              2.04
+            ],
+            [
+              "reference,",
+              2.1,
+              2.52
+            ],
+            [
+              "then",
+              3.52,
+              3.62
+            ],
+            [
+              "checks",
+              3.74,
+              3.98
+            ],
+            [
+              "the",
+              4.06,
+              4.14
+            ],
+            [
+              "result",
+              4.18,
+              4.44
+            ],
+            [
+              "again.",
+              4.52,
+              4.8
+            ]
+          ]
+        },
+        {
+          "text": "Here it's partly fixed, and the score rises by 3.07. It says so plainly, because it's a preview, not a promise.",
+          "file": "narration/s6_hear_fixed_03.wav",
+          "durationSec": 10.32,
+          "direction": "Friendly and honest. Lean on 'partly fixed' and 'three point oh seven'; sincere on 'a preview, not a promise'.",
+          "words": [
+            [
+              "Here",
+              0.06,
+              0.26
+            ],
+            [
+              "it's",
+              0.46,
+              0.6
+            ],
+            [
+              "partly",
+              0.66,
+              0.94
+            ],
+            [
+              "fixed,",
+              1.02,
+              1.3
+            ],
+            [
+              "and",
+              2.0,
+              2.08
+            ],
+            [
+              "the",
+              2.14,
+              2.2
+            ],
+            [
+              "score",
+              2.26,
+              2.56
+            ],
+            [
+              "rises",
+              2.66,
+              3.04
+            ],
+            [
+              "by",
+              3.14,
+              3.24
+            ],
+            [
+              "3.07.",
+              3.36,
+              4.54
+            ],
+            [
+              "It",
+              5.94,
+              5.98
+            ],
+            [
+              "says",
+              6.1,
+              6.28
+            ],
+            [
+              "so",
+              6.36,
+              6.46
+            ],
+            [
+              "plainly,",
+              6.62,
+              7.04
+            ],
+            [
+              "because",
+              7.36,
+              7.6
+            ],
+            [
+              "it's",
+              7.72,
+              7.84
+            ],
+            [
+              "a",
+              7.9,
+              7.92
+            ],
+            [
+              "preview,",
+              7.98,
+              8.4
+            ],
+            [
+              "not",
+              9.08,
+              9.28
+            ],
+            [
+              "a",
+              9.48,
+              9.5
+            ],
+            [
+              "promise.",
+              9.6,
+              10.04
+            ]
+          ]
+        }
+      ],
+      "clip": null,
+      "gapAfterSec": 0.6
+    },
+    {
+      "id": "s7_melody",
+      "lines": [
+        {
+          "text": "Sometimes your pitch is too flat to widen without sounding processed.",
+          "file": "narration/s7_melody_01.wav",
+          "durationSec": 4.27,
+          "direction": "Friendly guide, understanding tone. Lean on 'too flat'.",
+          "words": [
+            [
+              "Sometimes",
+              0.14,
+              0.74
+            ],
+            [
+              "your",
+              0.94,
+              1.08
+            ],
+            [
+              "pitch",
+              1.14,
+              1.34
+            ],
+            [
+              "is",
+              1.42,
+              1.5
+            ],
+            [
+              "too",
+              1.58,
+              1.72
+            ],
+            [
+              "flat",
+              1.86,
+              2.16
+            ],
+            [
+              "to",
+              2.38,
+              2.48
+            ],
+            [
+              "widen",
+              2.54,
+              2.86
+            ],
+            [
+              "without",
+              2.92,
+              3.14
+            ],
+            [
+              "sounding",
+              3.22,
+              3.54
+            ],
+            [
+              "processed.",
+              3.62,
+              4.14
+            ]
+          ]
+        },
+        {
+          "text": "Then try the reference's melody: it gives your own voice the reference's intonation on those words.",
+          "file": "narration/s7_melody_02.wav",
+          "durationSec": 6.47,
+          "direction": "Friendly, upbeat guide. Lean on 'the reference's melody' and 'your own voice'.",
+          "words": [
+            [
+              "Then",
+              0.12,
+              0.26
+            ],
+            [
+              "try",
+              0.4,
+              0.54
+            ],
+            [
+              "the",
+              0.64,
+              0.7
+            ],
+            [
+              "reference's",
+              0.76,
+              1.24
+            ],
+            [
+              "melody:",
+              1.34,
+              1.7
+            ],
+            [
+              "it",
+              2.58,
+              2.62
+            ],
+            [
+              "gives",
+              2.68,
+              2.88
+            ],
+            [
+              "your",
+              2.92,
+              3.06
+            ],
+            [
+              "own",
+              3.18,
+              3.28
+            ],
+            [
+              "voice",
+              3.42,
+              3.74
+            ],
+            [
+              "the",
+              3.84,
+              3.92
+            ],
+            [
+              "reference's",
+              3.98,
+              4.52
+            ],
+            [
+              "intonation",
+              4.66,
+              5.24
+            ],
+            [
+              "on",
+              5.5,
+              5.54
+            ],
+            [
+              "those",
+              5.6,
+              5.8
+            ],
+            [
+              "words.",
+              5.88,
+              6.24
+            ]
+          ]
+        },
+        {
+          "text": "Same voice, the reference's tune, and the spot is no longer flagged.",
+          "file": "narration/s7_melody_03.wav",
+          "durationSec": 4.95,
+          "direction": "Warm and pleased, with a smile, at a natural, flowing pace. Lean on 'no longer flagged'.",
+          "words": [
+            [
+              "Same",
+              0.16,
+              0.44
+            ],
+            [
+              "voice,",
+              0.54,
+              0.82
+            ],
+            [
+              "the",
+              1.16,
+              1.22
+            ],
+            [
+              "reference's",
+              1.3,
+              1.82
+            ],
+            [
+              "tune,",
+              1.92,
+              2.24
+            ],
+            [
+              "and",
+              3.0,
+              3.08
+            ],
+            [
+              "the",
+              3.16,
+              3.22
+            ],
+            [
+              "spot",
+              3.3,
+              3.62
+            ],
+            [
+              "is",
+              3.76,
+              3.82
+            ],
+            [
+              "no",
+              3.88,
+              3.96
+            ],
+            [
+              "longer",
+              4.04,
+              4.3
+            ],
+            [
+              "flagged.",
+              4.38,
+              4.8
+            ]
+          ]
+        }
+      ],
+      "clip": null,
+      "gapAfterSec": 0.6
+    },
+    {
+      "id": "s8_fix_all",
+      "lines": [
+        {
+          "text": "Or fix everything at once: 86 becomes 96.",
+          "file": "narration/s8_fix_all_01.wav",
+          "durationSec": 3.89,
+          "direction": "Upbeat and bright guide, flowing and lively. Lean on 'eighty-six becomes ninety-six'.",
+          "words": [
+            [
+              "Or",
+              0.2,
+              0.28
+            ],
+            [
+              "fix",
+              0.6,
+              0.74
+            ],
+            [
+              "everything",
+              0.92,
+              1.22
+            ],
+            [
+              "at",
+              1.28,
+              1.32
+            ],
+            [
+              "once:",
+              1.46,
+              1.62
+            ],
+            [
+              "86",
+              2.48,
+              2.86
+            ],
+            [
+              "becomes",
+              3.0,
+              3.34
+            ],
+            [
+              "96.",
+              3.46,
+              3.82
+            ]
+          ]
+        },
+        {
+          "text": "And the list tells you what each fix did.",
+          "file": "narration/s8_fix_all_02.wav",
+          "durationSec": 3.32,
+          "direction": "Friendly, upbeat guide, relaxed. Lean on 'what each fix did'.",
+          "words": [
+            [
+              "And",
+              0.1,
+              0.18
+            ],
+            [
+              "the",
+              0.26,
+              0.34
+            ],
+            [
+              "list",
+              0.42,
+              0.62
+            ],
+            [
+              "tells",
+              0.76,
+              1.04
+            ],
+            [
+              "you",
+              1.12,
+              1.24
+            ],
+            [
+              "what",
+              1.44,
+              1.58
+            ],
+            [
+              "each",
+              1.82,
+              1.98
+            ],
+            [
+              "fix",
+              2.12,
+              2.3
+            ],
+            [
+              "did.",
+              3.0,
+              3.2
+            ]
+          ]
+        }
+      ],
+      "clip": null,
+      "gapAfterSec": 0.6
+    },
+    {
+      "id": "s9_text_lists",
+      "lines": [
+        {
+          "text": "Every finding is pinned to the words of your transcript: dotted, dashed or solid as it gets more serious. Click any word to hear it.",
+          "file": "narration/s9_text_lists_01.wav",
+          "durationSec": 9.24,
+          "direction": "Friendly, upbeat guide, slightly brisk. Light, even rhythm on 'dotted, dashed or solid'; lean on 'Click any word'.",
+          "words": [
+            [
+              "Every",
+              0.16,
+              0.38
+            ],
+            [
+              "finding",
+              0.5,
+              0.9
+            ],
+            [
+              "is",
+              1.0,
+              1.06
+            ],
+            [
+              "pinned",
+              1.18,
+              1.44
+            ],
+            [
+              "to",
+              1.5,
+              1.54
+            ],
+            [
+              "the",
+              1.6,
+              1.66
+            ],
+            [
+              "words",
+              1.72,
+              1.98
+            ],
+            [
+              "of",
+              2.04,
+              2.08
+            ],
+            [
+              "your",
+              2.12,
+              2.26
+            ],
+            [
+              "transcript:",
+              2.32,
+              2.88
+            ],
+            [
+              "dotted,",
+              3.38,
+              3.76
+            ],
+            [
+              "dashed",
+              4.16,
+              4.64
+            ],
+            [
+              "or",
+              5.02,
+              5.1
+            ],
+            [
+              "solid",
+              5.22,
+              5.6
+            ],
+            [
+              "as",
+              5.82,
+              5.88
+            ],
+            [
+              "it",
+              5.96,
+              6.0
+            ],
+            [
+              "gets",
+              6.06,
+              6.24
+            ],
+            [
+              "more",
+              6.32,
+              6.5
+            ],
+            [
+              "serious.",
+              6.58,
+              7.0
+            ],
+            [
+              "Click",
+              7.88,
+              8.08
+            ],
+            [
+              "any",
+              8.26,
+              8.4
+            ],
+            [
+              "word",
+              8.5,
+              8.68
+            ],
+            [
+              "to",
+              8.76,
+              8.82
+            ],
+            [
+              "hear",
+              8.86,
+              9.04
+            ],
+            [
+              "it.",
+              9.12,
+              9.18
+            ]
+          ]
+        },
+        {
+          "text": "Want more? Open every finding, filter by pattern, or zoom into every measurement.",
+          "file": "narration/s9_text_lists_02.wav",
+          "durationSec": 5.82,
+          "direction": "Friendly and inviting. A light question on 'Want more?', then a brisk list.",
+          "words": [
+            [
+              "Want",
+              0.1,
+              0.24
+            ],
+            [
+              "more?",
+              0.3,
+              0.52
+            ],
+            [
+              "Open",
+              1.68,
+              1.86
+            ],
+            [
+              "every",
+              2.08,
+              2.28
+            ],
+            [
+              "finding,",
+              2.36,
+              2.74
+            ],
+            [
+              "filter",
+              3.36,
+              3.64
+            ],
+            [
+              "by",
+              3.72,
+              3.8
+            ],
+            [
+              "pattern,",
+              3.86,
+              4.22
+            ],
+            [
+              "or",
+              4.48,
+              4.54
+            ],
+            [
+              "zoom",
+              4.6,
+              4.78
+            ],
+            [
+              "into",
+              4.84,
+              5.0
+            ],
+            [
+              "every",
+              5.12,
+              5.26
+            ],
+            [
+              "measurement.",
+              5.32,
+              5.7
+            ]
+          ]
+        }
+      ],
+      "clip": null,
+      "gapAfterSec": 0.6
+    },
+    {
+      "id": "s10_fair",
+      "lines": [
+        {
+          "text": "It's careful about what it flags. An untouched copy scores 100, with nothing flagged.",
+          "file": "narration/s10_fair_01.wav",
+          "durationSec": 5.58,
+          "direction": "Friendly, calm and sure. Lean on 'careful' and 'a hundred'; settle on 'nothing flagged'.",
+          "words": [
+            [
+              "It's",
+              0.1,
+              0.22
+            ],
+            [
+              "careful",
+              0.3,
+              0.6
+            ],
+            [
+              "about",
+              0.7,
+              0.88
+            ],
+            [
+              "what",
+              0.9,
+              1.0
+            ],
+            [
+              "it",
+              1.06,
+              1.1
+            ],
+            [
+              "flags.",
+              1.18,
+              1.58
+            ],
+            [
+              "An",
+              2.42,
+              2.46
+            ],
+            [
+              "untouched",
+              2.62,
+              2.98
+            ],
+            [
+              "copy",
+              3.06,
+              3.34
+            ],
+            [
+              "scores",
+              3.44,
+              3.72
+            ],
+            [
+              "100,",
+              3.78,
+              4.22
+            ],
+            [
+              "with",
+              4.44,
+              4.56
+            ],
+            [
+              "nothing",
+              4.64,
+              4.92
+            ],
+            [
+              "flagged.",
+              5.0,
+              5.4
+            ]
+          ]
+        },
+        {
+          "text": "And with five reference readers, it compares you with their word-by-word median, so no single reader's habits count against you.",
+          "file": "narration/s10_fair_02.wav",
+          "durationSec": 7.74,
+          "direction": "Friendly, clear guide. Lean on 'five reference readers' and 'median'; reassuring on 'count against you'.",
+          "words": [
+            [
+              "And",
+              0.1,
+              0.18
+            ],
+            [
+              "with",
+              0.24,
+              0.36
+            ],
+            [
+              "five",
+              0.48,
+              0.8
+            ],
+            [
+              "reference",
+              0.92,
+              1.28
+            ],
+            [
+              "readers,",
+              1.36,
+              1.66
+            ],
+            [
+              "it",
+              1.9,
+              1.94
+            ],
+            [
+              "compares",
+              1.98,
+              2.42
+            ],
+            [
+              "you",
+              2.48,
+              2.58
+            ],
+            [
+              "with",
+              2.68,
+              2.82
+            ],
+            [
+              "their",
+              2.88,
+              3.04
+            ],
+            [
+              "word-by-word",
+              3.1,
+              3.82
+            ],
+            [
+              "median,",
+              3.96,
+              4.28
+            ],
+            [
+              "so",
+              5.04,
+              5.14
+            ],
+            [
+              "no",
+              5.26,
+              5.4
+            ],
+            [
+              "single",
+              5.58,
+              5.9
+            ],
+            [
+              "reader's",
+              5.98,
+              6.3
+            ],
+            [
+              "habits",
+              6.36,
+              6.74
+            ],
+            [
+              "count",
+              6.88,
+              7.08
+            ],
+            [
+              "against",
+              7.16,
+              7.44
+            ],
+            [
+              "you.",
+              7.5,
+              7.6
+            ]
+          ]
+        }
+      ],
+      "clip": null,
+      "gapAfterSec": 0.6
+    },
+    {
+      "id": "s11_upload",
+      "lines": [
+        {
+          "text": "Now your own speech. Upload your reading, choose a reference, and paste the transcript.",
+          "file": "narration/s11_upload_01.wav",
+          "durationSec": 6.0,
+          "direction": "Friendly, upbeat guide. Fresh start on 'Now your own speech', then a brisk list of three steps.",
+          "words": [
+            [
+              "Now",
+              0.14,
+              0.34
+            ],
+            [
+              "your",
+              0.5,
+              0.64
+            ],
+            [
+              "own",
+              0.8,
+              0.94
+            ],
+            [
+              "speech.",
+              1.14,
+              1.5
+            ],
+            [
+              "Upload",
+              2.26,
+              2.56
+            ],
+            [
+              "your",
+              2.62,
+              2.74
+            ],
+            [
+              "reading,",
+              2.78,
+              3.08
+            ],
+            [
+              "choose",
+              3.56,
+              3.8
+            ],
+            [
+              "a",
+              3.88,
+              3.9
+            ],
+            [
+              "reference,",
+              3.96,
+              4.38
+            ],
+            [
+              "and",
+              4.66,
+              4.74
+            ],
+            [
+              "paste",
+              4.84,
+              5.08
+            ],
+            [
+              "the",
+              5.14,
+              5.2
+            ],
+            [
+              "transcript.",
+              5.26,
+              5.78
+            ]
+          ]
+        },
+        {
+          "text": "If the transcript doesn't match what was said, it tells you where, instead of guessing.",
+          "file": "narration/s11_upload_02.wav",
+          "durationSec": 5.42,
+          "direction": "Calm and reassuring. Lean on 'tells you where'; gentle on 'instead of guessing'.",
+          "words": [
+            [
+              "If",
+              0.12,
+              0.18
+            ],
+            [
+              "the",
+              0.26,
+              0.34
+            ],
+            [
+              "transcript",
+              0.42,
+              1.0
+            ],
+            [
+              "doesn't",
+              1.04,
+              1.28
+            ],
+            [
+              "match",
+              1.34,
+              1.58
+            ],
+            [
+              "what",
+              1.64,
+              1.74
+            ],
+            [
+              "was",
+              1.8,
+              1.88
+            ],
+            [
+              "said,",
+              1.98,
+              2.26
+            ],
+            [
+              "it",
+              2.9,
+              2.94
+            ],
+            [
+              "tells",
+              3.04,
+              3.34
+            ],
+            [
+              "you",
+              3.4,
+              3.5
+            ],
+            [
+              "where,",
+              3.6,
+              3.9
+            ],
+            [
+              "instead",
+              4.26,
+              4.66
+            ],
+            [
+              "of",
+              4.7,
+              4.76
+            ],
+            [
+              "guessing.",
+              4.82,
+              5.28
+            ]
+          ]
+        },
+        {
+          "text": "With the right text, the analysis runs step by step, in seconds.",
+          "file": "narration/s11_upload_03.wav",
+          "durationSec": 4.74,
+          "direction": "Friendly, upbeat guide. Lean on 'step by step' and 'in seconds'.",
+          "words": [
+            [
+              "With",
+              0.08,
+              0.2
+            ],
+            [
+              "the",
+              0.26,
+              0.32
+            ],
+            [
+              "right",
+              0.36,
+              0.54
+            ],
+            [
+              "text,",
+              0.6,
+              0.9
+            ],
+            [
+              "the",
+              1.66,
+              1.74
+            ],
+            [
+              "analysis",
+              1.84,
+              2.32
+            ],
+            [
+              "runs",
+              2.42,
+              2.64
+            ],
+            [
+              "step",
+              2.76,
+              2.96
+            ],
+            [
+              "by",
+              3.06,
+              3.16
+            ],
+            [
+              "step,",
+              3.26,
+              3.48
+            ],
+            [
+              "in",
+              4.0,
+              4.04
+            ],
+            [
+              "seconds.",
+              4.16,
+              4.52
+            ]
+          ]
+        }
+      ],
+      "clip": null,
+      "gapAfterSec": 0.6
+    },
+    {
+      "id": "s12_no_reference",
+      "lines": [
+        {
+          "text": "No reference at all? It compares the reading with itself, and shows the spots that stand out.",
+          "file": "narration/s12_no_reference_01.wav",
+          "durationSec": 7.49,
+          "direction": "Friendly, upbeat guide. A light question on 'No reference at all?', then lean on 'stand out'.",
+          "words": [
+            [
+              "No",
+              0.18,
+              0.32
+            ],
+            [
+              "reference",
+              0.48,
+              1.02
+            ],
+            [
+              "at",
+              1.26,
+              1.3
+            ],
+            [
+              "all?",
+              1.58,
+              1.68
+            ],
+            [
+              "It",
+              2.68,
+              2.72
+            ],
+            [
+              "compares",
+              2.8,
+              3.26
+            ],
+            [
+              "the",
+              3.34,
+              3.44
+            ],
+            [
+              "reading",
+              3.5,
+              3.76
+            ],
+            [
+              "with",
+              3.8,
+              3.94
+            ],
+            [
+              "itself,",
+              4.0,
+              4.38
+            ],
+            [
+              "and",
+              5.18,
+              5.26
+            ],
+            [
+              "shows",
+              5.38,
+              5.68
+            ],
+            [
+              "the",
+              5.78,
+              5.88
+            ],
+            [
+              "spots",
+              5.94,
+              6.28
+            ],
+            [
+              "that",
+              6.38,
+              6.5
+            ],
+            [
+              "stand",
+              6.62,
+              6.94
+            ],
+            [
+              "out.",
+              7.16,
+              7.26
+            ]
+          ]
+        },
+        {
+          "text": "It's a rough check. A reference reading gives better results.",
+          "file": "narration/s12_no_reference_02.wav",
+          "durationSec": 3.91,
+          "direction": "Friendly and honest, relaxed. Lean on 'rough check' and 'better results'.",
+          "words": [
+            [
+              "It's",
+              0.12,
+              0.24
+            ],
+            [
+              "a",
+              0.3,
+              0.32
+            ],
+            [
+              "rough",
+              0.4,
+              0.62
+            ],
+            [
+              "check.",
+              0.74,
+              0.98
+            ],
+            [
+              "A",
+              1.86,
+              1.88
+            ],
+            [
+              "reference",
+              1.94,
+              2.38
+            ],
+            [
+              "reading",
+              2.5,
+              2.78
+            ],
+            [
+              "gives",
+              2.86,
+              3.08
+            ],
+            [
+              "better",
+              3.2,
+              3.46
+            ],
+            [
+              "results.",
+              3.52,
+              3.86
+            ]
+          ]
+        }
+      ],
+      "clip": null,
+      "gapAfterSec": 0.6
+    },
+    {
+      "id": "s13_how",
+      "lines": [
+        {
+          "text": "Under the hood, forced alignment times every word in both recordings.",
+          "file": "narration/s13_how_01.wav",
+          "durationSec": 4.6,
+          "direction": "Clear, measured explainer. Lean on 'forced alignment' and 'every word'.",
+          "words": [
+            [
+              "Under",
+              0.16,
+              0.34
+            ],
+            [
+              "the",
+              0.4,
+              0.46
+            ],
+            [
+              "hood,",
+              0.52,
+              0.74
+            ],
+            [
+              "forced",
+              1.18,
+              1.48
+            ],
+            [
+              "alignment",
+              1.62,
+              2.02
+            ],
+            [
+              "times",
+              2.08,
+              2.44
+            ],
+            [
+              "every",
+              2.7,
+              2.9
+            ],
+            [
+              "word",
+              2.96,
+              3.2
+            ],
+            [
+              "in",
+              3.34,
+              3.38
+            ],
+            [
+              "both",
+              3.5,
+              3.7
+            ],
+            [
+              "recordings.",
+              3.8,
+              4.34
+            ]
+          ]
+        },
+        {
+          "text": "Nine measures of pace, pauses, pitch, emphasis, volume and clarity are compared on the same words.",
+          "file": "narration/s13_how_02.wav",
+          "durationSec": 6.84,
+          "direction": "Clear explainer. Read the list smoothly, with only short breaths between items; lean on 'same words'.",
+          "words": [
+            [
+              "Nine",
+              0.14,
+              0.34
+            ],
+            [
+              "measures",
+              0.42,
+              0.7
+            ],
+            [
+              "of",
+              0.76,
+              0.8
+            ],
+            [
+              "pace,",
+              0.92,
+              1.2
+            ],
+            [
+              "pauses,",
+              1.48,
+              1.94
+            ],
+            [
+              "pitch,",
+              2.22,
+              2.46
+            ],
+            [
+              "emphasis,",
+              2.74,
+              3.2
+            ],
+            [
+              "volume",
+              3.48,
+              3.88
+            ],
+            [
+              "and",
+              4.0,
+              4.08
+            ],
+            [
+              "clarity",
+              4.14,
+              4.54
+            ],
+            [
+              "are",
+              5.1,
+              5.18
+            ],
+            [
+              "compared",
+              5.22,
+              5.66
+            ],
+            [
+              "on",
+              5.76,
+              5.8
+            ],
+            [
+              "the",
+              5.86,
+              5.94
+            ],
+            [
+              "same",
+              6.0,
+              6.22
+            ],
+            [
+              "words.",
+              6.3,
+              6.6
+            ]
+          ]
+        },
+        {
+          "text": "Volume and pitch are relative to your own voice, so a deep voice is never a flaw.",
+          "file": "narration/s13_how_03.wav",
+          "durationSec": 7.51,
+          "direction": "Clear, measured and warm. Lean on 'your own voice'; reassuring on 'never a flaw'.",
+          "words": [
+            [
+              "Volume",
+              0.14,
+              0.6
+            ],
+            [
+              "and",
+              0.78,
+              0.86
+            ],
+            [
+              "pitch",
+              1.0,
+              1.28
+            ],
+            [
+              "are",
+              1.6,
+              1.68
+            ],
+            [
+              "relative",
+              1.76,
+              2.32
+            ],
+            [
+              "to",
+              2.42,
+              2.52
+            ],
+            [
+              "your",
+              2.6,
+              2.76
+            ],
+            [
+              "own",
+              2.98,
+              3.14
+            ],
+            [
+              "voice,",
+              3.32,
+              3.62
+            ],
+            [
+              "so",
+              4.96,
+              5.08
+            ],
+            [
+              "a",
+              5.22,
+              5.24
+            ],
+            [
+              "deep",
+              5.34,
+              5.54
+            ],
+            [
+              "voice",
+              5.7,
+              6.04
+            ],
+            [
+              "is",
+              6.28,
+              6.34
+            ],
+            [
+              "never",
+              6.52,
+              6.8
+            ],
+            [
+              "a",
+              6.98,
+              7.0
+            ],
+            [
+              "flaw.",
+              7.12,
+              7.38
+            ]
+          ]
+        },
+        {
+          "text": "And only a difference past a threshold, fitted on flawless comparisons, gets flagged.",
+          "file": "narration/s13_how_04.wav",
+          "durationSec": 5.66,
+          "direction": "Clear, measured explainer. Lean on 'threshold' and 'flawless comparisons'; firm on 'gets flagged'.",
+          "words": [
+            [
+              "And",
+              0.1,
+              0.18
+            ],
+            [
+              "only",
+              0.38,
+              0.6
+            ],
+            [
+              "a",
+              0.68,
+              0.7
+            ],
+            [
+              "difference",
+              0.76,
+              1.14
+            ],
+            [
+              "past",
+              1.24,
+              1.52
+            ],
+            [
+              "a",
+              1.62,
+              1.64
+            ],
+            [
+              "threshold,",
+              1.7,
+              2.16
+            ],
+            [
+              "fitted",
+              2.76,
+              3.02
+            ],
+            [
+              "on",
+              3.2,
+              3.24
+            ],
+            [
+              "flawless",
+              3.38,
+              3.84
+            ],
+            [
+              "comparisons,",
+              3.9,
+              4.66
+            ],
+            [
+              "gets",
+              4.92,
+              5.12
+            ],
+            [
+              "flagged.",
+              5.2,
+              5.54
+            ]
+          ]
+        }
+      ],
+      "clip": null,
+      "gapAfterSec": 0.6
+    },
+    {
+      "id": "s14_evidence",
+      "lines": [
+        {
+          "text": "We tested it on 2,410 audio files from nine public-domain speeches, with edits of known type, place and size.",
+          "file": "narration/s14_evidence_01.wav",
+          "durationSec": 8.87,
+          "direction": "Confident and precise. A short beat before the number; lean on 'two thousand four hundred and ten' and 'known type, place and size'.",
+          "words": [
+            [
+              "We",
+              0.1,
+              0.18
+            ],
+            [
+              "tested",
+              0.26,
+              0.54
+            ],
+            [
+              "it",
+              0.62,
+              0.66
+            ],
+            [
+              "on",
+              0.8,
+              0.84
+            ],
+            [
+              "2,410",
+              0.96,
+              2.56
+            ],
+            [
+              "audio",
+              2.76,
+              2.98
+            ],
+            [
+              "files",
+              3.06,
+              3.42
+            ],
+            [
+              "from",
+              3.56,
+              3.7
+            ],
+            [
+              "nine",
+              3.84,
+              4.12
+            ],
+            [
+              "public-domain",
+              4.28,
+              5.0
+            ],
+            [
+              "speeches,",
+              5.12,
+              5.56
+            ],
+            [
+              "with",
+              6.3,
+              6.44
+            ],
+            [
+              "edits",
+              6.56,
+              6.82
+            ],
+            [
+              "of",
+              6.88,
+              6.92
+            ],
+            [
+              "known",
+              7.04,
+              7.26
+            ],
+            [
+              "type,",
+              7.38,
+              7.6
+            ],
+            [
+              "place",
+              7.72,
+              7.98
+            ],
+            [
+              "and",
+              8.16,
+              8.24
+            ],
+            [
+              "size.",
+              8.34,
+              8.64
+            ]
+          ]
+        },
+        {
+          "text": "On speakers it never saw, F1 is 0.812 as pre-registered, and 0.879 with one detection per edit.",
+          "file": "narration/s14_evidence_02.wav",
+          "durationSec": 10.94,
+          "direction": "Confident and precise. A short beat before each number; clear and steady on each digit.",
+          "words": [
+            [
+              "On",
+              0.16,
+              0.2
+            ],
+            [
+              "speakers",
+              0.34,
+              0.82
+            ],
+            [
+              "it",
+              1.0,
+              1.04
+            ],
+            [
+              "never",
+              1.12,
+              1.3
+            ],
+            [
+              "saw,",
+              1.38,
+              1.58
+            ],
+            [
+              "F1",
+              2.48,
+              2.9
+            ],
+            [
+              "is",
+              3.18,
+              3.22
+            ],
+            [
+              "0.812",
+              3.3,
+              4.8
+            ],
+            [
+              "as",
+              5.14,
+              5.2
+            ],
+            [
+              "pre-registered,",
+              5.36,
+              6.14
+            ],
+            [
+              "and",
+              7.08,
+              7.2
+            ],
+            [
+              "0.879",
+              7.28,
+              8.98
+            ],
+            [
+              "with",
+              9.18,
+              9.34
+            ],
+            [
+              "one",
+              9.56,
+              9.68
+            ],
+            [
+              "detection",
+              9.76,
+              10.24
+            ],
+            [
+              "per",
+              10.36,
+              10.52
+            ],
+            [
+              "edit.",
+              10.66,
+              10.84
+            ]
+          ]
+        },
+        {
+          "text": "And zero false flags in 5.89 minutes of unedited and placebo copies.",
+          "file": "narration/s14_evidence_03.wav",
+          "durationSec": 6.55,
+          "direction": "Confident and precise. Lean on 'zero false flags'; a short beat before 'five point eight nine minutes'.",
+          "words": [
+            [
+              "And",
+              0.1,
+              0.2
+            ],
+            [
+              "zero",
+              0.34,
+              0.64
+            ],
+            [
+              "false",
+              0.76,
+              1.02
+            ],
+            [
+              "flags",
+              1.1,
+              1.5
+            ],
+            [
+              "in",
+              1.76,
+              1.8
+            ],
+            [
+              "5.89",
+              1.96,
+              3.18
+            ],
+            [
+              "minutes",
+              3.26,
+              3.56
+            ],
+            [
+              "of",
+              3.84,
+              3.88
+            ],
+            [
+              "unedited",
+              4.12,
+              4.62
+            ],
+            [
+              "and",
+              5.1,
+              5.18
+            ],
+            [
+              "placebo",
+              5.24,
+              5.78
+            ],
+            [
+              "copies.",
+              5.92,
+              6.3
+            ]
+          ]
+        }
+      ],
+      "clip": null,
+      "gapAfterSec": 0.6
+    },
+    {
+      "id": "s15_open",
+      "lines": [
+        {
+          "text": "Run it yourself with Docker: build it, run it, and open the page in your browser.",
+          "file": "narration/s15_open_01.wav",
+          "durationSec": 5.87,
+          "direction": "Practical and warm. Brisk, even rhythm on 'build it, run it'; friendly on 'open the page'.",
+          "words": [
+            [
+              "Run",
+              0.16,
+              0.32
+            ],
+            [
+              "it",
+              0.38,
+              0.44
+            ],
+            [
+              "yourself",
+              0.48,
+              0.84
+            ],
+            [
+              "with",
+              0.94,
+              1.04
+            ],
+            [
+              "Docker:",
+              1.12,
+              1.5
+            ],
+            [
+              "build",
+              2.16,
+              2.42
+            ],
+            [
+              "it,",
+              2.56,
+              2.62
+            ],
+            [
+              "run",
+              3.3,
+              3.46
+            ],
+            [
+              "it,",
+              3.54,
+              3.6
+            ],
+            [
+              "and",
+              4.0,
+              4.08
+            ],
+            [
+              "open",
+              4.24,
+              4.44
+            ],
+            [
+              "the",
+              4.52,
+              4.58
+            ],
+            [
+              "page",
+              4.62,
+              4.96
+            ],
+            [
+              "in",
+              5.08,
+              5.12
+            ],
+            [
+              "your",
+              5.18,
+              5.3
+            ],
+            [
+              "browser.",
+              5.34,
+              5.72
+            ]
+          ]
+        },
+        {
+          "text": "The detector is on Hugging Face, the code is on GitHub, and the technical report explains every number.",
+          "file": "narration/s15_open_02.wav",
+          "durationSec": 6.21,
+          "direction": "Practical and warm. Light lean on 'Hugging Face', 'GitHub' and 'every number'.",
+          "words": [
+            [
+              "The",
+              0.08,
+              0.16
+            ],
+            [
+              "detector",
+              0.2,
+              0.64
+            ],
+            [
+              "is",
+              0.8,
+              0.86
+            ],
+            [
+              "on",
+              0.94,
+              1.0
+            ],
+            [
+              "Hugging",
+              1.08,
+              1.36
+            ],
+            [
+              "Face,",
+              1.44,
+              1.7
+            ],
+            [
+              "the",
+              2.18,
+              2.26
+            ],
+            [
+              "code",
+              2.3,
+              2.52
+            ],
+            [
+              "is",
+              2.58,
+              2.62
+            ],
+            [
+              "on",
+              2.72,
+              2.76
+            ],
+            [
+              "GitHub,",
+              2.84,
+              3.22
+            ],
+            [
+              "and",
+              3.76,
+              3.84
+            ],
+            [
+              "the",
+              3.86,
+              3.94
+            ],
+            [
+              "technical",
+              3.98,
+              4.32
+            ],
+            [
+              "report",
+              4.4,
+              4.72
+            ],
+            [
+              "explains",
+              4.86,
+              5.32
+            ],
+            [
+              "every",
+              5.54,
+              5.72
+            ],
+            [
+              "number.",
+              5.8,
+              6.1
+            ]
+          ]
+        }
+      ],
+      "clip": null,
+      "gapAfterSec": 1.0
+    },
+    {
+      "id": "s16_close",
       "lines": [
         {
           "text": "Record. Compare. Fix the exact words.",
-          "file": "narration/s10_close_01.wav",
-          "durationSec": 2.762
+          "file": "narration/s16_close_01.wav",
+          "durationSec": 5.24,
+          "direction": "Slow, warm and final. A clear pause after 'Record.' and after 'Compare.'; settle on 'Fix the exact words'.",
+          "words": [
+            [
+              "Record.",
+              0.2,
+              0.6
+            ],
+            [
+              "Compare.",
+              1.52,
+              2.18
+            ],
+            [
+              "Fix",
+              3.04,
+              3.22
+            ],
+            [
+              "the",
+              3.58,
+              3.68
+            ],
+            [
+              "exact",
+              3.76,
+              4.22
+            ],
+            [
+              "words.",
+              4.6,
+              4.96
+            ]
+          ]
         },
         {
           "text": "Contrastive Voice.",
-          "file": "narration/s10_close_02.wav",
-          "durationSec": 1.427
+          "file": "narration/s16_close_02.wav",
+          "durationSec": 1.96,
+          "direction": "Slow, warm and final; say the name with quiet pride.",
+          "words": [
+            [
+              "Contrastive",
+              0.1,
+              0.9
+            ],
+            [
+              "Voice.",
+              1.22,
+              1.62
+            ]
+          ]
         }
       ],
       "clip": null,
-      "gapAfterSec": 2.0
+      "gapAfterSec": 0.6
     }
   ]
 }
