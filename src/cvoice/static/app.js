@@ -2975,7 +2975,10 @@ async function submitUpload(ev) {
   if (!$("#f-text").value.trim()) return fail(none ? "Enter the transcript: the exact words you read." : "Enter the transcript: the exact words both recordings read.");
   if ($("#f-text").value.length > TRANSCRIPT_MAX) return fail(`The transcript is longer than ${TRANSCRIPT_MAX} characters. Shorten it before you analyse.`);
   const files = [audio, ...ownFiles];
-  if (S.limits && files.some((f) => f.size > S.limits.max_bytes)) return fail(`A file is larger than ${Math.round(S.limits.max_bytes / 2 ** 20)} MB.`);
+  // the same file names as the server's refusals (app.upload_label)
+  const fileName = (k) => (k === 0 ? "Your recording" : ownFiles.length === 1 ? "Your reference recording" : `Your reference recording ${k}`);
+  const large = S.limits ? files.findIndex((f) => f.size > S.limits.max_bytes) : -1;
+  if (large >= 0) return fail(`${fileName(large)} is larger than ${Math.round(S.limits.max_bytes / 2 ** 20)} MB.`);
   if (S.limits?.max_total_bytes && files.reduce((sum, f) => sum + f.size, 0) > S.limits.max_total_bytes) return fail(`The files together are larger than ${Math.round(S.limits.max_total_bytes / 2 ** 20)} MB.`);
   const fd = new FormData();
   fd.append("audio", audio);
