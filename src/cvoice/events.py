@@ -240,14 +240,14 @@ def _detected_region(t: dict, found, own_match, clip_hit: bool):
     return None
 
 
-def eval_clip(run: Run, lab: dict, secondary_exempt: bool = True, both_edges: bool = True) -> dict:
+def eval_clip(run: Run, lab: dict, secondary_exempt: bool = True) -> dict:
     """Per-clip TP / FN / FP by (dimension, sign) group, onset / offset errors of matched windows, and the false regions
     (those not matched and not an expected secondary dimension of a nearby injected flaw). One detection counts per change
     (truth_changes, false_change_duplicates): the other regions of a change are duplicates, listed in `duplicates` with
     their own flag key and the flag key of the change, under the strict and the exempt counting alike."""
     truth_rows = truths(lab, enabled=run.enabled)
     shortfalls = truths(lab, excluded=True)
-    matches = match(truth_rows, run, both_edges)
+    matches = match(truth_rows, run)
     overlap_matches = match(truth_rows, run, False)
     clip_matched = set()
     spans = [region_span(run, r) for r in run.regions]

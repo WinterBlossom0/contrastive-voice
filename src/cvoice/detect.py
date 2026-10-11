@@ -245,10 +245,9 @@ def config_hash(det: dict) -> str:
     state = {"config": C.as_dict(det["schema"]), "schema": det["schema"],
              "regimes": {r: {k: v[k] for k in ("scales", "h", "clip", "enabled", "name")} for r, v in sorted(det["regimes"].items())},
              "pmax": det["score"]["pmax"]}
-    if det['schema'] == SCHEMA:
-        for r, v in det['regimes'].items():
-            if 'pattern_labels' in v:
-                state['regimes'][r]['pattern_labels'] = v['pattern_labels']
+    for r, v in det['regimes'].items():
+        if 'pattern_labels' in v:
+            state['regimes'][r]['pattern_labels'] = v['pattern_labels']
     return hashlib.sha256(json.dumps(state, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
 
 
@@ -269,22 +268,14 @@ def load_detector(path: Path) -> dict:
     if not path.exists():
         raise FileNotFoundError(f"{path} not found: run `python -m cvoice.calibrate` first")
     det = json.loads(path.read_text())
-    # Schema 3 is the detector of the eight core types; config.as_dict(3) keeps its constants.
-    if det.get("schema") not in (3, SCHEMA):
+    if det.get("schema") != SCHEMA:
         raise ValueError(f"{path}: detector schema {det.get('schema')} != {SCHEMA}")
-    if det['schema'] == SCHEMA:
-        expected_keys, expected_clip = KEYS, C.CLIP_DIMS
-    else:
-        released = C.as_dict(3)
-        expected_keys = tuple(key(d, s) for d in released['DIMS'] for s in released['FLAG_SIGNS'][d])
-        expected_clip = released['CLIP_DIMS']
     for r, v in det["regimes"].items():
-        if set(v["h"]) != set(expected_keys) or set(v["clip"]) != set(expected_clip):
+        if set(v["h"]) != set(KEYS) or set(v["clip"]) != set(C.CLIP_DIMS):
             raise ValueError(f"{path}: {r} needs a threshold entry per flag key and per whole-clip dimension")
-    if det['schema'] == SCHEMA:
-        expected = {key(d, s) if C.is_event(d) else d for d in C.DIMS for s in C.FLAG_SIGNS[d]}
-        if any(set(v['scales']) != expected for v in det['regimes'].values()):
-            raise ValueError(f"{path}: needs a scale per event key and window dimension")
+    expected = {key(d, s) if C.is_event(d) else d for d in C.DIMS for s in C.FLAG_SIGNS[d]}
+    if any(set(v['scales']) != expected for v in det['regimes'].values()):
+        raise ValueError(f"{path}: needs a scale per event key and window dimension")
     if det["config_sha256"] != config_hash(det):
         raise ValueError(f"{path}: config hash mismatch (constants changed since calibration)")
     return det

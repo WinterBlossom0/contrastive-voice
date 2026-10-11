@@ -198,7 +198,7 @@ def test_detector_json_round_trip_and_hash(tmp_path, pinned_detector):
     with pytest.raises(ValueError, match="hash"):
         load_detector(tmp_path / "bad.json")
     for edit, match in ((lambda d: d["regimes"]["R1"]["h"].pop("D2+"), "threshold entry"), (lambda d: d["regimes"]["R2"]["clip"].pop("D3"), "threshold entry"),
-                        (lambda d: d.update(schema=2), "schema")):
+                        (lambda d: d.update(schema=2), "schema"), (lambda d: d.update(schema=3), "schema")):
         broken = json.loads((tmp_path / "d.json").read_text())
         edit(broken)
         (tmp_path / "broken.json").write_text(json.dumps(broken))
@@ -207,24 +207,6 @@ def test_detector_json_round_trip_and_hash(tmp_path, pinned_detector):
     with pytest.raises(FileNotFoundError):
         load_detector(tmp_path / "missing.json")
     assert (tmp_path / "d.json").read_text().endswith("\n") and list(json.loads((tmp_path / "d.json").read_text())) == sorted(det)
-
-
-def test_schema3_detector_loads_with_the_core_flag_keys_and_rejects_a_schema4_key(pinned_detector, tmp_path):
-    released = C.as_dict(3)
-    core_keys = [key(d, s) for d in released["DIMS"] for s in released["FLAG_SIGNS"][d]]
-    det = pinned_detector(2.0)
-    det["schema"] = 3
-    for v in det["regimes"].values():
-        v["h"] = {k: v["h"][k] for k in core_keys}
-        v["clip"] = {d: v["clip"][d] for d in released["CLIP_DIMS"]}
-    det["config_sha256"] = config_hash(det)
-    save_detector(det, tmp_path / "schema3.json")
-    assert load_detector(tmp_path / "schema3.json")["regimes"]["R1"]["h"] == det["regimes"]["R1"]["h"]
-    det["regimes"]["R1"]["h"]["D9-"] = 2.0
-    det["config_sha256"] = config_hash(det)
-    save_detector(det, tmp_path / "extra_key.json")
-    with pytest.raises(ValueError, match="threshold entry"):
-        load_detector(tmp_path / "extra_key.json")
 
 
 def test_decode_uses_regime_dims_and_disabled_flags(pinned_detector):

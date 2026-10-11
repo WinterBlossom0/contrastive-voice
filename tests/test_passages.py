@@ -114,7 +114,7 @@ def test_a_window_that_does_not_align_is_rejected():
     with pytest.raises(TranscriptMismatch, match="does not match"):  # passage selection is a trust boundary
         make_passage(fake, wav, other, anchors, 4, 5)
     with pytest.raises(RuntimeError, match="no eligible"):
-        select_passage(fake, [wav], official, [[a.__class__(a.k, a.w0, a.w1, 0.0, False, None, None) for a in anchors]])
+        select_passage(fake, [wav], official, [[a.__class__(a.w0, a.w1, 0.0, False, None, None) for a in anchors]])
 
 
 def test_groups_are_selected_in_rounds_and_a_failing_window_moves_only_its_group_on(monkeypatch):

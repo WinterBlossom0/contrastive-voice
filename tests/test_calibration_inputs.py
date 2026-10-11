@@ -87,7 +87,7 @@ def test_block_subtracts_short_reference_silence(base):
     P = dataclasses.replace(base, word_silence_spans=np.array([[a, a + .40]]),
                             al=dataclasses.replace(base.al, end=base.al.end.copy()))
     P.al.end[i] = a + .5
-    assert patterns.word_time(compare(B, P), B, P, i)['pattern'] == 'LENGTHENED_WORD'
+    assert patterns.word_time(B, P, i)['pattern'] == 'LENGTHENED_WORD'
 
 
 def weighted_nulls(base):
@@ -160,7 +160,7 @@ def test_null_crop_offsets_exclusions_and_lockbox_isolation(tmp_path, monkeypatc
     seen = []
     def locate(wavs, trs, *args):
         seen.append(len(wavs))
-        return [[Anchor(0,0,len(tr)-1,1.,failure!='anchor',3.,5.)] for _ in wavs]
+        return [[Anchor(0,len(tr)-1,1.,failure!='anchor',3.,5.)] for _ in wavs]
     def align(jobs, *args):
         return [Alignment(np.array([.5,1.5]),np.array([1.,2.5]),np.ones(2),0. if failure=='alignment' else 1.) for _ in jobs]
     monkeypatch.setattr(dataset, 'locate_many', locate)
@@ -251,13 +251,7 @@ def test_word_by_word_next_boundary_is_not_an_exact_hit(base):
     assert edit_direction(clean,changed,t)['x_edited'] == pytest.approx(.0)
 
 
-def test_schema3_has_no_empty_listed_panel_and_r1_note(base):
-    reg = regime('R2')
-    for k in ['D7+','D8+','D9']:
-        reg['scales'].pop(k)
-    reg['clip'].pop('D7')
-    assert pipeline.listed_dims(reg) == ()
-    assert pipeline.detection_block({},reg)['listed_keys'] == []
+def test_r1_listed_dimensions_carry_their_reason_note(base):
     reg = regime('R1',enabled=list(C.DIMS[:6]))
     from cvoice.score import score
     comp = compare(base,base)

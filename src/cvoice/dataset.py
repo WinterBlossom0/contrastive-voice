@@ -722,14 +722,14 @@ def crop_null_readers(root, null_pool, pool=None, aligner=None, phases=('fit', '
         (root / 'manifest.json').write_text(json.dumps({'schema': 1, 'r2_pool': null_pool}, indent=1, sort_keys=True) + '\n')
 
 
-def prepare_null_readers(ds: Dataset, entries: list[dict], retain=True, keep_audio=False) -> None:
+def prepare_null_readers(ds: Dataset, entries: list[dict], retain=True) -> None:
     for start in range(0, len(entries), C.R2_PREPARE_BATCH):
         batch = entries[start:start + C.R2_PREPARE_BATCH]
         ds.recs(batch)
         for e in batch:
             if not retain:
                 ds._recs.pop(e['id'], None)
-            elif not keep_audio:
+            else:
                 ds._recs[e['id']] = dataclasses.replace(ds._recs[e['id']], wav=None)
 
 

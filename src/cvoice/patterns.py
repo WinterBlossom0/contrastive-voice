@@ -28,7 +28,7 @@ def _length(span):
     return span[1] - span[0] if span else 0.0
 
 
-def word_time(comp, B, P, i):
+def word_time(B, P, i):
     """D7 evidence precedence from the disfluency report, before validation switches."""
     a, b = float(P.al.start[i]), float(P.al.end[i])
     ba, bb = float(B.al.start[i]), float(B.al.end[i])
@@ -241,7 +241,7 @@ def describe(region, comp, B, P, labels=None):
            'p': pause_span(B, P, i, comp) if r.dim == 'D2' else (P.al.start[r.i0], P.al.end[r.i1]),
            'b': pause_span(B, B, i, comp) if r.dim == 'D2' else (B.al.start[r.i0], B.al.end[r.i1])}
     if r.dim == 'D7':
-        out = word_time(comp, B, P, i)
+        out = word_time(B, P, i)
     elif r.dim == 'D8':
         fp, fb = float(P.final_df0[i]), float(B.final_df0[i])
         pattern = 'RISING_ENDING' if fp >= 1. else 'FLAT_FINAL_FALL' if fb < fp <= 0 else None

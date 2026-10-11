@@ -409,8 +409,8 @@ def _plain(v):
 
 
 def _released_dict() -> dict:
-    """Schema-3 constants: the detector of the eight core types on D1-D6. They keep the core-8 label bytes (flaws) and
-    the loading of schema-3 detector files unchanged."""
+    """Schema-3 constants: the detector of the eight core types on D1-D6. They keep the core-8 label bytes (flaws)
+    unchanged."""
     core_dims = ("D1", "D2", "D3", "D4", "D5", "D6")
     out = {k: _plain(globals()[k]) for k in _DETECTOR_KEYS}
     out["DIMS"] = list(core_dims)

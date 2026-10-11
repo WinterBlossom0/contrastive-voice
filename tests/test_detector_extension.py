@@ -249,20 +249,19 @@ def test_promotion_refits_all_shares_and_report_switches_are_hashed(rec, monkeyp
 
 def test_subtype_reference_floor_and_candidate_spans(rec):
     i = 3
-    c = compare(rec, rec)
     a, b = rec.al.start[i], rec.al.end[i]
     P = dataclasses.replace(rec, word_silence_spans=np.array([[a, a + .26]]))
-    assert patterns.word_time(c, rec, P, i)['pattern'] == 'BLOCK'
-    assert patterns.word_time(c, P, P, i)['pattern'] == 'LENGTHENED_WORD'
+    assert patterns.word_time(rec, P, i)['pattern'] == 'BLOCK'
+    assert patterns.word_time(P, P, i)['pattern'] == 'LENGTHENED_WORD'
     ins = dict(prompt_index=i, norm=rec.tr.norm[i], start=a - .3, end=a - .1)
     P = dataclasses.replace(rec, inserted=[ins])
-    info = patterns.word_time(c, rec, P, i)
+    info = patterns.word_time(rec, P, i)
     assert info['pattern'] == 'WORD_REPETITION' and info['candidate'] and info['words'] == [i - 1, i]
     assert info['p'] == (a - .3, a - .1) and info['span_kind'] == 'boundary'
-    assert patterns.word_time(c, P, P, i)['pattern'] == 'LENGTHENED_WORD'
+    assert patterns.word_time(P, P, i)['pattern'] == 'LENGTHENED_WORD'
     for held, subtype in [((a, a + .21), 'ONSET_PROLONGATION'), ((b - .21, b), 'RHYME_PROLONGATION')]:
         P = dataclasses.replace(rec, stable_spans=np.array([held]))
-        info = patterns.word_time(c, rec, P, i)
+        info = patterns.word_time(rec, P, i)
         assert info['pattern'] == subtype and info['candidate'] and info['p'] == held
 
 

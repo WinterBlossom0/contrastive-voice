@@ -742,7 +742,7 @@ def cross_pairs(ds: Dataset, det: dict, clips: list[dict], consensus=False) -> l
     return out
 
 
-def _cross_section(ds: Dataset, det: dict, splits: tuple[str, ...], consensus=False) -> dict:
+def _cross_section(ds: Dataset, det: dict, consensus=False) -> dict:
     """R2 sensitivity uses away-edits as denominator; toward-edits are separate repair controls. The check readers' clips are
     compared with every calibration reader as the reference."""
     rows, summary, kept, detail = [], {}, [], []
@@ -802,12 +802,12 @@ def _cross_section(ds: Dataset, det: dict, splits: tuple[str, ...], consensus=Fa
 
 
 def cross_section(ds, det, splits):
-    single = _cross_section(ds, det, splits)
+    single = _cross_section(ds, det)
     if 'R2_consensus' not in det['regimes']:
         single['limitations'] = r2_limits({'single': single}, det.get('report', {}).get('R2_modes', {}))
         return single
     consensus_det = {**det, 'regimes': {**det['regimes'], 'R2': det['regimes']['R2_consensus']}}
-    consensus = _cross_section(ds, consensus_det, splits, consensus=True)
+    consensus = _cross_section(ds, consensus_det, consensus=True)
     single['modes'] = {'single': {k: v for k,v in single.items() if k != 'modes'}, 'consensus5': consensus}
     single['table'] = 'Single reference:\n\n' + single['table'] + '\n\nMedian of five references:\n\n' + consensus['table']
     diagnostics = det.get('report', {}).get('R2_modes', {})

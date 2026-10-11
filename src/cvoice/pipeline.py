@@ -184,8 +184,7 @@ def direction_label(k: str, sign: float) -> str:
 
 
 def listed_dims(reg):
-    return tuple(d for d in C.LISTED_DIMS[reg['name']] if d not in reg['enabled'] and
-                 (d in reg['scales'] or all(flag_key(d, sign) in reg['scales'] for sign in C.FLAG_SIGNS[d])))
+    return tuple(d for d in C.LISTED_DIMS[reg['name']] if d not in reg['enabled'])
 
 
 def detector_status(dim: str, reg: dict) -> str:
@@ -210,8 +209,6 @@ def detection_block(det, reg):
 def _difference_regions(comp, P, reg, dims, flagged):
     candidates = []
     for k in dims:
-        if k not in reg['scales'] and not any(flag_key(k, sign) in reg['scales'] for sign in C.FLAG_SIGNS[k]):
-            continue  # A schema-3 artifact has no fitted D7/D8 tolerance scale.
         d = comp.dims[k]
         x = d.x.copy()
         for r in flagged:
@@ -543,11 +540,10 @@ def notices(det: dict, regime: str, reg: dict, B: Recording, P: Recording, flaws
 def analyze_self(participant, transcript, *, detector: dict | None = None, participant_meta: dict | None = None,
                  truth: list | None = None, aligner=None, cache_dir: Path | None = None,
                  progress: Callable[[str], None] = lambda stage: None, refuse_mismatch: bool = False,
-                 alignment_device: str = "cpu", norms=None) -> dict:
+                 alignment_device: str = "cpu") -> dict:
     """The result (schema 2) of one reading graded against its own typical delivery (selfref): reference_mode "none".
     detector: a SELF detector (selfref.load_detector); any other detector is replaced by the shipped SELF detector, so
-    that a caller that always passes the reference detector still gets the SELF thresholds. norms: test hook for the
-    'norms' text model."""
+    that a caller that always passes the reference detector still gets the SELF thresholds."""
     from . import selfref  # selfref imports compare and explain; calibrate imports this module
     det = detector if detector is not None and detector.get("name") == selfref.NAME else selfref.load_default()
     tr = transcript if isinstance(transcript, Transcript) else parse_transcript(transcript)
@@ -562,14 +558,14 @@ def analyze_self(participant, transcript, *, detector: dict | None = None, parti
     P = part if isinstance(part, Recording) else make_recording(part[0], tr, part[1])
     model, reg = det["text_model"], det["regime"]
     progress("compare")
-    comp = selfref.self_comparison(P, model, norms)
+    comp = selfref.self_comparison(P, model)
     progress("detect")
     regions = decode(comp, reg, tr.sentence)
     scored = score(comp, regions, reg, det["score"]["pmax"])
     info = patterns.annotate(comp, regions, P, P, {}, {})
     counted = patterns.counted(comp, regions, scored.masses, {})
     local_flaws = [selfref.describe_flaw(explain.build(r, comp, P, P, reg, scored.masses[i], scored, '', info[i], i in counted), r, comp,
-                                         P, reg, model, norms) for i, r in enumerate(regions)]
+                                         P, reg, model) for i, r in enumerate(regions)]
     flaws = sorted(local_flaws, key=lambda f: (f["p"][0], f["dimension"], f["type"]))
     for i, f in enumerate(flaws):
         f["id"] = f"{f['dimension'].lower()}-{i + 1:03d}"

@@ -316,12 +316,12 @@ def _finish(builder, typ, level, params, words, metric, *, approximation=None, d
     return y, chain, labels
 
 
-def _duration_metric(rec, words, name="duration_change", unit="s", parent_span=None):
+def _duration_metric(rec, words, parent_span=None):
     a, b = _words(rec, words) if parent_span is None else parent_span
     def metric(y, fy, chain):
         s = round(float(chain(a, "left")))
         e = round(float(chain(b, "right")))
-        return {"name": name, "value": ((e - s) - (b - a)) / C.SR, "unit": unit}
+        return {"name": "duration_change", "value": ((e - s) - (b - a)) / C.SR, "unit": "s"}
     return metric
 
 
@@ -610,7 +610,7 @@ def misplaced_emphasis(rec: Recording, function_word: int, stressed_word: int, l
         s, e = build.chain.cur(fa, fb)
         t = np.arange(e - s) / C.SR + s / C.SR
         build.x[s:e] *= 10 ** (p["function_gain_db"] * _ramp_window(t, s / C.SR, e / C.SR, C.DEEMPH_RAMP_S) / 20)
-    def prominence(y, fr, chain, word):
+    def prominence(fr, chain, word):
         a, b = _words(rec, (word, word))
         s, e = chain.cur(a, b)
         _, st = _f0(fr, s, e)
@@ -621,7 +621,7 @@ def misplaced_emphasis(rec: Recording, function_word: int, stressed_word: int, l
                       np.percentile(st, 90) - median_pitch, np.percentile(fr.L[sl], 90) - median_level])
         return float(np.mean((u - rec.m) / rec.sigma))
     def metric(y, fy, chain):
-        shifts = [prominence(y, fy, chain, w) - prominence(rec.wav, rec.fr, Chain(), w)
+        shifts = [prominence(fy, chain, w) - prominence(rec.fr, Chain(), w)
                   for w in (function_word, stressed_word)]
         return {"name": "prominence_transfer", "value": shifts[0] - shifts[1], "unit": "p",
                 "function_change_p": shifts[0], "stressed_change_p": shifts[1]}

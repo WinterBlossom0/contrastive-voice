@@ -74,7 +74,6 @@ def page_text(path: Path) -> str:
 @dataclass
 class Anchor:
     """A sentence of the official text located in a recording by greedy-decode anchoring."""
-    k: int
     w0: int
     w1: int
     coverage: float
@@ -96,7 +95,7 @@ def sentence_anchors(official: Transcript, decoded: list[dict]) -> list[Anchor]:
         w0, w1 = official.sentence_words(k)
         cov = sum(i in matched for i in range(w0, w1 + 1)) / (w1 - w0 + 1)
         ends = w0 in matched and w1 in matched
-        out.append(Anchor(k, w0, w1, cov, ends and cov >= C.SENTENCE_COVERAGE_MIN, matched[w0]["start"] if w0 in matched else None,
+        out.append(Anchor(w0, w1, cov, ends and cov >= C.SENTENCE_COVERAGE_MIN, matched[w0]["start"] if w0 in matched else None,
                           matched[w1]["end"] if w1 in matched else None))
     return out
 
@@ -108,7 +107,7 @@ def text_anchors(official: Transcript, decoded: list[dict]) -> list[Anchor]:
     left = min(matched, default=len(official))
     right = max(matched, default=-1)
     eligible = coverage >= C.SENTENCE_COVERAGE_MIN and left < 5 and right >= len(official) - 5
-    return [Anchor(0, 0, len(official) - 1, coverage, eligible,
+    return [Anchor(0, len(official) - 1, coverage, eligible,
                    max(0., matched[left]['start'] - left * C.PASSAGE_CONTEXT_S) if matched else None,
                    matched[right]['end'] + (len(official) - 1 - right) * C.PASSAGE_CONTEXT_S if matched else None)]
 

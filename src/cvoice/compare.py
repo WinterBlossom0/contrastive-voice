@@ -178,7 +178,7 @@ def event_span(comp: Comparison, dim: str, i: int, B: Recording, P: Recording) -
         return pause_span(B, P, i, comp)
     if dim == 'D7':
         from .patterns import word_time
-        return tuple(word_time(comp, B, P, i)['p'])
+        return tuple(word_time(B, P, i)['p'])
     if dim == 'D8':
         return final_span(P, i)
     if C.is_event(dim):
