@@ -200,7 +200,8 @@ a:hover { text-decoration-color: var(--ink); }
 @keyframes dawn { from { opacity: 0; } to { opacity: 1; } }
 /* the two cards end together: app.js fitHeroWave grows the waveform until the timeline panel matches the score card */
 .hero-grid { position: relative; z-index: 1; display: grid; grid-template-columns: minmax(300px, 400px) minmax(0, 1fr); gap: var(--s-4); align-items: stretch; margin-top: -24px; }
-.hero-wave { padding: 16px 20px 10px; border-radius: var(--r-card); min-width: 0; }
+/* --strip-gap: the space between the waveform and the strip; each tint reaches across it to meet its span on the strip. */
+.hero-wave { --strip-gap: 8px; padding: 16px 20px 10px; border-radius: var(--r-card); min-width: 0; }
 /* the score card: the ring beside the example name, then the summary, the notes and the action across the card */
 .sum-head { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; align-content: start; gap: var(--s-2) var(--s-4);
   padding: var(--s-4); border-radius: var(--r-card); min-width: 0; }
@@ -374,15 +375,15 @@ a:hover { text-decoration-color: var(--ink); }
 /* Light tints over this recording's waveform, one per finding on the strip under it, at the same x (app.js drawStrip):
    the strip says how serious, the tint shows which stretch of the audio, in one colour (--flag-text). A selected or
    hovered finding's tint is firmer. */
-.wave-tints { position: absolute; inset: 0; pointer-events: none; z-index: 2; }
-.wave-tint { position: absolute; top: 0; bottom: 0; border-radius: 4px; background: rgba(238, 152, 191, 0.09);
+.wave-tints { position: absolute; inset: 0 0 calc(0px - var(--strip-gap)); pointer-events: none; z-index: 2; }
+.wave-tint { position: absolute; top: 0; bottom: 0; border-radius: 4px 4px 0 0; background: rgba(238, 152, 191, 0.09);
   box-shadow: inset 1px 0 rgba(238, 152, 191, 0.32), inset -1px 0 rgba(238, 152, 191, 0.32);
   mix-blend-mode: screen; transition: background-color 0.15s ease; }   /* screen: overlapping tints lighten, not darken */
 .wave-tint.sel, .wave-tint.peek { background: rgba(238, 152, 191, 0.17); }
 /* Severity strip: one thin groove under this recording's waveform, on the waveform's time scale (app.js drawStrip). Each
    finding is a flat, focusable span on it, darker bramble for a mild finding and lighter for a costly one (app.js
    heatColor); a finding at one point in time (a missing pause) is a tick. */
-.fault-strip { position: relative; margin-top: 8px; }
+.fault-strip { position: relative; margin-top: var(--strip-gap); }
 .strip-track { position: relative; height: 8px; border-radius: 4px; background: var(--strip-calm); }
 .strip-span { position: absolute; top: 0; height: 100%; padding: 0; border: 0; border-radius: 4px; background: var(--c); cursor: pointer;
   transition: box-shadow 0.15s ease, filter 0.15s ease; }
