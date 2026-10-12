@@ -55,7 +55,6 @@ const READING_WAV = 'greenman_edited.wav';
 // The page orders findings by time; these are the stored indices of L3A's findings #3 (Rushed) and #1 (Flat pitch).
 const RUSHED = { stored: 2, peek: 2, word: 'Washington' };
 const FLAT = { stored: 0, peek: 0, word: 'few' };
-const PATTERN = 'unlabelled';
 
 // The pointer rests outside the page, so it hovers nothing that the page would highlight.
 const OFF = { x: VIEW.width + 30, y: VIEW.height - 80 };
