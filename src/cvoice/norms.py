@@ -545,8 +545,9 @@ def load(path: Path | str | None = None) -> Norms:
 
 # ============================================================================================ build and report
 # The model form with the smallest held-out window spread of D1 and D9 in both directions (fit dev-clean, score test-clean,
-# and the reverse; build/work/norms/STATUS.md): one duration per phone class, function word, comma-type mark after and
-# sentence end after as multiplicative factors, fitted to the five-word window times that the detector thresholds.
+# and the reverse; `held_out` in docs/evidence_post_final/duration_norms_fit_report.json): one duration per phone class,
+# function word, comma-type mark after and sentence end after as multiplicative factors, fitted to the five-word window
+# times that the detector thresholds.
 MODEL_GROUPS = {name: (name,) for name in CLASS_NAMES}
 MODEL_FACTORS = ("function_word", "comma_after", "end_after")
 OBJECTIVES = ("word", "window")

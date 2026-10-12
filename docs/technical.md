@@ -47,7 +47,7 @@ Judging rubrics name delivery problems ("poor pacing", "speaks in monotone", "to
 | Regime | Participant compared with | Thresholds fitted on | Scored keys | Used for |
 |:------------------|:--------------------------------------------|:-------------------------------------------|:--------------|:------------------------------------------|
 | R1 same recording | an edited copy of the reference recording | train identity and placebo nulls, edits | D1–D6, D9 | evaluation clips; gallery examples marked R1 |
-| R2 single | one reading of the same text by another person | R2 null pool fit set (985 readers) | D1, D2, D3, D5 | uploads against the Reagan passage or an own reference |
+| R2 single | one reading of the same text by another person | R2 null pool fit set (985 readings) | D1, D2, D3, D5 | uploads against the Reagan passage or an own reference |
 | R2 consensus of 5 | the word-by-word median of five other readings | the same fit set, five references | D1, D2, D3, D5 | uploads against the Gettysburg bank (six readings) |
 
 Regimes are never pooled. The R1 F1 measures recovery of edits inside one recording, not a comparison between two readers, which is what every upload is (`app.py`, `UPLOAD_REGIME = "R2"`).
@@ -56,7 +56,7 @@ Regimes are never pooled. The R1 F1 measures recovery of edits inside one record
 
 **Sources and licences.** Baselines: 9 public-domain US government speeches (Wikimedia Commons), split by speaker 5 train / 2 val / 2 test. R2 calibration bank (6), check readers (3) and never-fitted pair (1): 10 readings under a public-domain dedication (LibriVox Gettysburg Address; Greenman reading of the Reagan passage). R2 null pool: Speech Accent Archive (779, CC BY-NC-SA 4.0), EARS (856, CC BY-NC 4.0), LibriVox poetry and Gettysburg (308, public domain). Non-commercial audio is used for calibration and evaluation only, in private Kaggle outputs.
 
-**Rebuild from public origins.** `data/sources_manifest.json` lists the 19 source recordings with URL, SHA-256 and licence basis; the build stops on a hash mismatch. `kaggle/data/fetch.py` downloads the reader corpora from their origins and checks each member; `kaggle/run.py` builds the dataset, calibrates, evaluates and builds the gallery. Two independent Kaggle builds (2026-10-06 and 2026-10-07) produced byte-identical dataset manifests (sha256 `d67c9cd9…`).
+**Rebuild from public origins.** `data/sources_manifest.json` lists the 19 source recordings with URL, SHA-256 and licence basis; the build stops on a hash mismatch. `kaggle/data/fetch.py` downloads the reader corpora from their origins and checks each member; `kaggle/run.py` builds the dataset, calibrates, evaluates and builds the gallery. The final build's dataset manifest has sha256 `d67c9cd9…` (`STATUS.json`); the development build of 2026-10-06 reported the same hash (its outputs are not published).
 
 **Flaw synthesis.** A flaw is a controlled edit of a clean recording at one of three levels, spliced back with exact word, sample and time labels. Eight core types: RUSH and DRAG (D1), PAUSE_DROPPED and PAUSE_INTRUSIVE (D2), MONOTONE (D3), DEEMPHASIS (D4), FADE (D5) and MUMBLE (D6); at level 3, for example, speech time ×1.90, a pause cut to 0.06 s, 1.20 s of inserted room tone, no F0 range left and a 14 dB fade. Fifteen further types cover natural rushing (words ×1/1.13 to ×1/1.18, pauses shrunk), hesitation, disfluencies, low effort, trailing off, endings and others. Duration edits use waveform-similarity overlap-add and pitch edits Praat PSOLA; chain B (evaluation only) uses Praat duration and WORLD-vocoder pitch; identity and placebo clips pass the same processing. These tools are named without citation because their papers are not recorded as read. Each edit is measured again after synthesis: 118 realisation shortfalls are recorded and 82 events are excluded from truth. Synthetic errors helped learned detectors of real errors [105], but a learned detector can also key on synthesis artefacts [106]; this detector learns only its thresholds from the edits.
 
@@ -111,7 +111,7 @@ Regimes are never pooled. The R1 F1 measures recovery of edits inside one record
 
 ## 6.1 Plan and accountings
 
-A plan written on 2026-10-02, before any test number of this configuration existed, fixed the headline: R1, test split, levels 2–3, strict one-to-one event F1 with all predictions counted; windows match at IoU ≥ 0.5, pause and emphasis events by the labelled boundary or word [107, 108]. The test split and the R2 lockbox are evaluated only by `evaluate --final`, once per configuration hash (`models/final_evaluations.json`) [110]. The *one-detection-per-change* accounting, introduced after the plan, counts a same-change D9 region on a rush edit as its detection or as a duplicate, not as a false region. The earlier test evaluation (2026-10-02, configuration `32cdd86f…`, no D9 key; `docs/evidence_final_32cdd86f3d6e/`) was seen before the redesign; both results are reported side by side, there is no third test run, and no design choice of the rework used a test result.
+A plan written on 2026-10-02 ([text at commit c2204b2](https://github.com/WinterBlossom0/contrastive-voice/blob/c2204b2/docs/FINAL_EVALUATION_PLAN.md), first committed 2026-10-08), before any test number of this configuration existed, fixed the headline: R1, test split, levels 2–3, strict one-to-one event F1 with all predictions counted; windows match at IoU ≥ 0.5, pause and emphasis events by the labelled boundary or word [107, 108]. The test split and the R2 lockbox are evaluated only by `evaluate --final`, once per configuration hash (`models/final_evaluations.json`) [110]. The *one-detection-per-change* accounting, introduced after the plan, counts a same-change D9 region on a rush edit as its detection or as a duplicate, not as a false region. The earlier test evaluation (2026-10-02, configuration `32cdd86f…`, no D9 key; `docs/evidence_final_32cdd86f3d6e/`) was seen before the redesign; both results are reported side by side, there is no third test run, and no design choice of the rework used a test result.
 
 ## 6.2 R1 results (same recording, synthetic edits)
 
@@ -124,7 +124,7 @@ Counts are TP/FP/FN (pre-registered) and TP/FP/same-change duplicates/FN (one pe
 | **Test L2+L3** | 28/9/4, **0.812** (0.800, 0.824) | 29/5/3/3, 0.879 (0.848, 0.909) | 29/5/3, 0.879 |
 | Test L1 (sensitivity) | 3/2/13, **0.286** | 5/0/0/11, 0.476 | 10/0/6, 0.769 |
 
-Per type at test L2+L3 (one per change): 4 of 4 for each core type except MONOTONE 2 of 4 and DEEMPHASIS 3 of 4. Natural rushing (D9): test F1 0.167 (limit 1). Synthetic-only tier, test L2+L3: F1 0.211 in both accountings; WORD_BY_WORD 0 of 28, because the D2 threshold (0.3225 s) is above every recipe silence (0.15–0.30 s). Unedited test copies (identity and 5 placebo variants): **0 false regions in 5.89 comparison-minutes** (val 0 in 5.93).
+Per type at test L2+L3 (one per change): 4 of 4 for each core type except MONOTONE 2 of 4 and DEEMPHASIS 3 of 4. Natural rushing (D9): test F1 0.167 (limit 1). Synthetic-only tier, test L2+L3: F1 0.211 in both accountings; WORD_BY_WORD 0 of 28, because the D2 threshold (0.3225 s) is above every recipe silence (0.15–0.30 s). Unedited test copies (identity and 5 placebo variants): **0 false regions in 5.89 comparison-minutes** (val 0 in 5.93); they come from 0.98 independent recording-minutes, so the 0.5/min budget is not measurable on them.
 
 ## 6.3 R2 results (different speaker)
 
@@ -180,7 +180,7 @@ A FastAPI server and one static page. Cards follow the brief's categories (caden
 
 # 8. Reproducibility and code quality
 
-The final run was one Kaggle kernel (cvoice-build version 19, 2 × T4): 7228.9 s in total, `STATUS.json` complete with no failed stage. The kernel checks the staged source hashes and installs the locked environment (`uv.lock`). Hashes: dataset manifest `d67c9cd9…`, detector `d5935d3f…`, configuration `782d7df7…`, `results.json` `49a306d9…`. The evaluation addendum and the gallery were computed afterwards on CPU from the saved outputs (`scripts/rebuild_after_final.sh`); its re-run of the frozen detector on the saved audio of 162 clips reproduces the saved counts in 24 of 24 rows. Tests (2026-10-10 IST): 631 passed, 11 slow tests deselected; the slow integration test (a mini dataset build through the gallery) passed in 1110.57\ s; `ruff check --select F,E9` is clean. Evidence: `docs/evidence_final_782d7df7/` with `SHA256SUMS`; `README.md` gives the rebuild steps.
+The final run was one Kaggle kernel (cvoice-build version 19, 2 × T4): 7228.9 s in total, `STATUS.json` complete with no failed stage. The kernel checks the staged source hashes and installs the locked environment (`uv.lock`). Hashes: dataset manifest `d67c9cd9…`, detector `d5935d3f…`, configuration `782d7df7…`, `results.json` `49a306d9…`. The evaluation addendum and the gallery were computed afterwards on CPU from the saved outputs (`scripts/rebuild_after_final.sh`); its re-run of the frozen detector on the saved audio of 162 clips reproduces the saved counts in 24 of 24 rows. Tests (CI, 2026-10-12 IST): 654 passed, 4 skipped (they need the final-run outputs), 11 slow deselected; the slow integration test (a mini dataset build through the gallery) passed in 1110.57\ s; `ruff check --select F,E9` is clean. Evidence: `docs/evidence_final_782d7df7/` with `SHA256SUMS`; `README.md` gives the rebuild steps.
 
 # 9. Limits
 
@@ -218,7 +218,7 @@ Detector `782d7df7…`, its thresholds and every pre-registered number above are
 - All clips are synthetic edits, repaired by inverse operators of the same tool set; no natural flaw was tested. Gain does not restore effort; an inserted pause has no boundary lengthening.
 - No listening result: a blind MUSHRA-style test (12 spots) is designed and pending; there is no perceptual evidence yet.
 - Own pitch rarely edits a flattened contour: all three gallery MONOTONE findings are skipped; the reference-melody option has no perceptual test.
-- Without a reference only pause edits were checked: on 985 fit-phase readers, 32 longer-pause findings; 2 remove a majority phrase break.
+- Without a reference only pause edits were checked: on 985 fit-phase readings, 32 longer-pause findings; 2 remove a majority phrase break.
 
 **Novelty.** Own-voice prosody correction [125, 131] and scoring of modified learner audio [132, 133] exist; as far as the search found, the added part is the per-flag re-analysis by the same detector, with processing-only, sham, dose and detector-free controls.
 
@@ -226,7 +226,7 @@ Detector `782d7df7…`, its thresholds and every pre-registered number above are
 
 **Design** (`selfref.py`, `models/detector_selfref.json`). Each measure is compared with the speaker's own typical value: D1 and D9 window time against the time expected from CMUdict phone counts; D2 against the speaker's median pause of the boundary class [141]; D3 against the median less a declination offset [70, 97]; D5, D6 against the median. D4, D7 and D8 need a reference and are absent. One h per key maximises the R1 objective on train under a budget of 0.5 false regions per minute on train nulls and 167 Gettysburg and poetry fit-phase readers. Text-expected durations follow [138–140]; such pause and monotone checks exist commercially [146]; no novelty is claimed.
 
-**Single test run** (2026-10-10 09:45 IST; `detector_selfref.json` sha256 `6dd3adc5…`, equal to the repository file). Core 8, levels 2–3, one detection per change; intervals are count-level bootstrap, not clustered by the 2 test speakers. **What a reference adds:** with the same measures, test F1 is 0.36 without a reference and 0.812 / 0.879 with one.
+**Single test run** (2026-10-10 09:45 IST; `detector_selfref.json` sha256 `6dd3adc5…`, equal to the repository file). Core 8, levels 2–3, one detection per change; intervals are count-level bootstrap (`docs/evidence_post_final/f1_intervals.txt`), not clustered by the 2 test speakers. **What a reference adds:** with the same measures, test F1 is 0.36 without a reference and 0.812 / 0.879 with one.
 
 | Test, core 8, L2+L3 | TP/FP/dup/FN | Precision | Recall | F1 [95 %] |
 |:-------------------------------------------------------|:------------------|:------|:------|:----------------|
@@ -301,7 +301,7 @@ Full entries and the use of each paper: `docs/PAPERS.md`.
 [128] Bissiri, Pfitzinger & Tillmann (2006), Lexical stress training… by means of resynthesis and emphasis, *SST 2006*.
 [129] Nolan (2003), Intonational equivalence: an experimental evaluation of pitch scales, *15th ICPhS*.
 [130] Peabody & Seneff (2006), Towards automatic tone correction in non-native Mandarin, *ISCSLP 2006*.
-[131] Ai & Xu (2015), system demonstration, *ACL-IJCNLP 2015*, P15-4001.
+[131] Ai & Xu (2015), A system demonstration of a framework for computer assisted pronunciation training, *ACL-IJCNLP 2015 System Demonstrations*.
 [132] Zhao, Koh & Luke (2012), Accent reduction for computer-aided language learning, *EUSIPCO 2012*.
 [133] Zhang et al. (2021), Masked acoustic unit for mispronunciation detection and correction, arXiv:2108.05517.
 [138] Duong & Mostow (2010), Adapting a duration synthesis model to rate children's oral reading prosody, *Interspeech 2010*.

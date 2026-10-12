@@ -423,7 +423,7 @@ Word-duration norms were fitted on LibriTTS (Zen et al. 2019, arXiv:1904.02882; 
 128. Bissiri, Pfitzinger & Tillmann (2006). Lexical stress training of German compounds for Italian speakers by means of resynthesis and emphasis. *Proc. SST 2006*, 24–29. Full.
 129. Nolan (2003). Intonational equivalence: An experimental evaluation of pitch scales. *Proc. 15th ICPhS*, Barcelona. Full.
 130. Peabody & Seneff (2006). Towards automatic tone correction in non-native Mandarin. *Proc. ISCSLP 2006* (LNCS 4274). Full.
-131. Ai & Xu (2015). System demonstration of the DFKI "Sprinter" pronunciation tutor (the title is not recorded in the research notes). *Proc. ACL-IJCNLP 2015, System Demonstrations*, ACL Anthology P15-4001. Full.
+131. Ai & Xu (2015). A system demonstration of a framework for computer assisted pronunciation training. *Proc. ACL-IJCNLP 2015, System Demonstrations*, 1–6. ACL Anthology P15-4001. Full.
 132. Zhao, Koh & Luke (2012). Accent reduction for computer-aided language learning. *Proc. EUSIPCO 2012*. Full (method, evaluation).
 133. Zhang et al. (2021). Masked acoustic unit for mispronunciation detection and correction. arXiv:2108.05517. Parts (evaluation).
 134. Felps, Bortfeld & Gutierrez-Osuna (2009). Foreign accent conversion in computer assisted pronunciation training. *Speech Communication*, 51(10), 920–932. doi:10.1016/j.specom.2008.11.004. Full-F.

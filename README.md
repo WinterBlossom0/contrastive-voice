@@ -12,7 +12,7 @@ Contrastive Voice compares a spoken reading with a reference reading of the same
 
 ![Dashboard: gallery example "Level 3, Set A", same-recording regime R1](docs/img/readme_dashboard.png)
 
-The screenshot shows the local app on the gallery example **Level 3, Set A**: the Reagan passage with four injected level-3 edits, compared with the unedited recording (regime R1). The score is 86.11. The time view marks the costliest findings on both readings: **#2 Missing pause** (−3.56 points), **#3 Rushed** (−4.89), **#5 Volume drops** (−3.81) and **#1 Flat pitch**. Below it (not in the screenshot) are the three biggest fixes, each with the words, both measured values, the points it costs, a fix, A/B listening and **Hear it fixed**; then the text with every finding marked, the full list of findings and the charts of every measurement.
+The screenshot shows the local app on the gallery example **Level 3, Set A**: the Reagan passage with four injected level-3 edits, compared with the unedited recording (regime R1). The score is 86.11. The time view of both readings marks **#3 Rushed ×2** (−4.89 points), **#2 Missing pause** (−3.56) and **#5 Volume drops ×2** (−3.81) on this recording; **+1 more** stands for the finding without a label, **#1 Flat pitch**, and opens the list of every finding. Below it (not in the screenshot) are the three biggest fixes, each with the words, both measured values, the points it costs, a fix, A/B listening and **Hear it fixed**; then the text with every finding marked, the full list of findings and the charts of every measurement.
 
 **Documents:** [technical report](docs/technical.md) ([PDF](docs/technical.pdf)) · [papers used and the chain from each flaw to its method](docs/PAPERS.md) · [evidence of the final evaluation](docs/evidence_final_782d7df7/) · [evidence of the two features added after it](docs/evidence_post_final/)
 
@@ -40,7 +40,7 @@ The R1 F1 measures how well the tool finds edits inside one recording. It does n
 
 ## Headline results
 
-Final evaluation, detector configuration `782d7df7…` (`models/detector.json`, sha256 `d5935d3f…`), run on Kaggle (2 × T4) on 2026-10-07 IST; the test split was evaluated once with this configuration. Evidence: [`docs/evidence_final_782d7df7/`](docs/evidence_final_782d7df7/) (`results.json`, `addendum.json`, checksums in `SHA256SUMS`).
+Final evaluation, detector configuration `782d7df7…` (`models/detector.json`, sha256 `d5935d3f…`), run on Kaggle (2 × T4) on 2026-10-07 IST; the test split was evaluated once with this configuration. Evidence: [`docs/evidence_final_782d7df7/`](docs/evidence_final_782d7df7/) (`results.json`, `addendum.json`, checksums in `SHA256SUMS`). The evaluation plan that `addendum.json` cites (docs/FINAL_EVALUATION_PLAN.md) is no longer in the tree; it is kept at commit [`c2204b2`](https://github.com/WinterBlossom0/contrastive-voice/blob/c2204b2/docs/FINAL_EVALUATION_PLAN.md).
 
 **R1, same recording.** Strict event F1 for the 8 core edit types at levels 2 and 3 (one-to-one matching; windowed regions need IoU ≥ 0.5). Validation and test have 2 speakers each, so per-speaker values are given, not confidence intervals.
 
@@ -51,7 +51,7 @@ Final evaluation, detector configuration `782d7df7…` (`models/detector.json`, 
 
 - The test split was evaluated once before, on 2026-10-02, with an earlier detector configuration (`32cdd86f…`, without the speech-tempo key, all predictions counted): F1 0.879 (29/5/3). That result was seen before the redesign. Its evidence is kept in [`docs/evidence_final_32cdd86f3d6e/`](docs/evidence_final_32cdd86f3d6e/).
 - Level 1 (the mildest edits), test: 0.286 pre-registered, 0.476 one detection per change.
-- Unedited copies of the test recordings (identity and 5 placebo variants): 0 false regions in 5.89 comparison-minutes.
+- Unedited copies of the test recordings (identity and 5 placebo variants): 0 false regions in 5.89 comparison-minutes. The copies come from 0.98 independent recording-minutes, so the 0.5/min budget is not measurable on them (`results.json`).
 - Natural rushing (speech tempo): 4 of 18 edits found at levels 2–3 (train 2/10, validation 1/4, test 1/4).
 
 **R2, different speaker.** Held-out readers of the same texts (the lockbox: Speech Accent Archive and LibriVox poetry readers only), with no edits; false regions per comparison-minute, the two sources weighted equally:
@@ -97,9 +97,9 @@ uv run --extra cpu python -m cvoice.app
 
 Open `http://127.0.0.1:7860`. Options: `--host`, `--port`, `--gallery DIR`, `--detector FILE` (default `models/detector.json`, the frozen detector). `GET /api/health` reports whether analysis is available.
 
-**Gallery.** The page opens on a precomputed example. **Try an example** (and **More examples**) holds 18 examples, each with its score: **Identity**, **Level 1** to **Level 3** (**Set A**, **Set B**, and **Set A, no reference**), the **Ladder** (**G1**, **G3**, **G5**), **Other performance** (**Greenman**, **Greenman edited**, **Greenman botched**, **Listed entries**, **Median of five**), **Channel** (**MP3 64 kbit/s**) and **Natural rushing**. The evaluation and the stress matrix are in the technical report, linked at the foot of the page.
+**Gallery.** The page opens on a precomputed example. **Try an example** (and **More examples**) holds 18 examples, each with its score (the no-reference example with its number of flagged spots): **Identity**, **Level 1** to **Level 3** (**Set A**, **Set B**, and **Set A, no reference**), the **Ladder** (**G1**, **G3**, **G5**), **Other performance** (**Greenman**, **Greenman edited**, **Greenman botched**, **Listed entries**, **Median of five**), **Channel** (**MP3 64 kbit/s**) and **Natural rushing**. The evaluation and the stress matrix are in the technical report, linked at the foot of the page.
 
-**Upload your own reading.** Open **Analyse your reading**, choose your file under **Your recording**, pick a **Reference** (the bundled Reagan passage, one reading; the bundled Gettysburg Address, median of five readings; your own reference recordings; or **No reference: grade my reading on its own**), fill in **Transcript: the exact words both recordings read** (or load it from a text file), and press **Analyse**. The page shows the stages decode, align, features, compare and detect while the job runs. Every upload with a reference is analysed as R2. Limits: 50 MiB per request, 180 s per recording, one analysis at a time. A recording whose words do not match the transcript is refused.
+**Upload your own reading.** Open **Analyse your reading**, choose your file under **Your recording**, pick a **Reference** (the bundled Reagan passage, one reading; the bundled Gettysburg Address, median of five readings; your own reference recordings; or **No reference: grade my reading on its own**), fill in **Transcript: the exact words both recordings read** (or load it from a text file), and press **Analyse**. The page shows the stages decode, align, features, compare and detect while the job runs. Every upload with a reference is analysed as R2. Limits: 50 MiB per file (your recording and up to 5 reference recordings), 180 s per recording, one analysis at a time. A recording whose words do not match the transcript is refused.
 
 The same analysis from the command line (use `--regime R1` only for an edited copy of the reference recording itself):
 
@@ -118,7 +118,7 @@ Treat it as a preview of the change. It shows what the same detector measures af
 
 ### Fix everything and listen
 
-**Fix everything and listen** (under the score) applies every fix at once and plays your whole reading as **Yours** or **Edited**. It shows the score before and after (on "Level 3, Set A": 86.11 → 96.17) and, under **What each fix did**, the outcome of each finding with its own loop. Clarity, sentence endings, repetitions, fillers and other disfluencies cannot be fixed by editing a recording, and the list says so. The ticks under the player are the checks that passed: your unedited recording analysed again gives the same result, and every word of the edited recording is found where the edit moved it. The score change is shown only when the first check passes.
+**Fix everything and listen** (under the score) applies every fix at once and plays your whole reading as **Yours** or **Edited**. It shows the score before and after (on "Level 3, Set A": 86.11 → 96.17) and, under **What each fix did**, the outcome of each finding, with its own loop for each finding that was edited. Clarity, sentence endings, repetitions, fillers and other disfluencies cannot be fixed by editing a recording, and the list says so. The ticks under the player are the checks that passed: your unedited recording analysed again gives the same result, and every word of the edited recording is found where the edit moved it. The score change is shown only when the first check passes.
 
 ![Fix everything and listen on "Level 3, Set A"](docs/img/readme_fix_all.png)
 
@@ -143,7 +143,7 @@ The image needs about 2 GB of RAM (CPU PyTorch and the 378 MB alignment checkpoi
 
 - **Fly.io** (`fly.toml`): `fly launch --copy-config --no-deploy`, change `app` to a unique name, then `fly deploy` and `fly scale count 1`.
 - **Render** (`render.yaml`): New > Blueprint, then select the repository. It uses the Docker runtime on the `standard` plan (2 GB).
-- **Hugging Face Docker Spaces**: create a Docker Space, push the repository and add `sdk: docker` and `app_port: 7860` to the Space README front matter.
+- **Hugging Face Docker Spaces**: a plain `git push` of this repository is refused, because the Hub needs files over 10 MB stored with Git Xet or LFS, and `docs/video/contrastive-voice-launch.mp4` (38 MB) is in the history without it. Create a Docker Space and upload the tracked files without the video instead: `mkdir space && git archive HEAD -- . ':!video' ':!docs/video' | tar -x -C space`, add the front matter `sdk: docker` and `app_port: 7860` at the top of `space/README.md`, then `hf upload YOUR_USERNAME/cvoice space . --repo-type space` (`hf upload` stores large files itself).
 - **Google Cloud Run**: `gcloud run deploy cvoice --source . --memory 2Gi --cpu 2 --max-instances 1` (Cloud Run sets `PORT=8080`).
 
 ### Static gallery (no server)
@@ -192,7 +192,7 @@ Everything is rebuilt on Kaggle with your own account; no access to the owner's 
    scripts/import_run.sh build/run
    ```
 
-   The importer checks `SHA256SUMS` and `STATUS.json`, refuses a run whose record of final evaluations lost an entry, and replaces `data/dataset/`, `gallery/`, `docs/evidence/` and the JSON files in `models/`. To compare with the owner's run: the dataset manifest of the final run has sha256 `d67c9cd9…` (the development run before it gave the same manifest), and the detector configuration is `782d7df7…` (`STATUS.json` `detector.config_sha256`).
+   The importer checks `SHA256SUMS` and `STATUS.json`, refuses a run whose record of final evaluations lost an entry, and replaces `data/dataset/`, `gallery/`, `docs/evidence/` and the JSON files in `models/`. To compare with the owner's run: the dataset manifest of the final run has sha256 `d67c9cd9…` (the development run before it reported the same manifest; its outputs are not published), and the detector configuration is `782d7df7…` (`STATUS.json` `detector.config_sha256`).
 
 **Test split.** A default run evaluates train and validation only (`FINAL_DEFAULT = False` in `kaggle/run.py`). The test split and the R2 lockbox are evaluated only with `evaluate --final`, which records the configuration hash in `models/final_evaluations.json` before it computes a test number and refuses a second run for the same hash unless `--force` is given. That record already holds `782d7df7…` and the earlier `32cdd86f…`, and it travels with the staged project.
 
@@ -214,7 +214,7 @@ uv run --extra cpu pytest -q -m slow tests/test_smoke.py
 uv run --extra cpu ruff check --select F,E9 src kaggle tests
 ```
 
-The second command runs 658 tests (all pass, about 94 s on a laptop CPU, 2026-10-10 IST); 11 slow tests are deselected by default. The third runs the one-clip smoke test (it needs the alignment checkpoint; about 6 s once the checkpoint is cached). The slow tests of the two later features are in `tests/test_repair.py` and `tests/test_selfref.py` (`pytest -m slow`). The slow test `tests/test_integration.py` (a mini dataset build through the gallery) passes: `uv run --extra cpu --group build pytest -q -m slow tests/test_integration.py` gave 1 passed in 1110.57 s (18 min 31 s) on 2026-10-10 IST. A few tests read the final-run outputs under `build/`, which is not part of the repository; in a fresh clone they are skipped. `.github/workflows/ci.yml` runs the first three commands.
+The second command runs 658 tests (all pass, about 82 s on a laptop CPU, 2026-10-12 IST; in CI, 654 pass and 4 are skipped); 11 slow tests are deselected by default. The third runs the one-clip smoke test (it needs the alignment checkpoint; about 6 s once the checkpoint is cached). The slow tests of the two later features are in `tests/test_repair.py` and `tests/test_selfref.py` (`pytest -m slow`). The slow test `tests/test_integration.py` (a mini dataset build through the gallery) passes: `uv run --extra cpu --group build pytest -q -m slow tests/test_integration.py` gave 1 passed in 1110.57 s (18 min 31 s) on 2026-10-10 IST. A few tests read the final-run outputs under `build/`, which is not part of the repository; in a fresh clone they are skipped. `.github/workflows/ci.yml` runs the first three commands.
 
 ## Repository layout
 
@@ -240,16 +240,18 @@ The second command runs 658 tests (all pass, about 94 s on a laptop CPU, 2026-10
 
 ## Data and licences
 
-- **Baselines and gallery audio.** The 9 baseline speeches are public-domain US government recordings (Wikimedia Commons). The reader recordings in the gallery (Gettysburg Address, Reagan farewell address read by John Greenman) are LibriVox readings dedicated to the public domain. All audio in this repository derives from these sources. `data/sources_manifest.json` and the dataset card give the source URL and licence basis of each.
+- **Baselines and gallery audio.** The 9 baseline speeches are public-domain US government recordings (Wikimedia Commons). The reader recordings in the gallery (Gettysburg Address, Reagan farewell address read by John Greenman) are LibriVox readings dedicated to the public domain. All audio of the data, the gallery and the test fixtures derives from these sources. `data/sources_manifest.json` and the dataset card give the source URL and licence basis of each.
 - **Reader corpora for the R2 calibration and lockbox** (final-run dataset): Speech Accent Archive (779 recordings, CC BY-NC-SA 4.0), EARS (856 recordings, CC BY-NC 4.0), and LibriVox poetry and Gettysburg readings (308 recordings, public domain). They are used under their own terms for calibration and evaluation. Their audio is not in this repository; it stays in private Kaggle outputs and is rebuilt from the origins by `kaggle/data/fetch.py`, which writes the licence of each source to `LICENSES.md`.
 - No data is redistributed against its licence.
-- **Word-duration norms** (`models/duration_norms.json`, not used by the shipped detector) were fitted on LibriTTS dev-clean and test-clean (Zen et al. 2019, arXiv:1904.02882; CC BY 4.0; OpenSLR SLR60). The LibriTTS audio is not in this repository; `scripts/fetch_norms_corpus.py` downloads it and checks its hashes.
+- **Detectors** (`models/detector.json`, `models/detector_selfref.json` and the record `models/final_evaluations.json`): CC BY-NC-SA 4.0, as on Hugging Face, because they were calibrated or selected with Speech Accent Archive (CC BY-NC-SA 4.0) and EARS (CC BY-NC 4.0) data. They are excluded from the MIT licence of the code.
+- **Word-duration norms** (`models/duration_norms.json`, not used by the shipped detector) were fitted on LibriTTS dev-clean and test-clean (Zen et al. 2019, arXiv:1904.02882; CC BY 4.0; OpenSLR SLR60). The LibriTTS audio is not in this repository; `scripts/fetch_norms_corpus.py` downloads it and checks its hashes. The norms file is fitted on LibriTTS only and is licensed CC BY 4.0, with the attribution above.
 - Third-party components keep their own licences: torchaudio `WAV2VEC2_ASR_BASE_960H` (alignment), Praat through parselmouth (pitch), the WORLD vocoder through pyworld (build only), `cmudict` (syllable counts), Plotly (MIT) and wavesurfer.js (BSD-3-Clause), and the Newsreader and Atkinson Hyperlegible Next typefaces (SIL Open Font License), vendored in `src/cvoice/static/vendor/`.
-- Code licence: MIT (`LICENSE`).
+- **Launch video** (`docs/video/contrastive-voice-launch.mp4`, source in `video/`): music "Inspired" by Kevin MacLeod (incompetech.com), CC BY 4.0, credited on the end card and in `video/public/music/LICENSE.txt`; sound effects synthesized for this project, CC0 1.0 (`video/public/sfx/LICENSE.txt`); narration in `video/public/narration/` is generated speech of a designed synthetic voice, not a recording or a clone of any person (`video/public/narration/LICENSE.txt`); the demo captures and `video/public/clips/` show the app and gallery audio; the typefaces are under the SIL Open Font License (`video/public/fonts/`).
+- Code licence: MIT (`LICENSE`); the files in `models/` are excluded (see above and `models/LICENSE.md`).
 
 ## AI assistance
 
-The AI tool used is Claude Code. The research (literature and data-source reports), the source code and tests, the data pipeline and Kaggle kernels, the calibration and evaluation, the dashboard, and the documents (this README, the technical report, the papers file) were produced with Claude Code under the owner's direction. The owner made the design decisions: scope and flaw types, the data sources and their use, the threshold-only detector, the speaker splits, the evaluation rules and the decision to run the final evaluation once.
+The AI tool used is Claude Code. The research (literature and data-source reports), the source code and tests, the data pipeline and Kaggle kernels, the calibration and evaluation, the dashboard, the launch video, and the documents (this README, the technical report, the papers file) were produced with Claude Code under the owner's direction. The owner made the design decisions: scope and flaw types, the data sources and their use, the threshold-only detector, the speaker splits, the evaluation rules and the decision to run the final evaluation once.
 
 ## Limits
 

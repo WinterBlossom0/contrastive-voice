@@ -1,4 +1,4 @@
-// The narration script of build/work/video_v2/script.json. The timeline uses it only for a scene that
+// The narration script of the launch video (generated file). The timeline uses it only for a scene that
 // src/data/narration.json does not have yet; then it estimates each line's length from its word count.
 export type ScriptScene = { id: string; lines: string[]; clipAfterLine?: number };
 

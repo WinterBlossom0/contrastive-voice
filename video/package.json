@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Launch video for Contrastive Voice",
   "repository": {},
-  "license": "UNLICENSED",
+  "license": "MIT",
   "private": true,
   "dependencies": {
     "@remotion/cli": "4.0.534",

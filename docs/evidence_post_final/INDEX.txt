@@ -20,6 +20,10 @@ Fix your speech (src/cvoice/repair.py)
   Computed with src/cvoice/repair.py sha256 0cf2371cebf986776a54b62420eff2b4e8452791a5218fc536a586a1a1a4a52e.
   The repository file differs from it only in names and comments (the null chain renamed from "placebo").
   No test-split data was read.
+  The validation script that wrote these three files (build/work/repair/validate.py, sha256 562f0ece..., named in
+  repair_validation_summary.json) is not published: it reads the unpacked outputs of the final Kaggle run and a pickle of
+  analysed fit-phase reader recordings (including Speech Accent Archive and EARS readings under non-commercial
+  licences), which are not in this repository.
 - listening_test_design.txt       Pre-registered design of a blind listening test (MUSHRA-style, 12 spots). No
                                   listener data exists yet: there is no perceptual evidence.
 
@@ -37,6 +41,8 @@ No-reference rough check (src/cvoice/selfref.py, models/detector_selfref.json)
 Report detail
 - report_detail.txt               Full form of the passages that the PDF of docs/technical.md shortens in
                                   section 10 (method, every check row, the full limits). Values unchanged.
+- f1_intervals.txt                Method, inputs and a runnable computation of the F1 intervals of the single
+                                  no-reference test run (count-level multinomial bootstrap, exact enumeration).
 
 Hashes recorded with the single no-reference test run
 -----------------------------------------------------

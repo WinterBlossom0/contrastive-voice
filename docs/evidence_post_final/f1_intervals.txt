@@ -1,0 +1,47 @@
+F1 intervals of the single no-reference test run (technical report, section 10.2)
+================================================================================
+
+Values: without a reference, F1 0.36 [0.18, 0.51]; reference-free lower bound, F1 0.407 [0.23, 0.55].
+
+Inputs (no_reference_test_results.json, one detection per change, core 8, levels 2-3, test split):
+- without a reference:        self."core8|L2+L3|test".once_tp_fp_dup_fn         = [9, 9, 1, 23]
+- reference-free lower bound: old_lower_bound."core8|L2+L3|test".once_tp_fp_dup_fn = [12, 15, 0, 20]
+Same-change duplicates are not counted in F1, so the counts used are (TP, FP, FN) = (9, 9, 23) and (12, 15, 20).
+
+Method: count-level multinomial bootstrap. A resample draws n = TP + FP + FN outcomes with the observed shares of TP,
+FP and FN; F1 = 2 TP / (2 TP + FP + FN). The interval is the 2.5 % and 97.5 % quantile of the resampled F1. The
+resamples are not clustered by the 2 test speakers or by passage, so the intervals are too narrow if outcomes of one
+speaker are correlated.
+
+The values were first computed with random resamples. The computation below enumerates every multinomial outcome, so it
+gives the limit of an infinite number of resamples and needs no random seed; it gives the same values to two decimals:
+  (9, 9, 23):   [0.1778, 0.5091] -> [0.18, 0.51]
+  (12, 15, 20): [0.2264, 0.5538] -> [0.23, 0.55]
+Lower limit: the smallest F1 whose cumulative probability is >= 0.025; upper limit: the same for 0.975.
+
+Python 3 (standard library only):
+
+from math import exp, lgamma, log
+
+def f1_interval(tp, fp, fn, lower=0.025, upper=0.975):
+    n = tp + fp + fn
+    shares = (tp / n, fp / n, fn / n)
+    probability = {}
+    for a in range(n + 1):
+        for b in range(n + 1 - a):
+            c = n - a - b
+            log_p = lgamma(n + 1) - lgamma(a + 1) - lgamma(b + 1) - lgamma(c + 1)
+            log_p += sum(k * log(s) for k, s in zip((a, b, c), shares) if k > 0)
+            f1 = 2 * a / (2 * a + b + c)
+            probability[f1] = probability.get(f1, 0.0) + exp(log_p)
+    limits, cumulative = [], 0.0
+    targets = [lower, upper]
+    for f1 in sorted(probability):
+        cumulative += probability[f1]
+        while targets and cumulative >= targets[0]:
+            limits.append(f1)
+            targets.pop(0)
+    return limits
+
+print(f1_interval(9, 9, 23))    # [0.17777777777777778, 0.509090909090909]
+print(f1_interval(12, 15, 20))  # [0.22641509433962265, 0.5538461538461539]

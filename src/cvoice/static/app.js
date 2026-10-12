@@ -130,7 +130,7 @@ const SELF_COPY = {
 const SELF_LIMIT = "A rough check: your reading is graded against itself. For better results, use a reference reading of the same text.";
 const FIX_STAGES = ["edit", "check"];   // app.FIX_STAGES (tests/test_app.py compares them)
 const FIX_STAGE_TEXT = { edit: "Editing your recording…", check: "Checking the result…" };
-// "Edited", never "Fixed": an edit can leave a spot flagged or apply only part of the change (build/work/repair/FIX_CONTRACT.md).
+// "Edited", never "Fixed": an edit can leave a spot flagged or apply only part of the change (technical report, section 10.1).
 const LISTEN_SIDES = [["yours", "Yours"], ["fixed", "Edited"], ["target", "Target"]];
 const HEAR_FIXED = { reference: "Hear it fixed", self: "Hear it closer to your typical delivery" };
 

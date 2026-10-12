@@ -1,0 +1,9 @@
+s1_hook_01.wav ... s16_close_01.wav (the narration of the launch video; src/data/narration.json lists each line and file)
+
+Source: generated speech, made for this project with the text-to-speech model Qwen3-TTS-12Hz-1.7B-VoiceDesign (Qwen,
+https://huggingface.co/Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign). The voice is designed from a text description only
+(src/data/narration.json, field "direction"). No reference recording was used: the voice is not a recording or a clone
+of any person.
+Model licence: Apache License 2.0, https://www.apache.org/licenses/LICENSE-2.0. The model card sets no condition on
+generated audio.
+Edits: one generation per scene, cut into lines at the pauses.

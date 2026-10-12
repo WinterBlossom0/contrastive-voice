@@ -89,7 +89,8 @@ MEAN_COMPAT_MIN = 0.10  # (D) refusal "transcript does not match the audio", enf
 # Partial-mismatch refusal of uploads (align.require_full_match); outside the detector hash because it only refuses an upload.
 MISMATCH_TOL_FRAMES = 4  # CTC frames (80 ms)
 MISMATCH_SPIKE_P = 0.5  # posterior of the most probable letter on a spike frame
-# Limits 1.25 x the largest value of 1936 real readings with their correct transcripts (build/work/qa2/n1/REPORT.txt).
+# Limits 1.25 x the largest value of 1936 real readings with their correct transcripts (gallery, train and val clips,
+# EARS, Speech Accent Archive and LibriVox readers); the calibration record is not published.
 MISMATCH_WINDOW_S = 2.0  # s
 MISMATCH_MISSING_MAX, MISMATCH_EXTRA_MAX = 175.0, 360.0  # nats in one MISMATCH_WINDOW_S window
 MISMATCH_SPREAD_EXCLUDE_S, MISMATCH_SPREAD_MAX = 3.0, 9.5  # s, nats per second

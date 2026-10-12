@@ -9,7 +9,7 @@ import type { SceneId, SceneTiming } from "../timeline";
 
 type DemoSpec = { chapter: number; title: string; shows: string };
 
-// One chapter per demo scene; `shows` is the placeholder text while the scene has no capture yet (build/work/video_v2/PLAN.md).
+// One chapter per demo scene; `shows` is the placeholder text while the scene has no capture yet.
 export const DEMO_SCENES: Partial<Record<SceneId, DemoSpec>> = {
   s3_open_example: { chapter: 1, title: "Try an example", shows: "The page loads; the examples menu opens; L3A scores 86.11, with its summary and the three biggest fixes." },
   s4_listen: { chapter: 2, title: "Pinned to the words", shows: "The waveform strip and the transcript; the recording plays over the rushed words." },
