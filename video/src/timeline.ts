@@ -1,6 +1,7 @@
 import { staticFile } from "remotion";
 import captureData from "./data/captures.json";
 import narrationData from "./data/narration.json";
+import pacingData from "./data/pacing.json";
 import { SCRIPT } from "./script";
 
 export const FPS = 30;
@@ -45,9 +46,11 @@ export type Narration = { voice: string; scenes: NarrationScene[] };
 // rect at the largest size that fits CAPTURE_VIEW. The move starts at narration line `at` (or at the clip) plus `sec`.
 export type CameraRect = [number, number, number, number];
 export type CameraKey = { at: number | "clip"; sec?: number; rect: CameraRect; moveFrames?: number };
-// A ripple at capture frame `frame` (30 fps frames of the recording) at (x, y) in capture px.
-export type ClickSpec = [number, number, number];
-export type CalloutSpec = { at: number | "clip"; sec?: number; durSec?: number; rect: CameraRect; text: string };
+// A ripple at capture frame `frame` (30 fps frames of the recording) at (x, y) in capture px; `tail`, when given, is the
+// number of frames the ripple shows after the click (a click that changes the whole page ends its ripple early).
+export type ClickSpec = [number, number, number] | [number, number, number, number];
+// `label`: the centre of the callout's label in capture px, chosen by scripts/capture.cjs where no text lies.
+export type CalloutSpec = { at: number | "clip"; sec?: number; durSec?: number; rect: CameraRect; text: string; label?: [number, number] };
 // A sound effect at capture frame `frame` (30 fps frames of the recording), for a moment that only the recording shows,
 // such as the score ring counting up ("rise") or a fix result appearing ("chime").
 export const CAPTURE_SOUNDS = ["click", "pop", "rise", "chime"] as const;
@@ -76,8 +79,8 @@ export type Capture = {
 };
 
 export type TimedCameraKey = { frame: number; rect: CameraRect; moveFrames: number };
-export type TimedClick = { frame: number; x: number; y: number };
-export type TimedCallout = { from: number; durationInFrames: number; rect: CameraRect; text: string };
+export type TimedClick = { frame: number; x: number; y: number; tail?: number };
+export type TimedCallout = { from: number; durationInFrames: number; rect: CameraRect; text: string; label?: [number, number] };
 export type TimedSound = { frame: number; sound: CaptureSound };
 
 // The largest page area of the browser window in output px: the frame of CaptureFrame without its title bar.
@@ -127,8 +130,9 @@ const ESTIMATE_GAP_SEC = 0.7;
 const ESTIMATE_CLIP_SEC = 6;
 // The closing scene holds the name on screen after the last line, then fades to black.
 const CLOSE_HOLD_SEC = 2.5;
-// The opening scene shows the landscape rising for this long before the first line.
-const OPEN_LEAD_SEC = 1.5;
+// Picture without narration around each scene's lines (data/pacing.json); scripts/capture.cjs and check-framing.cjs read it too.
+type Pacing = { leadSec?: number; holdSec?: number };
+const pacing = (pacingData as { scenes: Partial<Record<string, Pacing>> }).scenes;
 // A callout without durSec stays to the end of its line, but at least this long.
 const CALLOUT_MIN_SEC = 2.5;
 
@@ -199,7 +203,7 @@ const anchorEnd = (lines: TimedLine[], clip: TimedClip | null, at: number | "cli
   return line === undefined ? 0 : line.from + line.durationInFrames;
 };
 
-// Each scene: its lines back to back, the clip (if any) after its cue line, then gapAfterSec of silence.
+// Each scene: its lead, its lines back to back, the clip (if any) after its cue line, then gapAfterSec plus its hold.
 // Frame positions are rounded from cumulative seconds inside a scene, so rounding never drifts across lines.
 export const computeTimeline = async (signal?: AbortSignal): Promise<SceneTiming[]> => {
   const narrated = new Map(narration.scenes.filter(matchesScript).map((scene) => [scene.id, scene]));
@@ -216,7 +220,7 @@ export const computeTimeline = async (signal?: AbortSignal): Promise<SceneTiming
 
   return SCENE_IDS.map((id) => {
     const scene = narrated.get(id) ?? estimatedScene(id);
-    let cursorSec = id === SCENE_IDS[0] ? OPEN_LEAD_SEC : 0;
+    let cursorSec = pacing[id]?.leadSec ?? 0;
     const lines: TimedLine[] = [];
     let clip: TimedClip | null = null;
     const clipAfter = clipLineIndex(scene);
@@ -230,7 +234,7 @@ export const computeTimeline = async (signal?: AbortSignal): Promise<SceneTiming
         clip = { ...scene.clip, from: clipFrom, durationInFrames: toFrame(cursorSec) - clipFrom, fileExists: existence.get(scene.clip.file) === true };
       }
     });
-    cursorSec += scene.gapAfterSec + (id === SCENE_IDS[SCENE_IDS.length - 1] ? CLOSE_HOLD_SEC : 0);
+    cursorSec += scene.gapAfterSec + (pacing[id]?.holdSec ?? 0) + (id === SCENE_IDS[SCENE_IDS.length - 1] ? CLOSE_HOLD_SEC : 0);
     const durationInFrames = Math.max(1, toFrame(cursorSec));
 
     // Moving captures share the scene in proportion to their own durations, or start at their narration line; a zero-length entry is the still of another.
@@ -260,14 +264,14 @@ export const computeTimeline = async (signal?: AbortSignal): Promise<SceneTiming
       }));
       // A frame of the recording to a frame of the scene: the recording starts after its lead and plays at its rate.
       const captureFrame = (frame: number) => from + leadFrames + Math.round(frame / rate);
-      const clickFrames = (capture.clicks ?? []).map(([frame, x, y]) => ({ frame: captureFrame(frame), x, y }));
+      const clickFrames = (capture.clicks ?? []).map(([frame, x, y, tail]) => ({ frame: captureFrame(frame), x, y, ...(tail === undefined ? {} : { tail }) }));
       const soundFrames = (capture.sounds ?? [])
         .filter(([, sound]) => (CAPTURE_SOUNDS as readonly string[]).includes(sound))
         .map(([frame, sound]) => ({ frame: captureFrame(frame), sound }));
       const timedCallouts = (capture.callouts ?? []).map((callout) => {
         const start = anchorFrame(lines, clip, callout.at, callout.sec);
         const end = callout.durSec === undefined ? Math.max(anchorEnd(lines, clip, callout.at), start + toFrame(CALLOUT_MIN_SEC)) : start + toFrame(callout.durSec);
-        return { from: start, durationInFrames: Math.max(1, end - start), rect: callout.rect, text: callout.text };
+        return { from: start, durationInFrames: Math.max(1, end - start), rect: callout.rect, text: callout.text, ...(callout.label === undefined ? {} : { label: callout.label }) };
       });
       return {
         ...capture,

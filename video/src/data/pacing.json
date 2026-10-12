@@ -1,0 +1,49 @@
+{
+  "note": "Seconds of picture without narration: leadSec before the first line of a scene, holdSec added to its gap after the last line. They give the demo time to act before a line names the result, and let results and the music breathe at the big transitions.",
+  "scenes": {
+    "s1_hook": {
+      "leadSec": 1.0
+    },
+    "s2_what": {
+      "holdSec": 0.4
+    },
+    "s3_open_example": {
+      "leadSec": 0.9,
+      "holdSec": 0.2
+    },
+    "s4_listen": {
+      "holdSec": 0.2
+    },
+    "s5_finding": {
+      "leadSec": 0.6,
+      "holdSec": 0.2
+    },
+    "s6_hear_fixed": {
+      "holdSec": 0.3
+    },
+    "s7_melody": {
+      "leadSec": 1.2,
+      "holdSec": 0.2
+    },
+    "s8_fix_all": {
+      "holdSec": 0.5
+    },
+    "s9_text_lists": {
+      "holdSec": 0.3
+    },
+    "s11_upload": {
+      "leadSec": 1.4,
+      "holdSec": 0.5
+    },
+    "s12_no_reference": {
+      "leadSec": 0.8,
+      "holdSec": 0.3
+    },
+    "s14_evidence": {
+      "holdSec": 0.2
+    },
+    "s15_open": {
+      "holdSec": 0.2
+    }
+  }
+}

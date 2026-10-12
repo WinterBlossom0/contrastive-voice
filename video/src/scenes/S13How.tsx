@@ -1,37 +1,29 @@
-import React, { useMemo } from "react";
+import React from "react";
 import { interpolate, useCurrentFrame } from "remotion";
 import { fadeOut, pop, rise, seeded } from "../components/anim";
 import { cueFrame } from "../components/cues";
 import { Heading, SceneShell } from "../components/SceneShell";
 import { referenceWords, yourWords } from "../components/words";
 import { color, font } from "../theme";
-import { beatFrame, FPS, type SceneTiming } from "../timeline";
+import { FPS, type SceneTiming } from "../timeline";
 
 const LEFT = 160;
 const WIDTH = 1600;
-const STEPS = ["Align", "Measure", "Normalise", "Threshold"];
-// The nine delivery measures D1 to D9 (docs/technical.md); `cue` is the word of narration line 2 that names it.
-const MEASURES = [
-  { name: "Pace", cue: "pace" },
-  { name: "Pauses", cue: "pauses" },
-  { name: "Pitch range", cue: "pitch" },
-  { name: "Emphasis", cue: "emphasis" },
-  { name: "Volume", cue: "volume" },
-  { name: "Clarity", cue: "clarity" },
-  { name: "Word time", cue: "" },
-  { name: "Sentence ending", cue: "" },
-  { name: "Speech tempo", cue: "" },
-];
+const STEPS = ["Align", "Own voice", "Threshold"];
+// The word of the narration line that starts each step.
+const STEP_CUES = ["wav2vec", "Pitch", "only"];
 // Both readings span this many seconds on the alignment panel's time labels.
 const READING_SEC = 6.4;
 
-// Panel `index` slides in from the right at its line and out to the left at the next line.
-const Panel: React.FC<{ scene: SceneTiming; index: number; children: React.ReactNode }> = ({ scene, index, children }) => {
+const stepStarts = (scene: SceneTiming): number[] => STEP_CUES.map((cue, index) => (index === 0 ? 0 : cueFrame(scene, 0, cue)));
+
+// Panel `index` slides in from the right at its step and out to the left at the next step.
+const Panel: React.FC<{ starts: number[]; index: number; children: React.ReactNode }> = ({ starts, index, children }) => {
   const frame = useCurrentFrame();
-  const start = index === 0 ? 0 : beatFrame(scene, index);
+  const start = starts[index];
   const last = index === STEPS.length - 1;
   const enter = pop(frame, start);
-  const leave = last ? 0 : 1 - fadeOut(frame, beatFrame(scene, index + 1) + 10, 14);
+  const leave = last ? 0 : 1 - fadeOut(frame, starts[index + 1] + 10, 14);
   return (
     <div
       style={{
@@ -99,61 +91,7 @@ const AlignPanel: React.FC<{ start: number; sweepFrames: number }> = ({ start, s
       {row(yourWords, 110, color.you, "Yours")}
       {row(referenceWords, 310, color.ref, "Reference")}
       <div style={{ position: "absolute", left: head * WIDTH - 1, top: 20, width: 3, height: 380, borderRadius: 2, backgroundColor: color.action, boxShadow: `0 0 18px ${color.action}`, opacity: head > 0 && head < 1 ? 1 : 0 }} />
-      <Caption top={470}>Forced alignment: a start and an end for every word</Caption>
-    </>
-  );
-};
-
-// A small comparison line per measure: the reading (lavender) against the reference (lake).
-const Spark: React.FC<{ seed: number; draw: number }> = ({ seed, draw }) => {
-  const points = useMemo(() => {
-    const random = seeded(seed * 97 + 13);
-    const reference = Array.from({ length: 12 }, () => 0.3 + random() * 0.4);
-    const reading = reference.map((value, index) => value + (index > 6 && index < 10 ? (random() - 0.5) * 0.7 : (random() - 0.5) * 0.12));
-    return { reference, reading };
-  }, [seed]);
-  const path = (values: number[]) => values.map((value, index) => `${index === 0 ? "M" : "L"}${(index / 11) * 120} ${44 - Math.min(1, Math.max(0, value)) * 40}`).join(" ");
-  return (
-    <svg width={120} height={46} style={{ display: "block", flexShrink: 0 }}>
-      <path d={path(points.reference)} fill="none" stroke={color.ref} strokeWidth={2.5} pathLength={1} strokeDasharray={1} strokeDashoffset={1 - draw} />
-      <path d={path(points.reading)} fill="none" stroke={color.you} strokeWidth={2.5} pathLength={1} strokeDasharray={1} strokeDashoffset={1 - draw} />
-    </svg>
-  );
-};
-
-const MeasurePanel: React.FC<{ scene: SceneTiming; start: number }> = ({ scene, start }) => {
-  const frame = useCurrentFrame();
-  return (
-    <>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 22, width: WIDTH }}>
-        {MEASURES.map((measure, index) => {
-          const shown = pop(frame, start + 4 + index * 3, true);
-          const named = measure.cue === "" ? 0 : rise(frame, cueFrame(scene, 1, measure.cue), 8) * fadeOut(frame, cueFrame(scene, 1, measure.cue) + 26, 10);
-          return (
-            <div
-              key={measure.name}
-              style={{
-                height: 122,
-                padding: "0 26px",
-                display: "flex",
-                alignItems: "center",
-                gap: 22,
-                borderRadius: 18,
-                backgroundColor: "rgba(38, 38, 36, 0.88)",
-                border: `1.5px solid ${named > 0.05 ? `rgba(217, 119, 87, ${0.4 + 0.6 * named})` : color.line}`,
-                boxShadow: named > 0.05 ? `0 0 30px rgba(217, 119, 87, ${0.3 * named})` : "none",
-                opacity: shown,
-                scale: String(interpolate(shown, [0, 1], [0.85, 1])),
-              }}
-            >
-              <div style={{ fontFamily: font.mono, fontSize: 22, color: color.action, width: 44 }}>D{index + 1}</div>
-              <div style={{ flex: 1, fontFamily: font.display, fontSize: 36, whiteSpace: "nowrap" }}>{measure.name}</div>
-              <Spark seed={index + 1} draw={rise(frame, start + 10 + index * 3, 30)} />
-            </div>
-          );
-        })}
-      </div>
-      <Caption top={460}>Compared on the same words in both readings</Caption>
+      <Caption top={470}>A wav2vec 2.0 aligner gives every word a start and an end</Caption>
     </>
   );
 };
@@ -172,8 +110,8 @@ const contour = (median: number, wobble: number, seed: number) => {
 const NormalisePanel: React.FC<{ scene: SceneTiming; start: number }> = ({ scene, start }) => {
   const frame = useCurrentFrame();
   const draw = rise(frame, start + 4, 30);
-  const together = pop(frame, cueFrame(scene, 2, "relative"));
-  const verdict = pop(frame, cueFrame(scene, 2, "deep"), true);
+  const together = pop(frame, cueFrame(scene, 0, "against"));
+  const verdict = pop(frame, cueFrame(scene, 0, "own"), true);
   const centre = 240;
   const deep = centre + 140 * (1 - together);
   const high = centre - 140 * (1 - together);
@@ -204,7 +142,7 @@ const NormalisePanel: React.FC<{ scene: SceneTiming; start: number }> = ({ scene
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 16, fontFamily: font.display, fontSize: 40 }}>
-          <span style={{ color: color.refText }}>✓</span> A deep voice is never a flaw
+          Pitch and volume against each speaker&apos;s own voice
         </div>
       </div>
     </>
@@ -219,8 +157,9 @@ const ThresholdPanel: React.FC<{ scene: SceneTiming; start: number }> = ({ scene
   const frame = useCurrentFrame();
   const chartWidth = 1300;
   const base = 360;
-  const threshold = rise(frame, cueFrame(scene, 3, "threshold"), 20);
-  const drops = cueFrame(scene, 3, "gets");
+  const threshold = rise(frame, cueFrame(scene, 0, "thresholds"), 20);
+  const drops = cueFrame(scene, 0, "differences");
+  const fitted = cueFrame(scene, 0, "flawless");
   return (
     <>
       <div style={{ position: "absolute", left: 150, top: 0, width: chartWidth, height: 420 }}>
@@ -243,13 +182,13 @@ const ThresholdPanel: React.FC<{ scene: SceneTiming; start: number }> = ({ scene
         })}
         <div style={{ position: "absolute", left: 0, top: base, width: chartWidth, height: 2, backgroundColor: color.line }} />
         <div style={{ position: "absolute", left: 0, top: base + 14, fontSize: 22, color: color.muted }}>difference from the reference →</div>
-        <div style={{ position: "absolute", left: 0, top: base - 270, fontSize: 24, color: color.ink2, opacity: rise(frame, start + 10, 16) }}>flawless comparisons</div>
+        <div style={{ position: "absolute", left: 0, top: base - 270, fontSize: 24, color: color.ink2, opacity: rise(frame, fitted, 16) }}>flawless comparisons</div>
         <div style={{ position: "absolute", left: THRESHOLD_AT * chartWidth - 2, top: base - 300 + 300 * (1 - threshold), width: 4, height: 300 * threshold, borderRadius: 2, backgroundColor: color.action, boxShadow: `0 0 16px ${color.action}` }} />
         <div style={{ position: "absolute", left: THRESHOLD_AT * chartWidth + 16, top: base - 300, fontSize: 26, fontWeight: 700, color: color.action, opacity: threshold }}>threshold</div>
         {DIFFERENCES.map((value, index) => {
           const fall = pop(frame, drops + index * 4, true);
           const flagged = value > THRESHOLD_AT;
-          const settled = rise(frame, drops + index * 4 + 10, 8);
+          const settled = Math.min(rise(frame, drops + index * 4 + 10, 8), threshold);
           return (
             <div
               key={index}
@@ -269,7 +208,7 @@ const ThresholdPanel: React.FC<{ scene: SceneTiming; start: number }> = ({ scene
         })}
       </div>
       <Caption top={460}>
-        Only a difference past the threshold is <span style={{ color: color.flagText }}>flagged</span>
+        Only differences past the threshold are <span style={{ color: color.flagText }}>flagged</span>
       </Caption>
     </>
   );
@@ -277,12 +216,11 @@ const ThresholdPanel: React.FC<{ scene: SceneTiming; start: number }> = ({ scene
 
 export const S13How: React.FC<{ scene: SceneTiming }> = ({ scene }) => {
   const frame = useCurrentFrame();
-  const starts = STEPS.map((_, index) => (index === 0 ? 0 : beatFrame(scene, index)));
+  const starts = stepStarts(scene);
   const active = starts.filter((start) => frame >= start).length - 1;
   const railProgress = interpolate(frame, starts, starts.map((_, index) => index / (STEPS.length - 1)), { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
   const railShown = rise(frame, 4, 20);
-  const firstLine = scene.lines[0];
-  const sweepFrames = Math.max(FPS, Math.round((firstLine === undefined ? 3 * FPS : firstLine.durationInFrames) * 0.8));
+  const sweepFrames = Math.max(FPS, Math.round((starts[1] - starts[0]) * 0.8));
   return (
     <SceneShell>
       <Heading style={{ position: "absolute", left: LEFT, top: 80, fontSize: 60, opacity: rise(frame, 0, 18) }}>Under the hood</Heading>
@@ -312,17 +250,14 @@ export const S13How: React.FC<{ scene: SceneTiming }> = ({ scene }) => {
           </div>
         );
       })}
-      <Panel scene={scene} index={0}>
+      <Panel starts={starts} index={0}>
         <AlignPanel start={starts[0]} sweepFrames={sweepFrames} />
       </Panel>
-      <Panel scene={scene} index={1}>
-        <MeasurePanel scene={scene} start={starts[1]} />
+      <Panel starts={starts} index={1}>
+        <NormalisePanel scene={scene} start={starts[1]} />
       </Panel>
-      <Panel scene={scene} index={2}>
-        <NormalisePanel scene={scene} start={starts[2]} />
-      </Panel>
-      <Panel scene={scene} index={3}>
-        <ThresholdPanel scene={scene} start={starts[3]} />
+      <Panel starts={starts} index={2}>
+        <ThresholdPanel scene={scene} start={starts[2]} />
       </Panel>
     </SceneShell>
   );

@@ -52,11 +52,12 @@ const effectsOf = (scenes: SceneTiming[]): Effect[] => {
     }
     if (scene.id === "s14_evidence") {
       const beats = evidenceBeats(scene);
-      list.push(...[beats.files, beats.scores, beats.once].map((frame) => effect(start + frame, "rise", COUNT_FRAMES + 2)));
+      list.push(...[beats.files, beats.scores].map((frame) => effect(start + frame, "rise", COUNT_FRAMES + 2)));
+      list.push(effect(start + beats.repairs, "pop"));
       list.push(effect(start + beats.clean, "chime"));
     }
     if (scene.id === "s15_open") {
-      const beats = terminalBeats(scene);
+      const beats = terminalBeats();
       list.push(effect(start + beats.buildStart, "typing", beats.buildDone - beats.buildStart));
       list.push(effect(start + beats.runStart, "typing", beats.runDone - beats.runStart));
       list.push(...cardFrames(scene).map((frame) => effect(start + frame, "pop")));

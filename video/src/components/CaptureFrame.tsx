@@ -145,6 +145,9 @@ const CameraView: React.FC<{ capture: TimedCapture; fadeIn: boolean; view: View 
 // A soft ring closes in on the spot just before the click, then a ripple spreads from it. Sizes are in output px, at any zoom.
 const ClickMark: React.FC<{ click: TimedClick; x: number; y: number; frame: number }> = ({ click, x, y, frame }) => {
   const since = frame - click.frame;
+  if (click.tail !== undefined && since > click.tail) {
+    return null;
+  }
   const approach = rise(frame, click.frame - CLICK_LEAD, CLICK_LEAD);
   const ripple = interpolate(since, [0, 18], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
   const hold = interpolate(since, [6, CLICK_TAIL], [1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
@@ -181,7 +184,7 @@ const ClickMark: React.FC<{ click: TimedClick; x: number; y: number; frame: numb
   );
 };
 
-type ProjectedCallout = { callout: TimedCallout; box: { left: number; top: number; width: number; height: number }; shown: number };
+type ProjectedCallout = { callout: TimedCallout; box: { left: number; top: number; width: number; height: number }; label: { x: number; y: number } | null; shown: number };
 
 const projectCallouts = (capture: TimedCapture, frame: number, view: View): ProjectedCallout[] => {
   const camera = projector(capture, frame, view);
@@ -192,7 +195,8 @@ const projectCallouts = (capture: TimedCapture, frame: number, view: View): Proj
       const pad = 8;
       const box = { left: camera.x(left) - pad, top: camera.y(top) - pad, width: (right - left) * camera.zoom + 2 * pad, height: (bottom - top) * camera.zoom + 2 * pad };
       const shown = rise(frame, callout.from, CALLOUT_IN) * interpolate(frame, [callout.from + callout.durationInFrames, callout.from + callout.durationInFrames + CALLOUT_OUT], [1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-      return { callout, box, shown };
+      const label = callout.label === undefined ? null : { x: camera.x(callout.label[0]), y: camera.y(callout.label[1]) };
+      return { callout, box, label, shown };
     });
 };
 
@@ -213,7 +217,72 @@ const CalloutBox: React.FC<{ item: ProjectedCallout }> = ({ item }) => (
   />
 );
 
-// The label of a callout, above its rect when there is room in the window, else below it; kept inside the frame.
+// A label at its chosen place (page-area px of its centre), with a line from its nearest edge to the outlined rect.
+const PlacedPill: React.FC<{ item: ProjectedCallout; at: { x: number; y: number }; origin: { left: number; top: number }; frame: number }> = ({ item, at, origin, frame }) => {
+  const { box, callout } = item;
+  const spring = pop(frame, callout.from, true);
+  const width = 60 + callout.text.length * 14.5;
+  const centre = { x: origin.left + at.x, y: origin.top + at.y };
+  const target = { left: origin.left + box.left, top: origin.top + box.top, right: origin.left + box.left + box.width, bottom: origin.top + box.top + box.height };
+  const clamp = (value: number, low: number, high: number) => Math.min(Math.max(value, low), high);
+  // The line leaves the label on the side that faces the rect and meets the rect's nearest edge.
+  let from: [number, number];
+  let to: [number, number];
+  if (centre.y + PILL_HEIGHT / 2 <= target.top) {
+    const x = clamp(centre.x, target.left + 12, target.right - 12);
+    from = [x, centre.y + PILL_HEIGHT / 2];
+    to = [x, target.top];
+  } else if (centre.y - PILL_HEIGHT / 2 >= target.bottom) {
+    const x = clamp(centre.x, target.left + 12, target.right - 12);
+    from = [x, centre.y - PILL_HEIGHT / 2];
+    to = [x, target.bottom];
+  } else if (centre.x >= target.right) {
+    const y = clamp(centre.y, target.top + 8, target.bottom - 8);
+    from = [centre.x - width / 2, y];
+    to = [target.right, y];
+  } else {
+    const y = clamp(centre.y, target.top + 8, target.bottom - 8);
+    from = [centre.x + width / 2, y];
+    to = [target.left, y];
+  }
+  const grow = Math.min(1, spring);
+  return (
+    <>
+      <svg width={1920} height={1080} style={{ position: "absolute", left: 0, top: 0, opacity: item.shown }}>
+        <line x1={from[0]} y1={from[1]} x2={from[0] + (to[0] - from[0]) * grow} y2={from[1] + (to[1] - from[1]) * grow} stroke={color.action} strokeWidth={2} />
+      </svg>
+      <div
+        style={{
+          position: "absolute",
+          left: centre.x,
+          top: centre.y,
+          height: PILL_HEIGHT,
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+          padding: "0 22px",
+          borderRadius: PILL_HEIGHT / 2,
+          backgroundColor: "rgba(38, 38, 36, 0.96)",
+          border: `1.5px solid ${color.action}`,
+          boxShadow: "0 12px 30px rgba(0, 0, 0, 0.45)",
+          color: color.ink,
+          fontFamily: font.text,
+          fontWeight: 700,
+          fontSize: 25,
+          whiteSpace: "nowrap",
+          opacity: item.shown,
+          translate: "-50% -50%",
+          scale: String(interpolate(spring, [0, 1], [0.85, 1])),
+        }}
+      >
+        <div style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: color.action }} />
+        {callout.text}
+      </div>
+    </>
+  );
+};
+
+// The label of a callout without a chosen place: above its rect when there is room in the window, else below it.
 const CalloutPill: React.FC<{ item: ProjectedCallout; origin: { left: number; top: number }; view: View; frame: number }> = ({ item, origin, view, frame }) => {
   const { box, callout } = item;
   const spring = pop(frame, callout.from, true);
@@ -282,7 +351,7 @@ export const CaptureFrame: React.FC<Props> = ({ captures, enter, pendingTitle, p
   const clicks = visible.flatMap((capture) => {
     const camera = projector(capture, frame, view);
     return capture.clickFrames
-      .filter((click) => frame >= click.frame - CLICK_LEAD && frame <= click.frame + CLICK_TAIL)
+      .filter((click) => frame >= click.frame - CLICK_LEAD && frame <= click.frame + (click.tail ?? CLICK_TAIL))
       .map((click) => ({ click, x: camera.x(click.x), y: camera.y(click.y) }));
   });
   return (
@@ -334,9 +403,13 @@ export const CaptureFrame: React.FC<Props> = ({ captures, enter, pendingTitle, p
           ))}
         </div>
       </div>
-      {callouts.map((item, index) => (
-        <CalloutPill key={`pill-${index}`} item={item} origin={page} view={view} frame={frame} />
-      ))}
+      {callouts.map((item, index) =>
+        item.label === null ? (
+          <CalloutPill key={`pill-${index}`} item={item} origin={page} view={view} frame={frame} />
+        ) : (
+          <PlacedPill key={`pill-${index}`} item={item} at={item.label} origin={page} frame={frame} />
+        ),
+      )}
     </AbsoluteFill>
   );
 };

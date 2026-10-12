@@ -35,27 +35,27 @@ const ReportIcon: React.FC = () => (
 );
 
 const CARDS = [
-  { icon: <ModelIcon />, place: "Hugging Face", address: "WinterBlossom/contrastive-voice", role: "The detector", cue: "Hugging" },
-  { icon: <CodeIcon />, place: "GitHub", address: "WinterBlossom0/contrastive-voice", role: "The code", cue: "GitHub" },
-  { icon: <ReportIcon />, place: "Technical report", address: "docs/technical.md", role: "Every number explained", cue: "technical" },
+  { icon: <ModelIcon />, place: "Hugging Face", address: ["WinterBlossom/", "contrastive-voice"], role: "The detector", cue: "Hugging" },
+  { icon: <CodeIcon />, place: "GitHub", address: ["WinterBlossom0/", "contrastive-voice"], role: "The code", cue: "code" },
+  { icon: <ReportIcon />, place: "Technical report", address: ["docs/technical.md", "on GitHub"], role: "Method and evaluation", cue: "report" },
 ];
 
 // When each command is typed; SoundEffects.tsx plays the keystrokes over the same frames.
-export const terminalBeats = (scene: SceneTiming) => {
+export const terminalBeats = () => {
   const buildStart = 14;
   const buildDone = buildStart + Math.ceil(BUILD.length / CHARS_PER_FRAME);
-  const runStart = Math.max(buildDone + 10, cueFrame(scene, 0, "run"));
+  const runStart = buildDone + 10;
   const runDone = runStart + Math.ceil(RUN.length / CHARS_PER_FRAME);
-  return { buildStart, buildDone, runStart, runDone, openLine: Math.max(runDone + 6, cueFrame(scene, 0, "open")) };
+  return { buildStart, buildDone, runStart, runDone, openLine: runDone + 6 };
 };
 
 // The frames at which the three cards pop up.
-export const cardFrames = (scene: SceneTiming): number[] => CARDS.map((card) => cueFrame(scene, 1, card.cue));
+export const cardFrames = (scene: SceneTiming): number[] => CARDS.map((card) => cueFrame(scene, 0, card.cue));
 
 export const S15Open: React.FC<{ scene: SceneTiming }> = ({ scene }) => {
   const frame = useCurrentFrame();
   const terminalIn = pop(frame, 2);
-  const { buildStart, buildDone, runStart, runDone, openLine } = terminalBeats(scene);
+  const { buildStart, buildDone, runStart, runDone, openLine } = terminalBeats();
   const cardStarts = cardFrames(scene);
   const caret = Math.floor(frame / 8) % 2 === 0;
   const typing = frame < runDone;
@@ -107,8 +107,8 @@ export const S15Open: React.FC<{ scene: SceneTiming }> = ({ scene }) => {
               key={card.place}
               style={{
                 flex: 1,
-                height: 270,
-                padding: "30px 30px",
+                height: 300,
+                padding: "28px 30px",
                 borderRadius: 22,
                 backgroundColor: "rgba(38, 38, 36, 0.92)",
                 border: `1px solid ${color.line}`,
@@ -122,9 +122,13 @@ export const S15Open: React.FC<{ scene: SceneTiming }> = ({ scene }) => {
               }}
             >
               {card.icon}
-              <div style={{ fontFamily: font.display, fontSize: 42, lineHeight: 1.1, marginTop: 6 }}>{card.place}</div>
-              <div style={{ fontFamily: font.mono, fontSize: 18, color: color.ink2, whiteSpace: "nowrap" }}>{card.address}</div>
-              <div style={{ fontSize: 26, color: color.muted }}>{card.role}</div>
+              <div style={{ fontFamily: font.display, fontSize: 42, lineHeight: 1.1, marginTop: 2 }}>{card.place}</div>
+              <div style={{ fontFamily: font.mono, fontSize: 25, lineHeight: 1.3, color: color.ink2, whiteSpace: "nowrap" }}>
+                {card.address.map((part) => (
+                  <div key={part}>{part}</div>
+                ))}
+              </div>
+              <div style={{ fontSize: 28, color: color.ink2 }}>{card.role}</div>
             </div>
           );
         })}

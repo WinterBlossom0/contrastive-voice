@@ -12,13 +12,13 @@ type DemoSpec = { chapter: number; title: string; shows: string };
 // One chapter per demo scene; `shows` is the placeholder text while the scene has no capture yet (build/work/video_v2/PLAN.md).
 export const DEMO_SCENES: Partial<Record<SceneId, DemoSpec>> = {
   s3_open_example: { chapter: 1, title: "Try an example", shows: "The page loads; the examples menu opens; L3A scores 86.11, with its summary and the three biggest fixes." },
-  s4_listen: { chapter: 2, title: "Listen along", shows: "Play: the clouds rise with the voice, the transcript follows, tints and the severity strip." },
+  s4_listen: { chapter: 2, title: "Pinned to the words", shows: "The waveform strip and the transcript; the recording plays over the rushed words." },
   s5_finding: { chapter: 3, title: "Open a finding", shows: "Finding #3, Rushed: 0.87 s against 1.62 s, the gauge, Listen to yours and the reference, How to fix." },
   s6_hear_fixed: { chapter: 4, title: "Hear it fixed", shows: "Hear it fixed: progress, the result card, Yours / Edited / Target, partly changed, +3.07." },
   s7_melody: { chapter: 5, title: "Borrow the melody", shows: "A pitch finding: Try the reference's melody, then the result." },
   s8_fix_all: { chapter: 6, title: "Fix everything", shows: "Fix everything and listen: 86.11 becomes 96.17; What each fix did." },
-  s9_text_lists: { chapter: 7, title: "Every word, every finding", shows: "Transcript underlines, a word played on click, Every finding with a filter, Every measurement zoomed." },
-  s10_fair: { chapter: 8, title: "Careful with flags", shows: "The identity example scores 100 with nothing flagged; r2_consensus compares with five readers." },
+  s9_text_lists: { chapter: 7, title: "Transcript and charts", shows: "Transcript underlines, Every finding with a filter, Every measurement zoomed." },
+  s10_fair: { chapter: 8, title: "No invented problems", shows: "The identity example scores 100 with nothing flagged; r2_consensus compares with five readers." },
   s11_upload: { chapter: 9, title: "Upload your own", shows: "Analyse your reading: file, bundled reference, transcript; a wrong transcript is refused; then the stages run." },
   s12_no_reference: { chapter: 10, title: "No reference", shows: "L3A_self: three spots stand out, with the rough-check note." },
 };

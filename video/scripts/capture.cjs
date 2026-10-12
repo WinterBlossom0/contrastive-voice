@@ -30,6 +30,7 @@ const OUT = path.join(ROOT, 'video/public/captures');
 const CLIPS = path.join(ROOT, 'video/public/clips');
 const NARRATION_FILE = path.join(ROOT, 'video/src/data/narration.json');
 const CAPTURES_FILE = path.join(ROOT, 'video/src/data/captures.json');
+const PACING_FILE = path.join(ROOT, 'video/src/data/pacing.json');
 const AUDIO = path.join(ROOT, 'gallery/audio');
 const CHROME = process.env.CHROME_PATH || path.join(os.homedir(), '.cache/ms-playwright/chromium_headless_shell-1234/chrome-headless-shell-linux64/chrome-headless-shell');
 
@@ -165,7 +166,8 @@ const normWord = (text) => text.toLowerCase().replace(/[^a-z0-9.]/g, '').replace
 // Scene line start frames, computed as video/src/timeline.ts computes them, and the frame of a spoken word.
 function sceneFrames(id) {
   const scene = narration().scenes.find((s) => s.id === id);
-  let cursor = 0;
+  const pace = readJSON(PACING_FILE).scenes[id] ?? {};
+  let cursor = pace.leadSec ?? 0;
   const lines = [];
   let clip = null;
   scene.lines.forEach((line, index) => {
@@ -182,7 +184,9 @@ function sceneFrames(id) {
     if (!found[nth]) throw new Error(`${id}: line ${line} has no word ${text}`);
     return lines[line] + toFrame(found[nth][1]);
   };
-  return { lines, clip, end: toFrame(cursor + scene.gapAfterSec), word };
+  // The seconds from the first line's start to capture frame `frame`: camera keys and callouts are anchored to line 0.
+  const rel = (frame) => (frame - lines[0]) / FPS;
+  return { lines, clip, end: toFrame(cursor + scene.gapAfterSec + (pace.holdSec ?? 0)), word, rel };
 }
 
 // ---------------------------------------------------------------------------------------------------- audio
@@ -333,6 +337,65 @@ function fitCamera(info, timing) {
   });
 }
 
+// ---------------------------------------------------------------------------------------------------- callout labels
+// Output px of a label (CaptureFrame.tsx CalloutPill): height, width per text, gap to the rect, and the rect's padding.
+const PILL = { height: 50, width: (text) => 60 + text.length * 14.5, gap: 22, pad: 8 };
+// Boxes larger than this (capture px squared) are panels, charts or waveforms: a label may cover a little of them.
+const PANEL_AREA = 300000;
+
+// The centre of each callout's label, in capture px, at the place around its rect that covers the least visible text. The
+// label may sit outside the browser window, on the backdrop of the video, where no text is; it must stay clear of the
+// chapter marker, the clip pill and the subtitle band (output px, CaptureFrame.tsx and DemoScenes.tsx). The rect itself
+// counts as text, so the label never covers what it marks.
+const KEEP_CLEAR = [[40, 20, 600, 100], [1480, 20, 1880, 95]];
+const OUTPUT_AREA = [30, 0, 1890, 920];
+// Capture px² of covered text that a label on the backdrop is worth.
+const OUTSIDE_COST = 3000;
+function placeLabels(info, timing, camera, callouts) {
+  const anchor = (at, sec) => (at === 'clip' ? timing.clip.from : timing.lines[at]) + toFrame(sec ?? 0);
+  const keys = camera.map((key) => ({ ...key, frame: anchor(key.at, key.sec) })).sort((a, b) => a.frame - b.frame);
+  return callouts.map((callout) => {
+    const start = anchor(callout.at, callout.sec);
+    const view = (keys.filter((key) => key.frame <= start + 6).pop() ?? keys[0]).rect;
+    const zoom = Math.min(1760 / (view[2] - view[0]), 764 / (view[3] - view[1]));
+    // Capture px to output px, as CaptureFrame.tsx places the window in its frame (FRAME, chrome 36 px).
+    const viewW = (view[2] - view[0]) * zoom, viewH = (view[3] - view[1]) * zoom;
+    const pageLeft = 80 + (1760 - viewW) / 2, pageTop = 116 + (800 - 36 - viewH) / 2 + 36;
+    const out = ([x, y]) => [pageLeft + (x - view[0]) * zoom, pageTop + (y - view[1]) * zoom];
+    const [w, h, gap, pad] = [PILL.width(callout.text) / zoom, PILL.height / zoom, PILL.gap / zoom, PILL.pad / zoom];
+    const [l, t, r, b] = callout.rect;
+    const cx = (l + r) / 2, cy = (t + b) / 2;
+    const candidates = [];
+    for (const far of [1, 2.5, 4.5]) {
+      const above = t - pad - far * gap - h / 2, below = b + pad + far * gap + h / 2;
+      candidates.push([cx, above], [l + w / 2, above], [r - w / 2, above], [cx, below], [l + w / 2, below], [r - w / 2, below],
+        [r + pad + far * gap + w / 2, cy], [l - pad - far * gap - w / 2, cy]);
+    }
+    const boxes = boxesAt(info, Math.min(start + 8, info.frames - 1));
+    const overlap = (p, [x, y, bw, bh]) => Math.max(0, Math.min(p[2], x + bw, view[2]) - Math.max(p[0], x, view[0])) * Math.max(0, Math.min(p[3], y + bh, view[3]) - Math.max(p[1], y, view[1]));
+    const meetsOut = (p, [ol, ot, or, ob]) => p[0] < or && p[2] > ol && p[1] < ob && p[3] > ot;
+    const margin = 4 / zoom;
+    const cost = ([x, y], index) => {
+      const pill = [x - w / 2 - margin, y - h / 2 - margin, x + w / 2 + margin, y + h / 2 + margin];
+      const [ol, ot] = out([pill[0], pill[1]]), [or, ob] = out([pill[2], pill[3]]);
+      if (ol < OUTPUT_AREA[0] || ot < OUTPUT_AREA[1] || or > OUTPUT_AREA[2] || ob > OUTPUT_AREA[3]) return Infinity;
+      if (KEEP_CLEAR.some((area) => meetsOut([ol, ot, or, ob], area))) return Infinity;
+      let sum = 4 * overlap(pill, [l, t, r - l, b - t]);
+      for (const box of boxes) sum += (box[2] * box[3] > PANEL_AREA ? 0.02 : 1) * overlap(pill, box);
+      return sum + index;
+    };
+    // A label inside the window costs less than one on the backdrop, which is used only when the window has no free place.
+    const inWindow = ([x, y]) => x - w / 2 - margin >= view[0] && y - h / 2 - margin >= view[1] && x + w / 2 + margin <= view[2] && y + h / 2 + margin <= view[3];
+    const scored = candidates.map((c, index) => ({ c, cost: cost(c, index) + (inWindow(c) ? 0 : OUTSIDE_COST) })).sort((p, q) => p.cost - q.cost);
+    if (!Number.isFinite(scored[0].cost)) {
+      console.warn(`  callout "${callout.text}": no free place; the label goes above or below its rect`);
+      return callout;
+    }
+    if (scored[0].cost % OUTSIDE_COST >= candidates.length) console.warn(`  callout "${callout.text}": its label covers ${Math.round(scored[0].cost)} capture px² of text`);
+    return { ...callout, label: scored[0].c.map(Math.round) };
+  });
+}
+
 // ---------------------------------------------------------------------------------------------------- stop motion
 class StopMotion {
   constructor(page, dir, port) {
@@ -447,6 +510,16 @@ class StopMotion {
 
   sound(name, frame = this.count) { this.sounds.push([frame, name]); }
 
+  // Picks an example from the open menu. The page's fade and audio load run without frames, so the video cuts from the
+  // click to the loaded example; the ripple ends with the click frame, as the chip it marks is gone in the next frame.
+  async pick(id, glideEnd, clickFrame) {
+    await this.clickAt(`.chip[data-id="${id}"]`, glideEnd, clickFrame);
+    this.clicks[this.clicks.length - 1].push(0);
+    const loaded = () => this.page.evaluate((id) => document.querySelector(`.chip[data-id="${id}"]`).getAttribute('aria-pressed') === 'true'
+      && !document.querySelector('main').classList.contains('fading') && S.youReady && (S.refReady || !S.ref.src), id);
+    await this.waitOffline(loaded, 60000, 40);
+  }
+
   // Scrolls the page by `by` CSS px over the frames up to endFrame; the pointer keeps its place on the screen.
   async scrollBy(by, endFrame) {
     const from = await this.page.evaluate(() => scrollY);
@@ -460,11 +533,11 @@ class StopMotion {
   }
 
   // Advances the page clock without frames until `ready` holds: the wait for a server job, which the video does not show.
-  async waitOffline(ready, timeoutMs = 240000) {
+  async waitOffline(ready, timeoutMs = 240000, stepMs = 100) {
     const started = Date.now();
     while (!(await ready())) {
       if (Date.now() - started > timeoutMs) throw new Error('timed out waiting for the server job');
-      await this.page.clock.runFor(100);
+      await this.page.clock.runFor(stepMs);
       await wait(60);
     }
   }
@@ -637,109 +710,115 @@ async function runJob(motion, done, releaseFrame, { stopPlayer = false, mark = '
 
 // ---------------------------------------------------------------------------------------------------- shots
 const SHOTS = {
-  // The examples menu opens, L3A is picked; the score counts up, then the camera reaches the three biggest fixes.
+  // The examples menu opens and L3A is picked; the whole result with its tinted findings, the score at "86", then the
+  // three costliest fixes.
   async s3_open_example(page, m) {
     const sc = sceneFrames('s3_open_example');
-    // The score counts up on the first load of the page only; L3A is that first load, so the count runs again for the pick.
     m.pointer = { x: 1120, y: 470 };
-    m.key(0, 0, [900, 0, MEDIA[0], 600]);
-    await m.holdUntil(6);
-    await m.clickAt('#picker-menu > summary', 26, 28);
-    await m.holdUntil(32);
-    m.key(0, 1.0, await capRect(page, '#chips'), { moveFrames: 24 });
+    m.key(0, sc.rel(0), [900, 0, MEDIA[0], 600]);
+    await m.holdUntil(8);
+    await m.clickAt('#picker-menu > summary', 20, 22);
+    await m.holdUntil(25);
+    m.key(0, sc.rel(25), await capRect(page, '#chips'), { moveFrames: 18 });
+    // The score counts up on the first load of the page only; L3A is that first load, so the count runs again for the pick.
     await page.evaluate(() => { S.counted = false; });
-    await m.clickAt(`.chip[data-id="${EXAMPLE}"]`, 62, 66);
-    m.sound('rise', m.count + 5);
-    // The menu closes with the pick: the camera pulls back to the score counting up under the title.
-    m.key(0, (m.count + 1) / FPS, await capRect(page, '#hero-title', '.ring-wrap', '#summary-line'), { moveFrames: 24 });
-    await m.holdUntil(sc.lines[1] - 2);
-    // Line 2: the whole result, the score card and the waveforms with their tinted findings.
-    await m.glideTo(OFF, sc.lines[1] + 10);
-    await m.scrollBy(await belowPlayer(page, '#ledger', 150), sc.lines[1] + 30);
-    m.key(1, 0, await capRect(page, '#ledger', '#hero-wave'), { moveFrames: 36 });
-    await m.holdUntil(sc.lines[2]);
-    m.key(2, 0, await capRect(page, '.ring-wrap', '#summary-line', '#regime-badge'), { moveFrames: 30 });
-    m.callout(2, 0.5, await capRect(page, '.ring-wrap'), 'Score 86.11', 3.2);
-    const fixesAt = sc.word(2, 'And');
-    await m.holdUntil(fixesAt);
-    await m.scrollBy(await belowPlayer(page, '.fixes h2', 12), fixesAt + 26);
-    m.key(2, (fixesAt - sc.lines[2]) / FPS, await capRect(page, '.fixes h2', '#top-cards'), { moveFrames: 34 });
+    await m.pick(EXAMPLE, 44, 47);
+    m.sound('rise', m.count + 2);
+    const slipsAt = sc.word(0, 'delivery');
+    // This move lasts until the next key, so no short hold of a half-loaded page comes between them.
+    m.key(0, sc.rel(m.count + 1), await capRect(page, '#hero-title', '.ring-wrap', '#summary-line'), { moveFrames: slipsAt - 16 - (m.count + 1) });
+    await m.glideTo(OFF, slipsAt - 16);
+    await m.scrollBy(await belowPlayer(page, '#ledger', 150), slipsAt);
+    m.key(0, sc.rel(slipsAt - 16), await capRect(page, '#ledger', '#hero-wave'), { moveFrames: 30 });
+    const scoreAt = sc.word(0, 'It');
+    await m.holdUntil(scoreAt);
+    m.key(0, sc.rel(scoreAt), await capRect(page, '.ring-wrap', '#summary-line', '#regime-badge'), { moveFrames: 24 });
+    const fixesAt = sc.word(0, 'three');
+    m.callout(0, sc.rel(sc.word(0, 'scores')), await capRect(page, '.ring-wrap'), 'Score 86.11', round((fixesAt - 2 - sc.word(0, 'scores')) / FPS, 2));
+    await m.holdUntil(fixesAt - 2);
+    await m.scrollBy(await belowPlayer(page, '.fixes h2', 12), fixesAt + 22);
+    m.key(0, sc.rel(fixesAt - 2), await capRect(page, '.fixes h2', '#top-cards'), { moveFrames: 30 });
     await m.holdUntil(sc.end + 4);
-    m.description = `Page with L3A; the pointer opens "Try an example", the menu shows the gallery ("${await textOf(page, '.chip[data-id="L3A"]')}" first) and picks it; the score counts up to ${await textOf(page, '#overall-fig')}, "${await textOf(page, '#summary-line')}", the waveforms with tinted findings; then "${await textOf(page, '.fixes h2')}": ${(await page.evaluate(() => [...document.querySelectorAll('#top-cards .top-card .card-title')].map((c) => c.innerText.replace(/\s+/g, ' ').trim()).join(' | ')))}.`;
+    m.description = `Page with L3A; the pointer opens "Try an example" ("${await textOf(page, '.chip[data-id="L3A"]')}" first) and picks it; the score counts up to ${await textOf(page, '#overall-fig')}, "${await textOf(page, '#summary-line')}", the waveforms with tinted findings; then "${await textOf(page, '.fixes h2')}": ${(await page.evaluate(() => [...document.querySelectorAll('#top-cards .top-card .card-title')].map((c) => c.innerText.replace(/\s+/g, ' ').trim()).join(' | ')))}.`;
   },
 
-  // Play at the clip: the sea of clouds swells and lights at the playback position with the voice; then the waveform tints and the strip.
+  // The waveform strip gives each finding its seconds and the transcript its words; then the recording plays over the
+  // rushed words while the transcript follows.
   async s4_listen(page, m) {
     const sc = sceneFrames('s4_listen');
     const startSec = narration().scenes.find((s) => s.id === 's4_listen').clip.sourceStartSec ?? 13.8;
     await page.evaluate((t) => seekYours(t), startSec);
     await page.clock.runFor(300);
     await wait(200);
-    m.pointer = { x: 520, y: 260 };
-    m.key(0, 0, [0, 0, MEDIA[0], 700]);
-    await m.holdUntil(sc.word(0, 'play') + 6);
-    await m.glideToSelector('#play-all', sc.clip.from - 6);
+    await scrollNow(page, await belowPlayer(page, '#ledger', 14));
+    await page.evaluate(() => __vt.flush());
+    m.pointer = { x: 900, y: 700 };
+    m.key(0, 0, await capRect(page, '.tl-stage'));
+    const wordsAt = sc.word(0, 'words');
+    m.callout(0, sc.rel(sc.word(0, 'pinned')), await capRect(page, '#fault-strip .strip-span[data-i="2"]', '#fault-strip .strip-label[data-i="2"]'), '#3 Rushed: 15.80–17.14 s', round((wordsAt - 8 - sc.word(0, 'pinned')) / FPS, 2));
+    await m.holdUntil(wordsAt - 8);
+    const scrollFrom = m.count;
+    await m.scrollBy(await belowPlayer(page, '#text-view', 14), wordsAt + 8);
+    m.key(0, sc.rel(scrollFrom), await capRect(page, '.player', '#text-view'), { moveFrames: 20 });
+    await m.glideToSelector('#play-all', sc.clip.from - 2);
     await m.holdUntil(sc.clip.from + 1);
     await m.click();
     m.syncFrame = m.count - 1;
-    // The sea right of the hero text, where the playback position (49 % to 74 % of the width) swells and lights it.
-    m.key('clip', 0.3, [1125, 330, MEDIA[0], 770], { moveFrames: 40 });
-    await m.glideTo({ x: 260, y: 90 }, sc.clip.from + 24);
-    await m.holdUntil(sc.clip.to - 14);
+    await m.glideTo({ x: 900, y: 700 }, sc.clip.from + 24);
+    await m.holdUntil(sc.clip.to - 12);
     await m.glideToSelector('#play-all', sc.clip.to - 2);
     await m.holdUntil(sc.clip.to + 1);
     await m.click();
     m.marks.paused = await page.evaluate(() => S.ws.getCurrentTime());
-    await m.glideTo(OFF, sc.lines[1] + 4);
-    await m.scrollBy(await belowPlayer(page, '#ledger', 14), sc.lines[1] + 28);
-    m.key(1, 0.1, await capRect(page, '.tl-stage'), { moveFrames: 36 });
-    m.callout(1, (sc.word(1, 'brighter') - sc.lines[1]) / FPS - 0.2, await capRect(page, '#fault-strip .strip-span[data-i="2"]', '#fault-strip .strip-label[data-i="2"]'), 'Brightest bar: −4.89', 2.6);
+    await m.glideTo(OFF, sc.clip.to + 14);
     await m.holdUntil(sc.end + 4);
-    m.description = `L3A at the top of the page: the pointer presses Play recording at the clip; playback from ${startSec.toFixed(2)} s to ${m.marks.paused.toFixed(2)} s (the rushed 'the Washington Monument and then' at 15.80-17.14 s); the cloud sea under the massif swells and lights at the playback position with the voice level, the low sun follows; Pause at the clip end; then the waveform panel: tinted findings, the strip with #2 Missing pause −3.56, #3 Rushed ×2 −4.89, #5 Volume drops ×2 −3.81.`;
+    m.description = `L3A waveform panel: the strip and the tinted findings, #3 Rushed at 15.80-17.14 s; then the transcript under the player bar; Play from ${startSec.toFixed(2)} s to ${m.marks.paused.toFixed(2)} s: the transcript highlight follows the voice over 'the Washington Monument and then'.`;
   },
 
-  // Finding #3 opens from its word; its panel; Listen plays yours, then the reference; then How to fix.
+  // Finding #3 opens from its word; 0.87 s against 1.62 s; Listen plays yours, then the reference; then How to fix.
   async s5_finding(page, m) {
     const sc = sceneFrames('s5_finding');
     await setupClick(page, wordSelector(4, 'humidity'));
     await scrollNow(page, await belowPlayer(page, '#text-view', 14));
     await page.evaluate(() => __vt.flush());
     m.pointer = { x: 760, y: 700 };
-    m.key(0, 0, await capRect(page, '#text-view', '#explain h3'));
-    await m.clickAt(wordSelector(RUSHED.peek, RUSHED.word), 30, 33);
-    await m.glideTo({ x: 720, y: 640 }, 50);
-    await m.holdUntil(sc.lines[1] - 4);
-    m.key(1, 0, await capRect(page, '#explain h3', '#explain .gauge'), { moveFrames: 30 });
-    m.callout(1, (sc.word(1, '0.87') - sc.lines[1]) / FPS, await inkRect(page, '#explain', '0.87 s in your reading'), '0.87 s vs 1.62 s', 4.6);
-    await m.holdUntil(sc.lines[2]);
-    m.key(2, 0, await capRect(page, '.player', '#transcript', '#explain [data-listen]'), { moveFrames: 30 });
-    await m.glideToSelector('#explain [data-listen]', sc.clip.from - 6);
+    m.key(0, sc.rel(0), await capRect(page, '#text-view', '#explain h3'));
+    await m.clickAt(wordSelector(RUSHED.peek, RUSHED.word), 12, 15);
+    await m.glideTo({ x: 720, y: 640 }, 26);
+    m.key(0, sc.rel(20), await capRect(page, '#explain h3', '#explain .gauge'), { moveFrames: 24 });
+    const numbersAt = sc.word(0, '0.87') - 4;
+    m.callout(0, sc.rel(numbersAt), await inkRect(page, '#explain', '0.87 s in your reading'), '0.87 s vs 1.62 s', round((sc.clip.from - 34 - numbersAt) / FPS, 2));
+    await m.holdUntil(sc.clip.from - 30);
+    m.key(0, sc.rel(sc.clip.from - 30), await capRect(page, '.player', '#transcript', '#explain [data-listen]'), { moveFrames: 24 });
+    await m.glideToSelector('#explain [data-listen]', sc.clip.from - 4);
     await m.holdUntil(sc.clip.from + 1);
     await m.click();
     m.syncFrame = m.count - 1;
     await m.glideTo({ x: 1000, y: 700 }, sc.clip.from + 30);
-    m.marks.listen = await page.evaluate(() => document.querySelector('#explain [data-listen]')?.closest('.panel, section')?.innerText.match(/Listen plays[^\n]*/)?.[0] ?? '');
-    await m.holdUntil(sc.lines[3]);
-    m.key(3, 0, await capRect(page, '#explain .fix'), { moveFrames: 30 });
+    m.marks.listen = await textOf(page, '#explain .listen-caption');
+    await m.holdUntil(sc.lines[1]);
+    m.key(1, 0, await capRect(page, '#explain .fix'), { moveFrames: 24 });
     await m.holdUntil(sc.end + 4);
-    m.description = `L3A text and finding panel (#5 Volume drops open); the pointer clicks 'Washington': panel "#3 Rushed −4.89 pts", 'the Washington Monument and then', "${await textOf(page, '#explain .gauge')}" gauge, "0.87 s in your reading, 1.62 s in the reference"; Listen plays yours then the reference (${m.marks.listen}); then How to fix: "${await textOf(page, '#explain .fix')}".`;
+    m.description = `L3A text and finding panel (#5 Volume drops open); the pointer clicks 'Washington': panel "#3 Rushed −4.89 pts", "${await textOf(page, '#explain .gauge')}" gauge, "0.87 s in your reading, 1.62 s in the reference"; Listen plays yours then the reference (${m.marks.listen}); then How to fix: "${await textOf(page, '#explain .fix')}".`;
   },
 
-  // Hear it fixed on #3: progress, the result with its checks, then Yours / Edited / Target in step with the clip.
+  // Hear it fixed on #3: progress, the result with its checks, Yours / Edited / Target in step with the clip, then the outcome.
   async s6_hear_fixed(page, m) {
     const sc = sceneFrames('s6_hear_fixed');
     await scrollNow(page, await belowPlayer(page, '#explain', 14));
-    m.pointer = { x: 1000, y: 650 };
+    const button = await center(page, '#explain [data-fix]');
+    m.pointer = { x: button.x + 70, y: button.y + 60 };
     m.key(0, 0, await capRect(page, '#explain h3', '#explain .listen-caption'));
-    await m.clickAt('#explain [data-fix]', sc.word(0, 'Hear') - 2, sc.word(0, 'Hear') + 2);
+    // The press waits until the cut into the scene has ended (DemoScenes cuts take 12 frames), so its ripple shows.
+    await m.clickAt('#explain [data-fix]', 12, 14);
     await m.glideTo({ x: 1000, y: 700 }, m.count + 12);
-    await runJob(m, '#explain .fixer .abc', sc.word(1, 'checks'), { stopPlayer: true });
+    await runJob(m, '#explain .fixer .abc', sc.word(0, 'then'), { stopPlayer: true });
     m.sound('chime', m.marks.result);
-    await m.glideTo(OFF, m.count + 8);
+    await m.glideTo(OFF, m.count + 6);
     await revealInPanel(m, '#explain .fixer', 10);
-    m.key(1, (m.marks.result - sc.lines[1]) / FPS, await capRect(page, '#explain [data-fix]', '#explain .fixer'), { moveFrames: m.count - m.marks.result + 6 });
-    await m.holdUntil(sc.clip.from - 20);
-    m.key('clip', 0, await capRect(page, '#explain .fixer .fix-head', '#explain .fixer .abc'), { moveFrames: 24 });
+    m.key(0, sc.rel(m.marks.result), await capRect(page, '#explain [data-fix]', '#explain .fixer'), { moveFrames: m.count - m.marks.result + 6 });
+    await m.holdUntil(sc.clip.from - 18);
+    m.key('clip', 0, await capRect(page, '#explain .fixer .fix-head', '#explain .fixer .abc'), { moveFrames: 20 });
     const sides = { Yours: 'yours', Edited: 'fixed', Target: 'target' };
     for (const seg of sc.clip.segments) {
       await m.glideToSelector(`#explain .fixer .abc [data-side="${sides[seg.label]}"]`, seg.from + 1);
@@ -749,11 +828,12 @@ const SHOTS = {
     const last = sc.clip.segments[sc.clip.segments.length - 1];
     await m.glideToSelector('#explain .fixer .loop-btn', last.to + 1);
     await m.click();
-    await m.glideTo(OFF, sc.clip.to + 20);
-    await m.holdUntil(sc.lines[2]);
-    m.key(2, 0, await capRect(page, '#explain .fixer .fix-head', '#explain .fixer .fix-score'), { moveFrames: 30 });
-    m.callout(2, (sc.word(2, 'partly') - sc.lines[2]) / FPS, await inkRect(page, '#explain .fixer .fix-head'), await textOf(page, '#explain .fixer .fix-head'), 2.4);
-    m.callout(2, (sc.word(2, 'score') - sc.lines[2]) / FPS, await inkRect(page, '#explain .fixer .fix-score'), '+3.07', 4);
+    await m.glideTo(OFF, sc.lines[1]);
+    m.key(1, 0, await capRect(page, '#explain .fixer .fix-head', '#explain .fixer .fix-score'), { moveFrames: 24 });
+    const scoreAt = sc.word(1, '3.07') - 4;
+    const headAt = sc.word(1, 'still') - 4;
+    m.callout(1, sc.rel(headAt) - sc.rel(sc.lines[1]), await inkRect(page, '#explain .fixer .fix-head'), await textOf(page, '#explain .fixer .fix-head'), round((scoreAt - 2 - headAt) / FPS, 2));
+    m.callout(1, sc.rel(scoreAt) - sc.rel(sc.lines[1]), await inkRect(page, '#explain .fixer .fix-score'), '+3.07', round((sc.end - scoreAt - 8) / FPS, 2));
     await m.holdUntil(sc.end + 4);
     m.marks.audio = await page.evaluate(() => S.fix.jobs.get(S.result.flaws[2].id)?.audio);
     m.description = `L3A finding #3 Rushed: the pointer presses Hear it fixed; the progress line shows, then "${await textOf(page, '#explain .fixer .fix-head')}", "${await textOf(page, '#explain .fixer .fix-score')}", the two checks; Yours, Edited and Target are pressed in step with the clip, then Stop.`;
@@ -764,22 +844,23 @@ const SHOTS = {
     const sc = sceneFrames('s7_melody');
     await scrollNow(page, await belowPlayer(page, '#text-view', 14));
     m.pointer = { x: 760, y: 700 };
-    m.key(0, 0, await capRect(page, '#text-view', '#explain h3'));
-    await m.clickAt(wordSelector(FLAT.peek, FLAT.word), 20, 23);
-    await m.holdUntil(28);
-    m.key(0, 1.0, await capRect(page, '#explain h3', '#explain [data-fix]'), { moveFrames: 24 });
-    await m.clickAt('#explain [data-fix]', 44, 48);
-    await runJob(m, '#explain .fixer .fix-head', sc.word(0, 'widen'));
-    m.key(0, Math.min(3.2, (m.count + 2) / FPS), await capRect(page, '#explain [data-fix]', '#explain .fixer'), { moveFrames: 24 });
-    await m.holdUntil(sc.word(1, 'try') - 16);
-    await m.clickAt('#explain [data-fix$="-melody"]', sc.word(1, 'melody') - 2, sc.word(1, 'melody') + 2);
+    m.key(0, sc.rel(0), await capRect(page, '#text-view', '#explain h3'));
+    await m.clickAt(wordSelector(FLAT.peek, FLAT.word), 10, 12);
+    await m.holdUntil(15);
+    m.key(0, sc.rel(15), await capRect(page, '#explain h3', '#explain [data-fix]'), { moveFrames: 18 });
+    await m.clickAt('#explain [data-fix]', 30, 33);
+    await runJob(m, '#explain .fixer .fix-head', sc.word(0, 'too'));
+    m.key(0, sc.rel(m.count + 1), await capRect(page, '#explain [data-fix]', '#explain .fixer'), { moveFrames: 20 });
+    await m.clickAt('#explain [data-fix$="-melody"]', sc.word(0, 'borrow') - 2, sc.word(0, 'borrow'));
     await m.glideTo({ x: 1000, y: 720 }, m.count + 12);
-    await runJob(m, '#explain .fixer-melody .abc', sc.word(1, 'intonation'), { stopPlayer: true });
+    await runJob(m, '#explain .fixer-melody .abc', sc.word(0, 'voice'), { stopPlayer: true });
     m.sound('chime', m.marks.result);
-    await m.glideTo(OFF, m.count + 10);
-    await revealInPanel(m, '#explain .fixer-melody', 16);
+    await m.glideTo(OFF, m.count + 8);
+    await revealInPanel(m, '#explain .fixer-melody', 14);
     const panel = await capRect(page, '#explain'), card = await capRect(page, '#explain .fixer-melody');
-    m.key(1, (m.marks.result - sc.lines[1]) / FPS, [card[0], Math.max(card[1], panel[1]), card[2], Math.min(card[3], panel[3])], { moveFrames: m.count - m.marks.result + 4 });
+    m.key(0, sc.rel(m.marks.result), [card[0], Math.max(card[1], panel[1]), card[2], Math.min(card[3], panel[3])], { moveFrames: m.count - m.marks.result + 6 });
+    const flaggedAt = sc.word(0, 'no') - 4;
+    m.callout(0, sc.rel(flaggedAt), await inkRect(page, '#explain .fixer-melody .fix-head'), 'No longer flagged', round((sc.clip.from - flaggedAt) / FPS, 2));
     const [edited, yours] = sc.clip.segments;
     await m.glideToSelector('#explain .fixer-melody .loop-btn', edited.from + 1);
     await m.click();
@@ -788,10 +869,7 @@ const SHOTS = {
     await m.click();
     await m.glideToSelector('#explain .fixer-melody .loop-btn', yours.to + 1);
     await m.click();
-    await m.glideTo(OFF, sc.clip.to + 20);
-    await m.holdUntil(sc.lines[2]);
-    m.key(2, 0, await capRect(page, '#explain .fixer-melody .fix-sub', '#explain .fixer-melody .fix-score'), { moveFrames: 30 });
-    m.callout(2, (sc.word(2, 'no') - sc.lines[2]) / FPS - 0.3, await inkRect(page, '#explain .fixer-melody .fix-head'), 'No longer flagged', 2.6);
+    await m.glideTo(OFF, yours.to + 14);
     await m.holdUntil(sc.end + 4);
     m.marks.audio = await page.evaluate(() => S.fix.jobs.get(`${S.result.flaws[0].id}:contour`)?.audio);
     m.description = `L3A: the pointer clicks 'few' (#1 Flat pitch) and presses Hear it fixed: "${await textOf(page, '#explain .fixer > .fix-head')}"; then Try the reference's melody: "${await textOf(page, '#explain .fixer-melody .fix-head')}", "${await textOf(page, '#explain .fixer-melody .fix-score')}"; Play (Edited) and Yours in step with the clip, then Stop.`;
@@ -801,64 +879,74 @@ const SHOTS = {
   async s8_fix_all(page, m) {
     const sc = sceneFrames('s8_fix_all');
     await scrollNow(page, await belowPlayer(page, '#ledger', 14));
-    m.pointer = { x: 700, y: 640 };
+    const button = await center(page, '#fix-all-btn');
+    m.pointer = { x: button.x + 80, y: button.y - 50 };
     m.key(0, 0, await capRect(page, '#ledger'));
-    await m.clickAt('#fix-all-btn', 8, 10);
-    await runJob(m, '#fix-all-body .fix-all-score', sc.word(0, '86') - 6, { stopPlayer: true });
+    await m.clickAt('#fix-all-btn', sc.word(0, 'fix') - 2, sc.word(0, 'fix'));
+    const scoreAt = sc.word(0, '86');
+    await runJob(m, '#fix-all-body .fix-all-score', scoreAt - 8, { stopPlayer: true });
     m.sound('chime', m.marks.result);
     await m.glideTo(OFF, m.count + 8);
-    await m.holdUntil(m.count + 16);
-    m.key(0, (m.marks.result + 4) / FPS, await capRect(page, '#ledger', '#fix-all-body .fix-all-score'), { moveFrames: 28 });
-    m.callout(0, (sc.word(0, '86') - sc.lines[0]) / FPS, await inkRect(page, '#fix-all-body .fix-all-score'), '86.11 → 96.17', 2.8);
-    const summary = await inkRect(page, '#fix-all-body .fix-list > summary');
-    await m.glideTo({ x: (summary[0] + summary[2]) / 2 / SCALE, y: (summary[1] + summary[3]) / 2 / SCALE }, sc.lines[1] + 4);
-    await m.holdUntil(sc.lines[1] + 6);
+    // The box takes the line under the score too, so its edge runs between lines of text, not through one.
+    const score = await inkRect(page, '#fix-all-body .fix-all-score'), under = await inkRect(page, '#fix-all-body', 'Your whole reading');
+    m.key(0, sc.rel(m.marks.result + 2), [...(await capRect(page, '#ledger')).slice(0, 3), under[3] + 12], { moveFrames: 20 });
+    const listAt = sc.word(0, 'with');
+    m.callout(0, sc.rel(scoreAt), [Math.min(score[0], under[0]), score[1], Math.max(score[2], under[2]), under[3]], '86.11 → 96.17', round((listAt - 12 - scoreAt) / FPS, 2));
+    // The summary row spans the card, so the pointer goes to its words; they are measured again just before the click,
+    // because the result card is still settling when it first shows.
+    const summaryWords = async () => {
+      const r = await inkRect(page, '#fix-all-body .fix-list > summary');
+      return { x: (r[0] + r[2]) / 2 / SCALE, y: (r[1] + r[3]) / 2 / SCALE };
+    };
+    await m.glideTo(await summaryWords(), listAt - 12);
+    await m.glideTo(await summaryWords(), listAt - 9);
     await m.click();
+    if (!(await page.evaluate(() => document.querySelector('#fix-all-body .fix-list').open))) throw new Error('What each fix did did not open');
     const opened = m.count;
     await m.glideTo(OFF, m.count + 6);
-    await m.scrollBy(await belowPlayer(page, '#fix-all-body .fix-all-score', 20), m.count + 14);
-    m.key(1, (opened - sc.lines[1]) / FPS, await visibleRect(page, await capRect(page, '#fix-all-body .fix-all-score', '#fix-all-body .fix-list')), { moveFrames: m.count - opened + 6 });
+    await m.scrollBy(await belowPlayer(page, '#fix-all-body .fix-all-score', 20), m.count + 12);
+    // The list alone, close enough to read: its first entries fill the window.
+    const list = await visibleRect(page, await capRect(page, '#fix-all-body .fix-list'));
+    m.key(0, sc.rel(opened), [list[0], list[1], list[2], Math.min(list[3], list[1] + (list[2] - list[0]) / WINDOW_ASPECT)], { moveFrames: m.count - opened + 6 });
     await m.holdUntil(sc.end + 4);
     m.description = `L3A score card; the pointer presses Fix everything and listen; progress, then "${await textOf(page, '#fix-all-body .fix-all-score')}" with "${(await textOf(page, '#fix-all-body')).match(/Your whole reading[^.]*\.[^.]*\./)?.[0] ?? ''}"; What each fix did opens: ${(await textOf(page, '#fix-all-body .fix-list')).slice(0, 220)}...`;
   },
 
-  // The transcript underlines and a word played on click; Every finding filtered by a pattern; Every measurement, zoomed by a drag.
+  // From the transcript's underlined words to the measurement charts: Every measurement opens, and a drag zooms the pitch
+  // chart onto the stretch of flag #1 (Flat pitch, 8.68-11.04 s).
   async s9_text_lists(page, m) {
     const sc = sceneFrames('s9_text_lists');
     await scrollNow(page, await belowPlayer(page, '#text-view', 14));
+    // A little further, so the Every measurement toggle under the transcript shows whole.
+    await scrollNow(page, await page.evaluate(() => Math.max(0, document.querySelector('#measures-toggle').getBoundingClientRect().bottom + 12 - innerHeight)));
+    await page.evaluate(() => __vt.flush());
     m.pointer = { x: 1100, y: 640 };
-    m.key(0, 0, await capRect(page, '#text-view'));
-    m.callout(0, (sc.word(0, 'dotted') - sc.lines[0]) / FPS - 0.2, await inkRect(page, '.text-key'), 'dotted · dashed · solid', 3.4);
-    await m.clickAt('#transcript .w:not([data-peek]):text-is("Potomac")', sc.word(0, 'word') - 2, sc.word(0, 'hear'));
-    await m.holdUntil(sc.lines[1]);
-    await m.clickAt('#all-findings-toggle', sc.word(1, 'open') - 3, sc.word(1, 'open'));
-    await m.scrollBy(await belowPlayer(page, '#all-findings', 8), m.count + 12);
-    m.key(1, (m.count - sc.lines[1]) / FPS - 0.2, await capRect(page, '#all-findings h2', '.finding-filters'), { moveFrames: 16 });
-    await m.clickAt('#pattern-filter', sc.word(1, 'filter') - 3, sc.word(1, 'filter'));
-    // "Other findings": the pattern groups of this example show a pattern chip that the page lays out one word per line.
-    await page.selectOption('#pattern-filter', PATTERN);
-    m.marks.flaws = await textOf(page, '#flaws');
-    m.key(1, (m.count + 2 - sc.lines[1]) / FPS, await capRect(page, '#all-findings h2', '.finding-filters', '#flaws'), { moveFrames: 12 });
-    await m.holdUntil(m.count + 8);
-    await m.clickAt('#measures-toggle', m.count + 8, m.count + 9);
+    m.key(0, 0, await visibleRect(page, await capRect(page, '#text-view', '#measures-toggle')));
+    await m.glideToSelector(wordSelector(FLAT.peek, FLAT.word), sc.word(0, 'transcript'));
+    const chartAt = sc.word(0, 'chart');
+    await m.clickAt('#measures-toggle', chartAt - 8, chartAt - 4);
     await m.holdUntil(m.count + 2);
-    await m.scrollBy(await belowPlayer(page, '#chart-host', 0), m.count + 10);
+    const scrollFrom = m.count;
+    await m.scrollBy(await belowPlayer(page, '#chart-host', 0), m.count + 16);
     const plot = await page.evaluate(() => {
       const r = document.querySelector('#chart .nsewdrag').getBoundingClientRect();
       return { left: r.left, top: r.top, width: r.width, height: r.height };
     });
-    m.key(1, (m.count - sc.lines[1]) / FPS - 0.25, clampRect([plot.left * SCALE - 140, (plot.top - 40) * SCALE, (plot.left + plot.width) * SCALE + 30, (plot.top + plot.height + 30) * SCALE]), { moveFrames: 12 });
+    m.key(0, sc.rel(scrollFrom), clampRect([plot.left * SCALE - 140, (plot.top - 40) * SCALE, (plot.left + plot.width) * SCALE + 30, (plot.top + plot.height + 30) * SCALE]), { moveFrames: 16 });
     const y = plot.top + plot.height * 0.5;
-    await m.glideTo({ x: plot.left + plot.width * 0.3, y }, m.count + 5);
+    const tracesAt = sc.word(0, 'traces');
+    await m.glideTo({ x: plot.left + plot.width * 0.27, y }, tracesAt - 8);
     await page.mouse.move(m.pointer.x, m.pointer.y);
     m.clicks.push([m.count, Math.round(m.pointer.x * SCALE), Math.round(y * SCALE)]);
     await page.mouse.down();
-    await m.glideTo({ x: plot.left + plot.width * 0.58, y: y + 3 }, m.count + 12);
+    await m.glideTo({ x: plot.left + plot.width * 0.44, y: y + 3 }, tracesAt + 6);
     await page.mouse.up();
     m.marks.zoomed = m.count;
     await m.glideTo(OFF, m.count + 10);
+    const measureAt = sc.word(0, 'measurement') - 4;
+    m.callout(0, sc.rel(measureAt), clampRect([plot.left * SCALE, plot.top * SCALE, (plot.left + plot.width) * SCALE, (plot.top + plot.height) * SCALE]), 'Flag #1: the pitch range', round((sc.end - measureAt - 4) / FPS, 2));
     await m.holdUntil(sc.end + 4);
-    m.description = `L3A text with dotted, dashed and solid underlines; the pointer clicks the plain word 'Potomac' (it plays); opens Every finding, chooses the pattern "${await page.evaluate(() => document.querySelector('#pattern-filter').selectedOptions[0].textContent)}" (list: ${m.marks.flaws.slice(0, 120)}); opens Every measurement and drags across the first chart, which zooms to the drag.`;
+    m.description = `L3A transcript with its underlined findings; the pointer opens Every measurement; a drag across the pitch chart zooms onto flag #1 (Flat pitch, 8.68-11.04 s).`;
   },
 
   // The identity example: 100.00 and nothing flagged; the median-of-five example.
@@ -866,25 +954,28 @@ const SHOTS = {
     const sc = sceneFrames('s10_fair');
     m.pointer = { x: 1120, y: 470 };
     m.key(0, 0, [900, 0, MEDIA[0], 600]);
-    await m.clickAt('#picker-menu > summary', 18, 20);
-    await m.holdUntil(22);
-    m.key(0, 0.7, await capRect(page, '#chips'), { moveFrames: 20 });
-    await m.clickAt('.chip[data-id="identity"]', 44, 47);
-    await m.glideTo(OFF, 60);
-    m.key(0, 2.1, await capRect(page, '.ring-wrap', '#summary-line', '#regime-badge'), { moveFrames: 30 });
-    m.callout(0, (sc.word(0, '100') - sc.lines[0]) / FPS, await capRect(page, '.ring-wrap', '#summary-line'), '100, nothing flagged', 2.0);
+    await m.clickAt('#picker-menu > summary', 6, 8);
+    await m.holdUntil(10);
+    m.key(0, sc.rel(10), await capRect(page, '#chips'), { moveFrames: 16 });
+    await m.pick('identity', 30, 33);
+    await m.glideTo(OFF, 45);
+    m.key(0, sc.rel(40), await capRect(page, '.ring-wrap', '#summary-line', '#regime-badge'), { moveFrames: 24 });
+    const fiveAt = sc.word(0, 'With');
+    const hundredAt = sc.word(0, 'scores') - 4;
+    m.callout(0, sc.rel(hundredAt), await capRect(page, '.ring-wrap', '#summary-line'), '100, nothing flagged', round((fiveAt - 4 - hundredAt) / FPS, 2));
     m.marks.identity = `${await textOf(page, '#overall-fig')}: "${await textOf(page, '#summary-line')}"`;
-    await m.clickAt('#picker-menu > summary', sc.lines[1] + 8, sc.lines[1] + 10);
-    m.key(1, 0.3, await capRect(page, '#picker-menu .picker-panel'), { moveFrames: 20 });
-    await m.clickAt('#more-examples > summary', sc.lines[1] + 26, sc.lines[1] + 28);
+    await m.clickAt('#picker-menu > summary', fiveAt - 2, fiveAt);
+    m.key(0, sc.rel(fiveAt + 2), await capRect(page, '#picker-menu .picker-panel'), { moveFrames: 15 });
+    await m.clickAt('#more-examples > summary', fiveAt + 14, fiveAt + 16);
     // The camera follows the grown menu until the pick: a view of the whole menu would cut the waveform under it.
-    const pickAt = sc.lines[1] + 53;
-    m.key(1, (m.count + 1 - sc.lines[1]) / FPS, await capRect(page, '#picker-menu .picker-panel'), { moveFrames: pickAt - (m.count + 1) });
-    await m.clickAt('.chip[data-id="r2_consensus"]', sc.lines[1] + 50, pickAt);
+    const pickAt = fiveAt + 34;
+    m.key(0, sc.rel(m.count + 1), await capRect(page, '#picker-menu .picker-panel'), { moveFrames: pickAt - (m.count + 1) });
+    await m.pick('r2_consensus', fiveAt + 31, pickAt);
     const picked = m.count;
-    await m.glideTo(OFF, sc.lines[1] + 66);
-    m.key(1, (picked - sc.lines[1]) / FPS, await capRect(page, '.ring-wrap', '#summary-line', '#reference-mode'), { moveFrames: 30 });
-    m.callout(1, (sc.word(1, 'median') - sc.lines[1]) / FPS - 0.4, await inkRect(page, '#ledger', 'median of five'), 'Median of five readers', 3);
+    await m.glideTo(OFF, picked + 14);
+    m.key(0, sc.rel(picked), await capRect(page, '.ring-wrap', '#summary-line', '#reference-mode'), { moveFrames: 30 });
+    const medianAt = sc.word(0, 'wordbyword') - 4;
+    m.callout(0, sc.rel(medianAt), await inkRect(page, '#ledger', 'median of five'), 'Median of five readers', round((sc.end - medianAt - 4) / FPS, 2));
     await m.holdUntil(sc.end + 4);
     m.description = `The menu opens; "The reference itself: nothing to fix" (identity) scores ${m.marks.identity}; then More examples, "Against five readers: a narrow pitch range": ${await textOf(page, '#overall-fig')}, "${await textOf(page, '#summary-line')}", "${await textOf(page, '#reference-mode')}".`;
   },
@@ -903,77 +994,69 @@ const SHOTS = {
     // The form is the last section; room below it lets the whole form scroll into view.
     await page.addStyleTag({ content: 'footer { padding-bottom: 420px; }' });
     m.pointer = { x: 1000, y: 300 };
-    m.key(0, 0, [900, 0, MEDIA[0], 600]);
-    await m.glideToSelector('#jump-upload', 10);
-    await m.holdUntil(12);
+    m.key(0, sc.rel(0), [900, 0, MEDIA[0], 600]);
+    await m.glideToSelector('#jump-upload', 18);
+    await m.holdUntil(20);
     const before = await page.evaluate(() => scrollY);
     await m.click();
-    // The link jumps to the form at once; the recording shows the same move as an eased scroll.
+    m.clicks[m.clicks.length - 1].push(9);
+    // The link jumps to the form at once. The recording holds the page on the pressed button for 0.3 s, then cuts to the form.
     const target = (await page.evaluate(() => scrollY)) + (await belowPlayer(page, '#upload', 8));
     await page.evaluate((y) => scrollTo({ top: y, behavior: 'instant' }), before);
-    await m.scrollBy(target - before, m.count + 16);
-    m.key(0, 0.6, await visibleRect(page, await capRect(page, '#upload > summary', '#f-text')), { moveFrames: 18 });
-    await m.glideToSelector('#f-audio', sc.word(0, 'upload') + 4);
+    await m.holdUntil(m.count + 9);
+    await page.evaluate((y) => scrollTo({ top: y, behavior: 'instant' }), target);
+    m.lastBoxes = -Infinity;
+    m.key(0, sc.rel(m.count), await visibleRect(page, await capRect(page, '#upload > summary', '#f-text')), { moveFrames: 1 });
+    await m.glideToSelector('#f-audio', sc.word(0, 'For') - 6);
     await m.chooseFile(path.join(AUDIO, READING_WAV));
-    await m.glideToSelector('#f-baseline', sc.word(0, 'choose') + 2);
+    await m.glideToSelector('#f-baseline', sc.word(0, 'speech') + 4);
     await m.click();
     await page.selectOption('#f-baseline', '');
-    m.key(0, (m.count + 1 - sc.lines[0]) / FPS, await visibleRect(page, await capRect(page, '#f-audio', '#f-baseline-audio')), { moveFrames: 12 });
-    await m.glideToSelector('#f-baseline-audio', sc.word(0, 'reference') + 12);
+    m.key(0, sc.rel(m.count + 1), await visibleRect(page, await capRect(page, '#f-audio', '#f-baseline-audio')), { moveFrames: 12 });
+    await m.glideToSelector('#f-baseline-audio', sc.word(0, 'recordings') - 4);
     await m.chooseFile(path.join(AUDIO, REFERENCE_WAV));
     // Room under Analyse for the stages and the two lines of the refusal.
     const by = await page.evaluate(() => Math.max(0, document.querySelector('#submit').getBoundingClientRect().bottom + 170 - innerHeight));
-    const scrollFrom = m.count;
+    const roomFrom = m.count;
     await m.scrollBy(by, m.count + 8);
-    m.key(0, (scrollFrom - sc.lines[0]) / FPS, await visibleRect(page, await capRect(page, '#f-baseline-audio', '#submit')), { moveFrames: 12 });
-    await m.glideToSelector('#f-text', Math.max(m.count + 4, sc.word(0, 'paste') + 2));
+    m.key(0, sc.rel(roomFrom), await visibleRect(page, await capRect(page, '#f-baseline-audio', '#submit')), { moveFrames: 12 });
+    await m.glideToSelector('#f-text', Math.max(m.count + 4, sc.word(0, 'transcript') - 2));
     await m.click();
     await page.fill('#f-text', wrong);
-    await m.holdUntil(m.count + 4);
-    await m.clickAt('#submit', sc.lines[1] - 6, sc.lines[1] - 2);
+    await m.clickAt('#submit', sc.word(0, 'If') - 6, sc.word(0, 'If') - 4);
     const refusal = () => page.evaluate(() => document.querySelector('#stage-msg').textContent.length > 30);
     await m.glideTo({ x: 1000, y: 700 }, m.count + 10);
-    await runJob(m, refusal, sc.word(1, 'tells') - 4, { mark: 'refused' });
+    await runJob(m, refusal, sc.word(0, 'tells') - 6, { mark: 'refused' });
     m.marks.refusal = await textOf(page, '#stage-msg');
-    m.key(1, (m.marks.refused - sc.lines[1]) / FPS, await capRect(page, '#f-text', '#stage-msg'), { moveFrames: 24 });
+    m.key(0, sc.rel(m.marks.refused), await capRect(page, '#f-text', '#stage-msg'), { moveFrames: 20 });
     const place = m.marks.refusal.match(/at about (\d+) s/);
     if (!place) throw new Error(`the refusal names no place: ${m.marks.refusal}`);
-    m.callout(1, (sc.word(1, 'where') - sc.lines[1]) / FPS - 0.3, await inkRect(page, '#stage-msg'), `Says where: about ${place[1]} s`, 2.6);
-    await m.holdUntil(sc.lines[2] - 12);
-    await m.clickAt('#f-text', sc.lines[2] + 4, sc.lines[2] + 6);
-    await page.fill('#f-text', right);
-    await m.clickAt('#submit', sc.word(2, 'analysis') - 2, sc.word(2, 'analysis'));
-    m.key(2, (m.count - sc.lines[2]) / FPS, await capRect(page, '#f-text', '#submit'), { moveFrames: 16 });
-    const analysed = () => page.evaluate(() => document.querySelector('#picker-current').textContent === 'Your analysis' && !document.querySelector('#play-all').disabled);
-    await m.glideTo(OFF, m.count + 12);
-    for (let frame = 0; frame < 90 && (await page.evaluate(() => document.querySelector('#stages').hidden)); frame++) await m.shoot();
-    m.key(2, (m.count + 2 - sc.lines[2]) / FPS, await capRect(page, '#f-text', '#stages'), { moveFrames: 14 });
-    await runJob(m, analysed, sc.word(2, 'in'), { mark: 'analysed' });
-    await m.holdUntil(m.count + 3);
-    m.key(2, (m.marks.analysed - sc.lines[2]) / FPS, await capRect(page, '#ledger'), { moveFrames: 20 });
+    const whereAt = sc.word(0, 'where') - 6;
+    m.callout(0, sc.rel(whereAt), await inkRect(page, '#stage-msg'), `Says where: about ${place[1]} s`, round((sc.end - whereAt - 4) / FPS, 2));
+    // The scene ends on the refusal: the narration says nothing about a second run.
     await m.holdUntil(sc.end + 4);
-    m.description = `Analyse your reading opens from the header; the pointer chooses ${READING_WAV} as the reading, "Upload my own reference recordings" with ${REFERENCE_WAV}, and pastes the Reagan passage with one sentence changed; Analyse: "${m.marks.refusal}"; the right transcript, Analyse, the stages, then the result: ${await textOf(page, '#overall-fig')}, "${await textOf(page, '#picker-current')}", "${await textOf(page, '#summary-line')}".`;
+    m.description = `Analyse your reading opens from the header; the pointer chooses ${READING_WAV} as the reading, "Upload my own reference recordings" with ${REFERENCE_WAV}, and pastes the Reagan passage with one sentence changed; Analyse: "${m.marks.refusal}"; the page refuses it, naming the place.`;
   },
 
-  // The same reading graded without a reference: 3 spots stand out, with the rough-check note.
+  // The same reading graded without a reference: graded on its own, with the rough-check note.
   async s12_no_reference(page, m) {
     const sc = sceneFrames('s12_no_reference');
     m.pointer = { x: 1120, y: 470 };
-    m.key(0, 0, [900, 0, MEDIA[0], 600]);
-    await m.clickAt('#picker-menu > summary', sc.word(0, 'reference') + 4, sc.word(0, 'reference') + 6);
-    m.key(0, 0.9, await capRect(page, '#chips'), { moveFrames: 20 });
-    await m.clickAt('.chip[data-id="L3A_self"]', sc.word(0, 'compares') - 2, sc.word(0, 'compares'));
-    await m.glideTo(OFF, m.count + 14);
-    m.key(0, (m.count - sc.lines[0]) / FPS, await capRect(page, '.ring-wrap', '#summary-line', '#regime-badge'), { moveFrames: 30 });
-    // The callout ends when the page starts to scroll to the note.
-    const scrollAt = sc.lines[1] - 6, spotsAt = sc.word(0, 'shows') - 3;
-    m.callout(0, (spotsAt - sc.lines[0]) / FPS, await capRect(page, '.ring-wrap'), '3 spots stand out', round((scrollAt - spotsAt) / FPS, 2));
+    m.key(0, sc.rel(0), [900, 0, MEDIA[0], 600]);
+    await m.clickAt('#picker-menu > summary', 6, 8);
+    await m.holdUntil(10);
+    m.key(0, sc.rel(10), await capRect(page, '#chips'), { moveFrames: 14 });
+    await m.pick('L3A_self', 26, 29);
+    await m.glideTo(OFF, 40);
+    m.key(0, sc.rel(40), await capRect(page, '.ring-wrap', '#summary-line', '#regime-badge'), { moveFrames: 24 });
+    const itselfAt = sc.word(0, 'grades') - 2;
+    const scrollAt = sc.word(0, 'as') - 8;
+    m.callout(0, sc.rel(itselfAt), await inkRect(page, '#regime-badge'), 'Against itself', round((scrollAt - itselfAt) / FPS, 2));
     await m.holdUntil(scrollAt);
-    const scrollFrom = m.count;
-    await m.scrollBy(await belowPlayer(page, '#ledger', 14), sc.lines[1] + 10);
+    await m.scrollBy(await belowPlayer(page, '#ledger', 14), scrollAt + 10);
     const note = await inkRect(page, '#ledger', 'A rough check'), ring = await capRect(page, '.ring-wrap');
-    m.key(1, (scrollFrom - sc.lines[1]) / FPS, [Math.min(ring[0], note[0]), ring[1], Math.max(ring[2], note[2]), note[3]], { moveFrames: 30 });
-    m.callout(1, 0.5, note, 'A rough check', 3.4);
+    m.key(0, sc.rel(scrollAt), [Math.min(ring[0], note[0]), ring[1], Math.max(ring[2], note[2]), note[3]], { moveFrames: 24 });
+    m.callout(0, sc.rel(sc.word(0, 'rough') - 2), note, 'A rough check', round((sc.end - sc.word(0, 'rough') - 4) / FPS, 2));
     await m.holdUntil(sc.end + 4);
     m.description = `The menu opens; "Same reading, no reference" (L3A_self) shows ${await textOf(page, '.ring-wrap')}, "${await textOf(page, '#summary-line')}", badge "${await textOf(page, '#regime-badge')}", and the note "${(await textOf(page, '#ledger')).match(/A rough check[^.]*\.[^.]*\./)?.[0] ?? ''}".`;
   },
@@ -988,10 +1071,11 @@ function encode(id, motion) {
 function captureEntry(id, info) {
   const timing = sceneFrames(id);
   const entry = {
-    id, file: `captures/${id}.webm`, durationSec: round(info.frames / FPS), scene: id, description: info.description, atLine: 0,
+    id, file: `captures/${id}.webm`, durationSec: round(info.frames / FPS), scene: id, description: info.description,
     ...(info.syncFrame != null && timing.clip ? { alignSec: round(timing.clip.from / FPS) } : {}),
-    size: MEDIA, camera: fitCamera(info, timing), clicks: info.clicks, callouts: info.callouts, sounds: info.sounds,
+    size: MEDIA, camera: fitCamera(info, timing), clicks: info.clicks, sounds: info.sounds,
   };
+  entry.callouts = placeLabels(info, timing, entry.camera, info.callouts);
   if (info.syncFrame != null && timing.clip && Math.abs(info.syncFrame - timing.clip.from) > 1) console.warn(`  ${id}: playback starts at frame ${info.syncFrame}, the clip at ${timing.clip.from}`);
   return entry;
 }
@@ -1082,8 +1166,9 @@ function cutClip(out, pieces) {
       filters.push(`anullsrc=r=${CLIP_RATE}:cl=mono,atrim=duration=${piece.gap}[p${k}]`);
     } else {
       inputs.push('-i', piece.file);
-      const index = inputs.length / 2 - 1, fade = 0.012;
-      filters.push(`[${index}:a]atrim=start=${piece.from}:end=${piece.to},asetpts=PTS-STARTPTS,aresample=${CLIP_RATE},aformat=channel_layouts=mono,afade=t=in:d=${fade},afade=t=out:st=${round(piece.to - piece.from - fade, 4)}:d=${fade}[p${k}]`);
+      // fadeOut: seconds of fade at the end of a piece that ends inside speech; 12 ms otherwise, against a click.
+      const index = inputs.length / 2 - 1, fade = 0.012, fadeOut = piece.fadeOut ?? fade;
+      filters.push(`[${index}:a]atrim=start=${piece.from}:end=${piece.to},asetpts=PTS-STARTPTS,aresample=${CLIP_RATE},aformat=channel_layouts=mono,afade=t=in:d=${fade},afade=t=out:st=${round(piece.to - piece.from - fadeOut, 4)}:d=${fadeOut}[p${k}]`);
     }
     labels.push(`[p${k}]`);
   });
@@ -1113,27 +1198,43 @@ async function makeClips(port) {
   const rushed = result.flaws[RUSHED.stored], flat = result.flaws[FLAT.stored];
   const rushedJob = await fixJob(port, { finding: RUSHED.stored }, 'rushed');
   const melodyJob = await fixJob(port, { finding: FLAT.stored, pitch_method: 'contour' }, 'melody');
-  // The A/B/C player's tracks (app.js fixResult): yours and edited with their context, the target with the same context.
+  // The A/B/C player's tracks (app.js fixResult), each with CONTEXT s around the words instead of the page's full second,
+  // so the video plays each take once without a long run-up.
+  const CONTEXT = 0.4;
   const tracks = (job, f) => {
     const pair = job.fix.listen.find((p) => p.finding === f.id);
-    const context = Math.max(pair.original[0] - pair.original_context[0], pair.original_context[1] - pair.original[1]);
-    return { yours: pair.original_context, fixed: pair.edited_context, target: [Math.max(0, f.b[0] - context), f.b[1] + context] };
+    const around = ([a, b]) => [Math.max(0, a - CONTEXT), b + CONTEXT];
+    return { yours: around(pair.original), fixed: around(pair.edited), target: around(f.b) };
   };
-  const rushedTracks = tracks(rushedJob, rushed), melodyTracks = tracks(melodyJob, flat);
+  // A take of the Rushed finding ends TAKE_TAIL s after the next word that ends a phrase ('Mall'), so it ends in the pause.
+  const TAKE_TAIL = 0.2, TAKE_FADE = 0.07, TAKE_GAP = 0.25, CLIP_FADE = 0.05;
+  const mall = result.words.find((w) => w.w === 'Mall' && w.p[0] > rushed.p[1]);
+  const rushedPair = rushedJob.fix.listen.find((p) => p.finding === rushed.id);
+  const shift = rushedPair.edited[1] - rushedPair.original[1];
+  const rushedTakes = {
+    yours: [rushed.p[0] - CONTEXT, mall.p[1] + TAKE_TAIL],
+    fixed: [rushedPair.edited[0] - CONTEXT, mall.p[1] + shift + TAKE_TAIL],
+    target: [rushed.b[0] - CONTEXT, mall.b[1] + TAKE_TAIL],
+  };
+  // The example clip ends after 'Memorial', in the pause before 'But'.
+  const memorial = result.words.find((w) => w.w === 'Memorial');
+  const melodyTracks = tracks(melodyJob, flat);
   const BOTH_GAP = 0.35;   // app.js BOTH_GAP_MS: the silence between yours and the reference in Listen
   const TAIL = 0.35;
   const plans = {
-    s4_listen: { caption: 'The example recording, 13.8 to 20.8 s: the rushed words in the middle', sourceStartSec: 13.8,
-      pieces: [{ file: l3a, from: 13.8, to: 20.8 }] },
-    s5_finding: { caption: `Listen: yours, ${rushed.p[0].toFixed(2)}–${rushed.p[1].toFixed(2)} s, then the reference, ${rushed.b[0].toFixed(2)}–${rushed.b[1].toFixed(2)} s`,
-      pieces: [{ file: l3a, from: rushed.p[0], to: rushed.p[1], label: 'Yours' }, { gap: BOTH_GAP }, { file: reference, from: rushed.b[0], to: rushed.b[1], label: 'Reference' }, { gap: TAIL }] },
-    s6_hear_fixed: { caption: 'Hear it fixed: yours, the edited take, then the reference (the target), each with a second around the words',
-      pieces: [{ file: l3a, from: rushedTracks.yours[0], to: rushedTracks.yours[1], label: 'Yours' }, { file: rushedJob.wav, from: rushedTracks.fixed[0], to: rushedTracks.fixed[1], label: 'Edited' },
-        { file: reference, from: rushedTracks.target[0], to: rushedTracks.target[1], label: 'Target' }, { gap: TAIL }] },
-    s7_melody: { caption: "With the reference's melody: the edited take, then yours",
+    s4_listen: { sourceStartSec: 14.3,
+      pieces: [{ file: l3a, from: 14.3, to: round(memorial.p[1] + 0.08, 3), fadeOut: CLIP_FADE }] },
+    s5_finding: {
+      pieces: [{ file: l3a, from: rushed.p[0], to: rushed.p[1], label: 'Yours', fadeOut: CLIP_FADE }, { gap: BOTH_GAP }, { file: reference, from: rushed.b[0], to: rushed.b[1], label: 'Reference', fadeOut: CLIP_FADE }, { gap: TAIL }] },
+    s6_hear_fixed: {
+      pieces: [{ file: l3a, from: rushedTakes.yours[0], to: rushedTakes.yours[1], label: 'Yours', fadeOut: TAKE_FADE }, { gap: TAKE_GAP },
+        { file: rushedJob.wav, from: rushedTakes.fixed[0], to: rushedTakes.fixed[1], label: 'Edited', fadeOut: TAKE_FADE }, { gap: TAKE_GAP },
+        { file: reference, from: rushedTakes.target[0], to: rushedTakes.target[1], label: 'Target', fadeOut: TAKE_FADE }, { gap: TAIL }] },
+    s7_melody: {
       pieces: [{ file: melodyJob.wav, from: melodyTracks.fixed[0], to: melodyTracks.fixed[1], label: 'Edited' }, { file: l3a, from: melodyTracks.yours[0], to: melodyTracks.yours[1], label: 'Yours' }, { gap: TAIL }] },
   };
-  const AFTER_LINE = { s4_listen: 1, s5_finding: 3, s6_hear_fixed: 2, s7_melody: 2 };
+  const AFTER_LINE = { s4_listen: 1, s5_finding: 1, s6_hear_fixed: 1, s7_melody: 1 };
+  // The caption band stays empty during a clip: the video's pill names the take that plays.
   const updates = {};
   for (const [id, plan] of Object.entries(plans)) {
     const durationSec = cutClip(path.join(CLIPS, `${id}.wav`), plan.pieces);
@@ -1144,7 +1245,7 @@ async function makeClips(port) {
       if (piece.label) segments.push({ label: piece.label, startSec: round(at), endSec: round(at + length) });
       at += length;
     }
-    updates[id] = { clip: { file: `clips/${id}.wav`, durationSec: round(durationSec), caption: plan.caption, ...(segments.length ? { segments } : {}), ...(plan.sourceStartSec ? { sourceStartSec: plan.sourceStartSec } : {}) },
+    updates[id] = { clip: { file: `clips/${id}.wav`, durationSec: round(durationSec), caption: '', ...(segments.length ? { segments } : {}), ...(plan.sourceStartSec ? { sourceStartSec: plan.sourceStartSec } : {}) },
       clipAfterLine: AFTER_LINE[id] };
   }
   // Python writes narration.json as its voice part wrote it (1.0 stays 1.0), so only the clip fields change.

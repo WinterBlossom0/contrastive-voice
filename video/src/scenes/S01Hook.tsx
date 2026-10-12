@@ -8,7 +8,7 @@ import { color, font } from "../theme";
 import { beatFrame, type SceneTiming } from "../timeline";
 
 const TITLE = "Contrastive Voice";
-const ACCENTS: Record<string, string> = { "off.": color.youText, which: color.action, "words,": color.action };
+const ACCENTS: Record<string, string> = { "wrong,": color.youText, which: color.action, words: color.action, fix: color.action };
 
 const toWords = (tokens: TimedToken[]): KineticWord[] => tokens.map((token) => ({ text: token.text, at: token.from, tint: ACCENTS[token.text] }));
 
@@ -32,49 +32,6 @@ const Beat: React.FC<{ end: number; top: number; children: React.ReactNode }> = 
       }}
     >
       {children}
-    </div>
-  );
-};
-
-// The three questions, one per row; each gets the site's pink tint under it, like a flagged stretch.
-const Questions: React.FC<{ tokens: TimedToken[] }> = ({ tokens }) => {
-  const frame = useCurrentFrame();
-  const rows: TimedToken[][] = [];
-  let row: TimedToken[] = [];
-  tokens.forEach((token) => {
-    row.push(token);
-    if (token.text.endsWith("?")) {
-      rows.push(row);
-      row = [];
-    }
-  });
-  if (row.length > 0) {
-    rows.push(row);
-  }
-  return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 22 }}>
-      {rows.map((words, index) => {
-        const start = words[0].from;
-        const tint = rise(frame, start + 4, 18);
-        return (
-          <div key={index} style={{ position: "relative", padding: "2px 18px 10px" }}>
-            <div
-              style={{
-                position: "absolute",
-                left: 0,
-                right: `${100 - 100 * tint}%`,
-                top: 0,
-                bottom: 0,
-                borderRadius: "10px 10px 0 0",
-                backgroundColor: color.tint,
-                borderBottom: `3px solid ${color.flagBar}`,
-                opacity: 0.9,
-              }}
-            />
-            <KineticLine words={toWords(words)} style={{ position: "relative", fontFamily: font.display, fontSize: 70, fontWeight: 400, letterSpacing: "-0.01em", justifyContent: "center" }} />
-          </div>
-        );
-      })}
     </div>
   );
 };
@@ -117,8 +74,8 @@ const Title: React.FC<{ start: number }> = ({ start }) => {
 export const S01Hook: React.FC<{ scene: SceneTiming }> = ({ scene }) => {
   const frame = useCurrentFrame();
   const lines = scene.lines.map(lineTokens);
-  const [first, second, questions, answer] = [0, 1, 2, 3].map((index) => lines[Math.min(index, lines.length - 1)]);
-  const answerStart = beatFrame(scene, 3);
+  const [first, answer] = [0, 1].map((index) => lines[Math.min(index, lines.length - 1)]);
+  const answerStart = beatFrame(scene, 1);
   // The answer line opens with the name; the title stands for it, and the rest of the line follows under it.
   const nameWords = TITLE.split(" ").length;
   const tagline = answer.slice(nameWords);
@@ -126,14 +83,8 @@ export const S01Hook: React.FC<{ scene: SceneTiming }> = ({ scene }) => {
   return (
     <AbsoluteFill style={{ color: color.ink, fontFamily: font.text }}>
       <Landscape push={push} rise={rise(frame, 0, 75)} glow={rise(frame, answerStart, 40)} />
-      <Beat end={beatFrame(scene, 1)} top={300}>
-        <KineticLine words={toWords(first)} style={{ fontFamily: font.display, fontSize: 92, letterSpacing: "-0.015em", justifyContent: "center" }} />
-      </Beat>
-      <Beat end={beatFrame(scene, 2)} top={300}>
-        <KineticLine words={toWords(second)} style={{ fontFamily: font.display, fontSize: 80, letterSpacing: "-0.015em", justifyContent: "center", maxWidth: 1400 }} />
-      </Beat>
-      <Beat end={beatFrame(scene, 3)} top={190}>
-        <Questions tokens={questions} />
+      <Beat end={answerStart} top={250}>
+        <KineticLine words={toWords(first)} style={{ fontFamily: font.display, fontSize: 84, lineHeight: 1.18, letterSpacing: "-0.015em", justifyContent: "center", maxWidth: 1500 }} />
       </Beat>
       <div style={{ position: "absolute", left: 0, right: 0, top: 170, display: "flex", flexDirection: "column", alignItems: "center", gap: 34 }}>
         <div style={{ opacity: rise(frame, answerStart - 6, 12) }}>

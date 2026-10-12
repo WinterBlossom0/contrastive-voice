@@ -18,11 +18,13 @@ const CALLOUT_MIN_SEC = 2.5;
 const INSET = 4;
 const narration = JSON.parse(fs.readFileSync(path.join(ROOT, 'src/data/narration.json'), 'utf8'));
 const captures = JSON.parse(fs.readFileSync(path.join(ROOT, 'src/data/captures.json'), 'utf8'));
+const pacing = JSON.parse(fs.readFileSync(path.join(ROOT, 'src/data/pacing.json'), 'utf8')).scenes;
 const toFrame = (sec) => Math.round(sec * FPS);
 
 function sceneTiming(id) {
   const scene = narration.scenes.find((s) => s.id === id);
-  let cursor = 0;
+  const pace = pacing[id] ?? {};
+  let cursor = pace.leadSec ?? 0;
   const lines = [];
   const lineEnds = [];
   let clip = null;
@@ -35,7 +37,7 @@ function sceneTiming(id) {
       cursor += scene.clip.durationSec;
     }
   });
-  return { lines, lineEnds, clip, end: Math.max(1, toFrame(cursor + scene.gapAfterSec)) };
+  return { lines, lineEnds, clip, end: Math.max(1, toFrame(cursor + scene.gapAfterSec + (pace.holdSec ?? 0))) };
 }
 
 const raw = (id) => JSON.parse(fs.readFileSync(path.join(ROOT, 'out/capture_raw', `${id}.json`), 'utf8'));
@@ -60,9 +62,11 @@ function check() {
   for (const capture of captures.filter((c) => c.durationSec > 0)) {
     const timing = sceneTiming(capture.scene);
     const siblings = captures.filter((c) => c.scene === capture.scene && c.durationSec > 0);
-    const from = timing.lines[capture.atLine];
+    // A capture without atLine starts with its scene.
+    const startOf = (c) => (c.atLine === undefined ? 0 : timing.lines[c.atLine]);
+    const from = startOf(capture);
     const next = siblings[siblings.indexOf(capture) + 1];
-    const to = next ? timing.lines[next.atLine] : timing.end;
+    const to = next ? startOf(next) : timing.end;
     const info = raw(capture.id);
     const anchor = (at, sec) => (at === 'clip' ? timing.clip : timing.lines[at]) + toFrame(sec ?? 0);
     const keys = capture.camera.map((key) => ({ ...key, frame: anchor(key.at, key.sec) }));

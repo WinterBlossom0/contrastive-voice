@@ -6,7 +6,7 @@ import { Heading, SceneShell } from "../components/SceneShell";
 import { Waveform, type WordSpan } from "../components/Waveform";
 import { FADE_FIRST, referenceWords, RUSH_FIRST, RUSH_LAST, yourWords } from "../components/words";
 import { color, font } from "../theme";
-import { beatFrame, type SceneTiming } from "../timeline";
+import type { SceneTiming } from "../timeline";
 
 const LEFT = 160;
 const WIDTH = 1600;
@@ -28,9 +28,8 @@ const DRIFTS: Drift[] = [
   { measure: "Pauses", label: "Pause dropped", start: yourWords[RUSH_LAST].end - 0.012, end: yourWords[FADE_FIRST].start + 0.012, severity: 0.75, row: 1 },
   { measure: "Volume", label: "Fading", start: yourWords[FADE_FIRST].start, end: yourWords[yourWords.length - 1].end, severity: 0.85, row: 0 },
 ];
-const MEASURES = ["Pace", "Pauses", "Pitch", "Emphasis", "Volume", "Clarity"];
-const SOURCES = ["your best take", "a coach", "a speaker you admire"];
-const SOURCE_CUES = ["best", "coach", "speaker"];
+// The nine delivery measures D1 to D9 of docs/technical.md, as the page names them.
+const MEASURES = ["Pace", "Pauses", "Pitch range", "Emphasis", "Volume", "Clarity", "Word time", "Sentence ending", "Speech tempo"];
 
 const WordLabels: React.FC<{ words: WordSpan[]; top: number; shift: number; opacity: number; hidden?: (index: number) => number }> = ({ words, top, shift, opacity, hidden }) => (
   <>
@@ -61,12 +60,12 @@ export const S02What: React.FC<{ scene: SceneTiming }> = ({ scene }) => {
   const youIn = pop(frame, 4);
   const refIn = pop(frame, 14);
   const reveal = interpolate(frame, [6, 60], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-  const alignStart = beatFrame(scene, 1);
+  const alignStart = cueFrame(scene, 0, "word");
   const align = pop(frame, alignStart);
   const shift = START_OFFSET * (1 - align);
-  const marks = cueFrame(scene, 1, "marks");
+  const marks = cueFrame(scene, 0, "compares");
   const driftShown = DRIFTS.map((_, index) => rise(frame, marks + index * 9, 16));
-  const chipsStart = cueFrame(scene, 1, "drifts");
+  const chipsStart = cueFrame(scene, 0, "nine");
   const rushLabelHidden = (index: number) => (index >= RUSH_FIRST ? Math.max(driftShown[0], driftShown[2]) : 0);
   return (
     <SceneShell>
@@ -161,44 +160,23 @@ export const S02What: React.FC<{ scene: SceneTiming }> = ({ scene }) => {
         <Waveform words={referenceWords} width={WIDTH} height={WAVE_HEIGHT} seed={5} barColor={color.ref} reveal={reveal} />
       </div>
       <WordLabels words={referenceWords} top={REF_TOP + WAVE_HEIGHT + 12} shift={0} opacity={refIn * rise(frame, 36, 20)} />
-      <div style={{ position: "absolute", left: LEFT, top: REF_TOP + WAVE_HEIGHT + 62, display: "flex", alignItems: "center", gap: 16, opacity: refIn }}>
-        <div style={{ fontSize: 28, fontWeight: 700, color: color.refText, marginRight: 8 }}>Reference</div>
-        {SOURCES.map((source, index) => {
-          const shown = pop(frame, cueFrame(scene, 0, SOURCE_CUES[index]));
-          return (
-            <div
-              key={source}
-              style={{
-                padding: "5px 16px",
-                borderRadius: 999,
-                border: "1px solid rgba(33, 155, 161, 0.6)",
-                backgroundColor: "rgba(33, 155, 161, 0.12)",
-                color: color.refText,
-                fontSize: 24,
-                opacity: shown,
-                translate: `0px ${interpolate(shown, [0, 1], [10, 0])}px`,
-              }}
-            >
-              {source}
-            </div>
-          );
-        })}
-      </div>
+      <div style={{ position: "absolute", left: LEFT, top: REF_TOP + WAVE_HEIGHT + 62, fontSize: 28, fontWeight: 700, color: color.refText, opacity: refIn }}>Reference</div>
 
       {/* The measures; the ones that drift here light up in the flag colour. */}
-      <div style={{ position: "absolute", left: 0, right: 0, top: 850, display: "flex", justifyContent: "center", gap: 18 }}>
+      <div style={{ position: "absolute", left: 0, right: 0, top: 850, display: "flex", justifyContent: "center", gap: 14 }}>
         {MEASURES.map((measure, index) => {
-          const shown = pop(frame, chipsStart + index * 3, true);
+          const shown = pop(frame, chipsStart + index * 2, true);
           const driftIndex = DRIFTS.findIndex((drift) => drift.measure === measure);
           const lit = driftIndex < 0 ? 0 : driftShown[driftIndex] * rise(frame, chipsStart + 8, 12);
           return (
             <div
               key={measure}
               style={{
-                padding: "8px 24px",
+                padding: "8px 20px",
                 borderRadius: 999,
                 fontFamily: font.text,
-                fontSize: 28,
+                fontSize: 25,
+                whiteSpace: "nowrap",
                 fontWeight: 700,
                 color: lit > 0.5 ? color.flagText : color.ink2,
                 backgroundColor: `rgba(178, 73, 129, ${0.2 * lit})`,
