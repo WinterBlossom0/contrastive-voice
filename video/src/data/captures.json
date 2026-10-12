@@ -1,65 +1,10 @@
 [
   {
-    "id": "s3_page",
-    "file": "captures/s3_page.png",
-    "durationSec": 20.5,
-    "scene": "s3_demo_summary",
-    "description": "The full L3A page under the dusk horizon: score ring 86.11, 'Rushed in the middle, then fading', the fault timeline with Reference and This recording lanes and the #1 to #5 markers, then the three biggest fixes: Rushed -4.89, Volume drops -3.81, Missing pause -3.56.",
-    "atLine": 0,
-    "size": [
-      2240,
-      3901
-    ],
-    "camera": [
-      {
-        "at": 0,
-        "rect": [
-          0,
-          0,
-          2240,
-          1408
-        ]
-      },
-      {
-        "at": 1,
-        "rect": [
-          686,
-          697,
-          2232,
-          1408
-        ],
-        "moveFrames": 36
-      },
-      {
-        "at": 3,
-        "rect": [
-          8,
-          1441,
-          2232,
-          2266
-        ],
-        "moveFrames": 40
-      },
-      {
-        "at": 4,
-        "rect": [
-          8,
-          697,
-          696,
-          1408
-        ],
-        "moveFrames": 40
-      }
-    ]
-  },
-  {
-    "id": "transcript_karaoke",
-    "file": "captures/transcript_karaoke.webm",
-    "durationSec": 16.233,
-    "scene": "s4_demo_listen",
-    "description": "L3A, text view: the pointer presses Play recording at the clip start; the word highlight moves from 'to stand' past 'morning', 'the Washington Monument and then' and the faded 'humidity is low you can see past the' to 'Jefferson'.",
-    "alignSec": 3.833,
-    "firstStill": "captures/transcript_karaoke_first.png",
+    "id": "s3_open_example",
+    "file": "captures/s3_open_example.webm",
+    "durationSec": 16.733,
+    "scene": "s3_open_example",
+    "description": "Page with L3A; the pointer opens \"Try an example\", the menu shows the gallery (\"\" first) and picks it; the score counts up to 86.11, \"Compared with the reference reading, these 3 findings cost you the most points.\", the waveforms with tinted findings; then \"Your three biggest fixes\": Rushed | Volume drops | Missing pause.",
     "atLine": 0,
     "size": [
       2240,
@@ -69,42 +14,180 @@
       {
         "at": 0,
         "rect": [
-          8,
+          24,
           0,
+          2240,
+          607
+        ]
+      },
+      {
+        "at": 0,
+        "rect": [
+          24,
+          132,
+          1981,
+          719
+        ],
+        "sec": 1,
+        "moveFrames": 24
+      },
+      {
+        "at": 0,
+        "rect": [
+          0,
+          261,
+          2071,
+          1160
+        ],
+        "sec": 2.23,
+        "moveFrames": 24
+      },
+      {
+        "at": 1,
+        "rect": [
+          8,
+          235,
           2232,
-          1050
+          1200
+        ],
+        "moveFrames": 36
+      },
+      {
+        "at": 2,
+        "rect": [
+          0,
+          475,
+          743,
+          1124
+        ],
+        "moveFrames": 30
+      },
+      {
+        "at": 2,
+        "rect": [
+          8,
+          18,
+          2232,
+          995
+        ],
+        "sec": 5.43,
+        "moveFrames": 34
+      }
+    ],
+    "clicks": [
+      [
+        28,
+        1726,
+        75
+      ],
+      [
+        66,
+        1210,
+        203
+      ]
+    ],
+    "callouts": [
+      {
+        "at": 2,
+        "sec": 0.5,
+        "durSec": 3.2,
+        "rect": [
+          72,
+          529,
+          283,
+          740
+        ],
+        "text": "Score 86.11"
+      }
+    ],
+    "sounds": [
+      [
+        71,
+        "rise"
+      ]
+    ]
+  },
+  {
+    "id": "s4_listen",
+    "file": "captures/s4_listen.webm",
+    "durationSec": 24.233,
+    "scene": "s4_listen",
+    "description": "L3A at the top of the page: the pointer presses Play recording at the clip; playback from 13.80 s to 20.83 s (the rushed 'the Washington Monument and then' at 15.80-17.14 s); the cloud sea under the massif swells and lights at the playback position with the voice level, the low sun follows; Pause at the clip end; then the waveform panel: tinted findings, the strip with #2 Missing pause −3.56, #3 Rushed ×2 −4.89, #5 Volume drops ×2 −3.81.",
+    "atLine": 0,
+    "alignSec": 8.833,
+    "size": [
+      2240,
+      1200
+    ],
+    "camera": [
+      {
+        "at": 0,
+        "rect": [
+          0,
+          0,
+          2240,
+          753
         ]
       },
       {
         "at": "clip",
         "rect": [
-          40,
-          241,
-          1330,
-          1040
+          1113,
+          278,
+          2240,
+          782
         ],
+        "sec": 0.3,
+        "moveFrames": 40
+      },
+      {
+        "at": 1,
+        "rect": [
+          699,
+          274,
+          2219,
+          918
+        ],
+        "sec": 0.1,
         "moveFrames": 36
       }
-    ]
+    ],
+    "clicks": [
+      [
+        266,
+        178,
+        192
+      ],
+      [
+        476,
+        128,
+        193
+      ]
+    ],
+    "callouts": [
+      {
+        "at": 1,
+        "sec": 5.87,
+        "durSec": 2.6,
+        "rect": [
+          1413,
+          785,
+          1638,
+          836
+        ],
+        "text": "Brightest bar: −4.89"
+      }
+    ],
+    "sounds": []
   },
   {
-    "id": "transcript_karaoke_still",
-    "file": "captures/transcript_karaoke.png",
-    "durationSec": 0,
-    "scene": "s4_demo_listen",
-    "description": "Still, last frame of the transcript_karaoke shot.",
-    "size": [
-      2240,
-      1200
-    ]
-  },
-  {
-    "id": "finding",
-    "file": "captures/finding.webm",
-    "durationSec": 19.067,
-    "scene": "s5_demo_finding",
-    "description": "L3A, text view with the Volume drops finding open: the pointer clicks 'the' of 'the Washington Monument and then'; the panel switches to #3 Rushed -4.89 pts (0.87 s in your reading, 1.62 s in the reference, gauge x3.03, how to fix).",
+    "id": "s5_finding",
+    "file": "captures/s5_finding.webm",
+    "durationSec": 22.8,
+    "scene": "s5_finding",
+    "description": "L3A text and finding panel (#5 Volume drops open); the pointer clicks 'Washington': panel \"#3 Rushed −4.89 pts\", 'the Washington Monument and then', \"Distance past the flag threshold Flag threshold ×3.03\" gauge, \"0.87 s in your reading, 1.62 s in the reference\"; Listen plays yours then the reference (Listen plays yours, 15.80–17.14 s, then the reference, 16.52–18.62 s.); then How to fix: \"How to fix Give these words about 1.6 s; lengthen the stressed words rather than adding gaps.\".",
     "atLine": 0,
+    "alignSec": 11.367,
     "size": [
       2240,
       1200
@@ -114,62 +197,309 @@
         "at": 0,
         "rect": [
           8,
-          217,
-          2232,
-          1040
+          91,
+          2177,
+          872
         ]
       },
       {
         "at": 1,
         "rect": [
-          1352,
-          217,
-          2232,
-          834
+          1270,
+          154,
+          2240,
+          656
         ],
-        "moveFrames": 36
+        "moveFrames": 30
       },
       {
         "at": 2,
         "rect": [
-          1352,
-          217,
+          8,
+          0,
           2232,
-          560
+          965
         ],
         "moveFrames": 30
       },
       {
         "at": 3,
         "rect": [
-          1352,
-          680,
-          2232,
-          1040
+          1339,
+          593,
+          2240,
+          1185
         ],
         "moveFrames": 30
       }
-    ]
+    ],
+    "clicks": [
+      [
+        33,
+        601,
+        535
+      ],
+      [
+        342,
+        1498,
+        692
+      ]
+    ],
+    "callouts": [
+      {
+        "at": 1,
+        "sec": 1.63,
+        "durSec": 4.6,
+        "rect": [
+          1419,
+          419,
+          1939,
+          453
+        ],
+        "text": "0.87 s vs 1.62 s"
+      }
+    ],
+    "sounds": []
   },
   {
-    "id": "finding_still",
-    "file": "captures/finding.png",
-    "durationSec": 0,
-    "scene": "s5_demo_finding",
-    "description": "Still, last frame of the finding shot.",
+    "id": "s6_hear_fixed",
+    "file": "captures/s6_hear_fixed.webm",
+    "durationSec": 31.4,
+    "scene": "s6_hear_fixed",
+    "description": "L3A finding #3 Rushed: the pointer presses Hear it fixed; the progress line shows, then \"Still flagged · partly changed\", \"Score change +3.07 points\", the two checks; Yours, Edited and Target are pressed in step with the clip, then Stop.",
+    "atLine": 0,
+    "alignSec": 8.933,
     "size": [
       2240,
       1200
+    ],
+    "camera": [
+      {
+        "at": 0,
+        "rect": [
+          72,
+          289,
+          2240,
+          931
+        ]
+      },
+      {
+        "at": 1,
+        "rect": [
+          1339,
+          270,
+          2240,
+          1200
+        ],
+        "sec": 3.73,
+        "moveFrames": 35
+      },
+      {
+        "at": "clip",
+        "rect": [
+          1339,
+          645,
+          2240,
+          1186
+        ],
+        "moveFrames": 24
+      },
+      {
+        "at": 2,
+        "rect": [
+          1339,
+          566,
+          2240,
+          1157
+        ],
+        "moveFrames": 30
+      }
+    ],
+    "clicks": [
+      [
+        90,
+        1721,
+        826
+      ],
+      [
+        269,
+        1510,
+        1071
+      ],
+      [
+        369,
+        1625,
+        1071
+      ],
+      [
+        479,
+        1744,
+        1071
+      ],
+      [
+        602,
+        1883,
+        1072
+      ]
+    ],
+    "callouts": [
+      {
+        "at": 2,
+        "sec": 0.67,
+        "durSec": 2.4,
+        "rect": [
+          1450,
+          743,
+          1805,
+          773
+        ],
+        "text": "Still flagged · partly changed"
+      },
+      {
+        "at": 2,
+        "sec": 2.27,
+        "durSec": 4,
+        "rect": [
+          1450,
+          883,
+          1733,
+          913
+        ],
+        "text": "+3.07"
+      }
+    ],
+    "sounds": [
+      [
+        232,
+        "chime"
+      ]
     ]
   },
   {
-    "id": "hear_fixed",
-    "file": "captures/hear_fixed.webm",
-    "durationSec": 30.1,
-    "scene": "s5b_demo_hear_fixed",
-    "description": "L3A, #3 Rushed: the pointer presses Hear it fixed; 'Editing your recording…', then 'Still flagged · partly changed', 'Score change +3.07 points', two passed checks and the Yours / Edited / Target player. In step with the clip it presses Yours, Edited and Target, then Stop.",
-    "alignSec": 8.867,
-    "firstStill": "captures/hear_fixed_first.png",
+    "id": "s7_melody",
+    "file": "captures/s7_melody.webm",
+    "durationSec": 25.5,
+    "scene": "s7_melody",
+    "description": "L3A: the pointer clicks 'few' (#1 Flat pitch) and presses Hear it fixed: \"Not edited · Your pitch here is too flat to widen enough within natural limits.\"; then Try the reference's melody: \"No longer flagged · 82% of the change applied\", \"Score change +1.64 points\"; Play (Edited) and Yours in step with the clip, then Stop.",
+    "atLine": 0,
+    "alignSec": 10.733,
+    "size": [
+      2240,
+      1200
+    ],
+    "camera": [
+      {
+        "at": 0,
+        "rect": [
+          8,
+          197,
+          2179,
+          949
+        ]
+      },
+      {
+        "at": 0,
+        "rect": [
+          1270,
+          289,
+          2240,
+          852
+        ],
+        "sec": 1,
+        "moveFrames": 24
+      },
+      {
+        "at": 0,
+        "rect": [
+          1339,
+          704,
+          2240,
+          1166
+        ],
+        "sec": 2.63,
+        "moveFrames": 24
+      },
+      {
+        "at": 1,
+        "rect": [
+          1339,
+          378,
+          2240,
+          1200
+        ],
+        "sec": 4.67,
+        "moveFrames": 47
+      },
+      {
+        "at": 2,
+        "rect": [
+          1339,
+          551,
+          2240,
+          1131
+        ],
+        "moveFrames": 30
+      }
+    ],
+    "clicks": [
+      [
+        23,
+        950,
+        539
+      ],
+      [
+        48,
+        1721,
+        767
+      ],
+      [
+        170,
+        1654,
+        1014
+      ],
+      [
+        323,
+        1922,
+        1094
+      ],
+      [
+        454,
+        1507,
+        1094
+      ],
+      [
+        585,
+        1880,
+        1095
+      ]
+    ],
+    "callouts": [
+      {
+        "at": 2,
+        "sec": 3.57,
+        "durSec": 2.6,
+        "rect": [
+          1446,
+          725,
+          2026,
+          755
+        ],
+        "text": "No longer flagged"
+      }
+    ],
+    "sounds": [
+      [
+        268,
+        "chime"
+      ]
+    ]
+  },
+  {
+    "id": "s8_fix_all",
+    "file": "captures/s8_fix_all.webm",
+    "durationSec": 7.933,
+    "scene": "s8_fix_all",
+    "description": "L3A score card; the pointer presses Fix everything and listen; progress, then \"86.11 → 96.17 +10.06 points\" with \"Your whole reading with every fix applied. 2 spots no longer flagged (1 with part of the change), 3 still flagged, 1 not edited.\"; What each fix did opens: What each fix did #1 Flat pitch Not edited · Your pitch here is too flat to widen enough within natural limits. #2 Missing pause No longer flagged Yours Edited Play, looping #3 Rushed Still flagged · partly changed. A la...",
     "atLine": 0,
     "size": [
       2240,
@@ -179,219 +509,461 @@
       {
         "at": 0,
         "rect": [
-          1352,
-          217,
-          2232,
-          836
+          0,
+          247,
+          2182,
+          1009
         ]
       },
       {
         "at": 0,
-        "sec": 1.5,
         "rect": [
-          1352,
-          217,
-          2232,
-          925
+          0,
+          0,
+          2189,
+          828
         ],
+        "sec": 2.4,
+        "moveFrames": 28
+      },
+      {
+        "at": 1,
+        "rect": [
+          0,
+          101,
+          2240,
+          1200
+        ],
+        "sec": 0.2,
+        "moveFrames": 26
+      }
+    ],
+    "clicks": [
+      [
+        10,
+        272,
+        862
+      ],
+      [
+        123,
+        951,
+        757
+      ]
+    ],
+    "callouts": [
+      {
+        "at": 0,
+        "sec": 2.47,
+        "durSec": 2.8,
+        "rect": [
+          75,
+          733,
+          594,
+          810
+        ],
+        "text": "86.11 → 96.17"
+      }
+    ],
+    "sounds": [
+      [
+        68,
+        "chime"
+      ]
+    ]
+  },
+  {
+    "id": "s9_text_lists",
+    "file": "captures/s9_text_lists.webm",
+    "durationSec": 15.8,
+    "scene": "s9_text_lists",
+    "description": "L3A text with dotted, dashed and solid underlines; the pointer clicks the plain word 'Potomac' (it plays); opens Every finding, chooses the pattern \"Other findings\" (list: #1 Flat pitch −1.63 pts Pitch range, 8.68–11.04 s #2 Missing pause −3.56 pts Pauses, at 14.13 s); opens Every measurement and drags across the first chart, which zooms to the drag.",
+    "atLine": 0,
+    "size": [
+      2240,
+      1200
+    ],
+    "camera": [
+      {
+        "at": 0,
+        "rect": [
+          0,
+          249,
+          1418,
+          970
+        ]
+      },
+      {
+        "at": 1,
+        "rect": [
+          8,
+          0,
+          1362,
+          621
+        ],
+        "sec": 1.87,
+        "moveFrames": 16
+      },
+      {
+        "at": 1,
+        "rect": [
+          8,
+          91,
+          1362,
+          676
+        ],
+        "sec": 3.43,
+        "moveFrames": 12
+      },
+      {
+        "at": 1,
+        "rect": [
+          7,
+          0,
+          1329,
+          556
+        ],
+        "sec": 4.08,
+        "moveFrames": 12
+      }
+    ],
+    "clicks": [
+      [
+        266,
+        498,
+        799
+      ],
+      [
+        327,
+        685,
+        1049
+      ],
+      [
+        378,
+        627,
+        324
+      ],
+      [
+        395,
+        685,
+        734
+      ],
+      [
+        412,
+        502,
+        251
+      ]
+    ],
+    "callouts": [
+      {
+        "at": 0,
+        "sec": 3.17,
+        "durSec": 3.4,
+        "rect": [
+          82,
+          870,
+          845,
+          899
+        ],
+        "text": "dotted · dashed · solid"
+      }
+    ],
+    "sounds": []
+  },
+  {
+    "id": "s10_fair",
+    "file": "captures/s10_fair.webm",
+    "durationSec": 14.067,
+    "scene": "s10_fair",
+    "description": "The menu opens; \"The reference itself: nothing to fix\" (identity) scores 100.00: \"Nothing crosses its threshold: this reading matches the reference.\"; then More examples, \"Against five readers: a narrow pitch range\": 94.25, \"Compared with the median of five references, these 2 findings cost you the most points.\", \"Compared with 5 readings of the same text\".",
+    "atLine": 0,
+    "size": [
+      2240,
+      1200
+    ],
+    "camera": [
+      {
+        "at": 0,
+        "rect": [
+          24,
+          0,
+          2240,
+          607
+        ]
+      },
+      {
+        "at": 0,
+        "rect": [
+          24,
+          132,
+          1981,
+          719
+        ],
+        "sec": 0.7,
+        "moveFrames": 20
+      },
+      {
+        "at": 0,
+        "rect": [
+          0,
+          713,
+          743,
+          1156
+        ],
+        "sec": 2.1,
+        "moveFrames": 30
+      },
+      {
+        "at": 1,
+        "rect": [
+          581,
+          108,
+          2240,
+          828
+        ],
+        "sec": 0.3,
+        "moveFrames": 20
+      },
+      {
+        "at": 1,
+        "rect": [
+          139,
+          108,
+          2240,
+          1020
+        ],
+        "sec": 0.97,
+        "moveFrames": 24
+      },
+      {
+        "at": 1,
+        "rect": [
+          0,
+          723,
+          743,
+          1200
+        ],
+        "sec": 1.77,
+        "moveFrames": 30
+      }
+    ],
+    "clicks": [
+      [
+        20,
+        1726,
+        75
+      ],
+      [
+        47,
+        1210,
+        655
+      ],
+      [
+        177,
+        1726,
+        75
+      ],
+      [
+        195,
+        1426,
+        750
+      ],
+      [
+        220,
+        1210,
+        962
+      ]
+    ],
+    "callouts": [
+      {
+        "at": 0,
+        "sec": 3.77,
+        "durSec": 2,
+        "rect": [
+          72,
+          767,
+          632,
+          1136
+        ],
+        "text": "100, nothing flagged"
+      },
+      {
+        "at": 1,
+        "sec": 3.57,
+        "durSec": 3,
+        "rect": [
+          72,
+          1061,
+          589,
+          1133
+        ],
+        "text": "Median of five readers"
+      }
+    ],
+    "sounds": []
+  },
+  {
+    "id": "s11_upload",
+    "file": "captures/s11_upload.webm",
+    "durationSec": 16.9,
+    "scene": "s11_upload",
+    "description": "Analyse your reading opens from the header; the pointer chooses greenman_edited.wav as the reading, \"Upload my own reference recordings\" with reagan_farewell_1989.wav, and pastes the Reagan passage with one sentence changed; Analyse: \"Part of the transcript does not match your recording (at about 14 s, near 'through late in the'). Check that the transcript is the exact text you read. Your reference recording does not match the transcript either.\"; the right transcript, Analyse, the stages, then the result: 97.40, \"Your analysis\", \"Compared with the reference reading, these 2 findings cost you the most points.\".",
+    "atLine": 0,
+    "size": [
+      2240,
+      1200
+    ],
+    "camera": [
+      {
+        "at": 0,
+        "rect": [
+          24,
+          0,
+          2240,
+          648
+        ]
+      },
+      {
+        "at": 0,
+        "rect": [
+          51,
+          91,
+          2189,
+          1025
+        ],
+        "sec": 0.6,
+        "moveFrames": 18
+      },
+      {
+        "at": 0,
+        "rect": [
+          37,
+          238,
+          2172,
+          687
+        ],
+        "sec": 3.67,
         "moveFrames": 12
       },
       {
         "at": 0,
-        "sec": 2.45,
         "rect": [
-          1352,
-          112,
-          2232,
-          752
+          0,
+          153,
+          2173,
+          952
         ],
-        "moveFrames": 46
+        "sec": 4.37,
+        "moveFrames": 12
+      },
+      {
+        "at": 1,
+        "rect": [
+          51,
+          275,
+          2189,
+          1182
+        ],
+        "sec": 2.9,
+        "moveFrames": 24
       },
       {
         "at": 2,
         "rect": [
-          1400,
-          276,
-          2200,
-          478
+          51,
+          174,
+          2189,
+          1103
         ],
-        "moveFrames": 30
+        "sec": 1.83,
+        "moveFrames": 16
       },
       {
-        "at": 3,
-        "rect": [
-          1352,
-          112,
-          2232,
-          752
-        ],
-        "moveFrames": 30
-      }
-    ]
-  },
-  {
-    "id": "hear_fixed_still",
-    "file": "captures/hear_fixed.png",
-    "durationSec": 0,
-    "scene": "s5b_demo_hear_fixed",
-    "description": "Still, last frame of the hear_fixed shot.",
-    "size": [
-      2240,
-      1200
-    ]
-  },
-  {
-    "id": "fix_all",
-    "file": "captures/fix_all.webm",
-    "durationSec": 13.633,
-    "scene": "s5c_demo_fix_all",
-    "description": "L3A: the pointer presses Fix everything and listen; 'Editing your recording…', then 86.11 → 96.17 +10.06 points, '2 spots no longer flagged (1 with part of the change), 3 still flagged, 1 not edited.', and the opened list 'What each fix did' for #1 to #6.",
-    "atLine": 0,
-    "size": [
-      2240,
-      1200
-    ],
-    "camera": [
-      {
-        "at": 0,
-        "rect": [
-          8,
-          259,
-          2232,
-          1100
-        ]
-      },
-      {
-        "at": 0,
-        "sec": 2.25,
-        "rect": [
-          40,
-          150,
-          812,
-          560
-        ],
-        "moveFrames": 46
-      },
-      {
-        "at": 1,
-        "sec": 0.6,
-        "rect": [
-          8,
-          150,
-          2232,
-          1196
-        ],
-        "moveFrames": 36
-      }
-    ]
-  },
-  {
-    "id": "fix_all_still",
-    "file": "captures/fix_all.png",
-    "durationSec": 0,
-    "scene": "s5c_demo_fix_all",
-    "description": "Still, last frame of the fix_all shot.",
-    "size": [
-      2240,
-      1200
-    ]
-  },
-  {
-    "id": "clean",
-    "file": "captures/clean.webm",
-    "durationSec": 6.133,
-    "scene": "s6_demo_clean_and_upload",
-    "description": "The pointer opens 'Try an example' and picks 'The reference itself: nothing to fix' (identity): score 100.00, no flag bands, 'Nothing crosses its threshold: this reading matches the reference.'",
-    "atLine": 0,
-    "size": [
-      2240,
-      1200
-    ],
-    "camera": [
-      {
-        "at": 0,
-        "rect": [
-          0,
-          0,
-          2240,
-          1182
-        ]
-      },
-      {
-        "at": 0,
-        "sec": 2.15,
-        "rect": [
-          8,
-          259,
-          2232,
-          873
-        ],
-        "moveFrames": 54
-      }
-    ]
-  },
-  {
-    "id": "clean_still",
-    "file": "captures/clean.png",
-    "durationSec": 0,
-    "scene": "s6_demo_clean_and_upload",
-    "description": "Still, last frame of the clean shot.",
-    "size": [
-      2240,
-      1200
-    ]
-  },
-  {
-    "id": "upload",
-    "file": "captures/upload.webm",
-    "durationSec": 6,
-    "scene": "s6_demo_clean_and_upload",
-    "description": "Upload form: L3A.wav chosen as your recording, Reference set to 'Upload my own reference recordings', reagan_farewell_1989.wav chosen, transcript already filled in. Ends on the Analyse button; nothing is submitted.",
-    "atLine": 1,
-    "size": [
-      2240,
-      1200
-    ],
-    "camera": [
-      {
-        "at": 1,
+        "at": 2,
         "rect": [
           51,
-          250,
-          2190,
-          1115
-        ]
+          157,
+          2189,
+          1135
+        ],
+        "sec": 2.3,
+        "moveFrames": 14
       },
       {
-        "at": 1,
-        "sec": 3.05,
+        "at": 2,
         "rect": [
-          51,
-          112,
-          2190,
-          1150
+          0,
+          111,
+          2182,
+          893
         ],
+        "sec": 4.03,
         "moveFrames": 20
       }
-    ]
+    ],
+    "clicks": [
+      [
+        12,
+        2038,
+        75
+      ],
+      [
+        72,
+        586,
+        353
+      ],
+      [
+        109,
+        1654,
+        333
+      ],
+      [
+        131,
+        586,
+        601
+      ],
+      [
+        147,
+        1120,
+        493
+      ],
+      [
+        178,
+        172,
+        889
+      ],
+      [
+        349,
+        1120,
+        493
+      ],
+      [
+        398,
+        172,
+        889
+      ]
+    ],
+    "callouts": [
+      {
+        "at": 1,
+        "sec": 3.3,
+        "durSec": 2.6,
+        "rect": [
+          98,
+          1008,
+          2125,
+          1082
+        ],
+        "text": "Says where: about 14 s"
+      }
+    ],
+    "sounds": []
   },
   {
-    "id": "upload_still",
-    "file": "captures/upload.png",
-    "durationSec": 0,
-    "scene": "s6_demo_clean_and_upload",
-    "description": "Still, last frame of the upload shot.",
-    "size": [
-      2240,
-      1200
-    ]
-  },
-  {
-    "id": "no_reference",
-    "file": "captures/no_reference.webm",
-    "durationSec": 13.4,
-    "scene": "s6b_demo_no_reference",
-    "description": "The pointer opens 'Try an example' and picks 'Same reading, no reference': the hero reads 'Hear where your reading drifts from your typical delivery.', the ring shows 3 spots stand out, 'Graded on its own', and 'A rough check: your reading is graded against itself. For better results, use a reference reading of the same text.'",
+    "id": "s12_no_reference",
+    "file": "captures/s12_no_reference.webm",
+    "durationSec": 12.133,
+    "scene": "s12_no_reference",
+    "description": "The menu opens; \"Same reading, no reference\" (L3A_self) shows 3 spots stand out, \"Compared with your typical delivery, these 3 spots stand out the most.\", badge \"Graded on its own\", and the note \"A rough check: your reading is graded against itself. For better results, use a reference reading of the same text.\".",
     "atLine": 0,
     "size": [
       2240,
@@ -401,44 +973,84 @@
       {
         "at": 0,
         "rect": [
-          0,
+          24,
           0,
           2240,
-          1182
+          607
         ]
       },
       {
         "at": 0,
-        "sec": 2.05,
         "rect": [
-          8,
-          256,
-          2232,
-          900
+          24,
+          132,
+          1917,
+          719
         ],
-        "moveFrames": 55
+        "sec": 0.9,
+        "moveFrames": 20
+      },
+      {
+        "at": 0,
+        "rect": [
+          0,
+          709,
+          743,
+          1152
+        ],
+        "sec": 3.27,
+        "moveFrames": 30
       },
       {
         "at": 1,
         "rect": [
-          8,
-          256,
-          696,
-          900
+          0,
+          283,
+          743,
+          782
         ],
-        "moveFrames": 36
+        "sec": -0.2,
+        "moveFrames": 30
       }
-    ]
-  },
-  {
-    "id": "no_reference_still",
-    "file": "captures/no_reference.png",
-    "durationSec": 0,
-    "scene": "s6b_demo_no_reference",
-    "description": "Still, last frame of the no_reference shot.",
-    "size": [
-      2240,
-      1200
-    ]
+    ],
+    "clicks": [
+      [
+        20,
+        1726,
+        75
+      ],
+      [
+        84,
+        1641,
+        203
+      ]
+    ],
+    "callouts": [
+      {
+        "at": 0,
+        "sec": 5.27,
+        "durSec": 2.03,
+        "rect": [
+          72,
+          763,
+          283,
+          975
+        ],
+        "text": "3 spots stand out"
+      },
+      {
+        "at": 1,
+        "sec": 0.5,
+        "durSec": 3.4,
+        "rect": [
+          72,
+          697,
+          584,
+          758
+        ],
+        "text": "A rough check"
+      }
+    ],
+    "sounds": []
   }
 ]

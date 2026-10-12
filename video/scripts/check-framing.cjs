@@ -1,4 +1,5 @@
-/* Fails when a held camera view of video/src/data/captures.json cuts a text line, a control or a waveform at its edge.
+/* Fails when a held camera view of video/src/data/captures.json cuts a text line, a control or a waveform at its edge, or
+   when a callout points at something outside the view that holds when the callout shows.
 
      node video/scripts/check-framing.cjs                 check every capture; exit code 1 on a fault
      node video/scripts/check-framing.cjs ID FRAME        list the boxes of capture ID at its own FRAME (for choosing rects)
@@ -12,6 +13,7 @@ const path = require('node:path');
 const ROOT = path.resolve(__dirname, '..');
 const FPS = 30;
 const DEFAULT_MOVE_FRAMES = 30;
+const CALLOUT_MIN_SEC = 2.5;
 // A box that is inside the view must keep this many capture px from the view edge.
 const INSET = 4;
 const narration = JSON.parse(fs.readFileSync(path.join(ROOT, 'src/data/narration.json'), 'utf8'));
@@ -22,16 +24,18 @@ function sceneTiming(id) {
   const scene = narration.scenes.find((s) => s.id === id);
   let cursor = 0;
   const lines = [];
+  const lineEnds = [];
   let clip = null;
   scene.lines.forEach((line, index) => {
     lines.push(toFrame(cursor));
     cursor += line.durationSec;
+    lineEnds.push(toFrame(cursor));
     if (scene.clip && index === scene.clipAfterLine - 1) {
       clip = toFrame(cursor);
       cursor += scene.clip.durationSec;
     }
   });
-  return { lines, clip, end: Math.max(1, toFrame(cursor + scene.gapAfterSec)) };
+  return { lines, lineEnds, clip, end: Math.max(1, toFrame(cursor + scene.gapAfterSec)) };
 }
 
 const raw = (id) => JSON.parse(fs.readFileSync(path.join(ROOT, 'out/capture_raw', `${id}.json`), 'utf8'));
@@ -60,7 +64,8 @@ function check() {
     const next = siblings[siblings.indexOf(capture) + 1];
     const to = next ? timing.lines[next.atLine] : timing.end;
     const info = raw(capture.id);
-    const keys = capture.camera.map((key) => ({ ...key, frame: (key.at === 'clip' ? timing.clip : timing.lines[key.at]) + toFrame(key.sec ?? 0) }));
+    const anchor = (at, sec) => (at === 'clip' ? timing.clip : timing.lines[at]) + toFrame(sec ?? 0);
+    const keys = capture.camera.map((key) => ({ ...key, frame: anchor(key.at, key.sec) }));
     const [width, height] = capture.size;
     keys.forEach((key, index) => {
       const [left, top, right, bottom] = key.rect;
@@ -84,8 +89,24 @@ function check() {
         for (const [own, box] of [...cut.values()].slice(0, 8)) console.log(`     capture frame ${own}: ${JSON.stringify(box)}`);
       }
     });
+    // A callout shows from its anchor; every view held while it shows must contain its rect.
+    for (const callout of capture.callouts ?? []) {
+      const start = anchor(callout.at, callout.sec);
+      const end = callout.durSec === undefined
+        ? Math.max(callout.at === 'clip' ? timing.clip : timing.lineEnds[callout.at], start + toFrame(CALLOUT_MIN_SEC)) : start + toFrame(callout.durSec);
+      keys.forEach((key, index) => {
+        const holdFrom = index === 0 ? from : key.frame;
+        const holdTo = index + 1 < keys.length ? keys[index + 1].frame : to;
+        if (holdTo <= start || holdFrom >= end) return;
+        const [l, t, r, b] = key.rect, [cl, ct, cr, cb] = callout.rect;
+        if (cl < l || ct < t || cr > r || cb > b) {
+          failures += 1;
+          console.log(`FAIL ${capture.id} callout "${callout.text}" (frames ${start}-${end}) leaves the view of key ${index} ${key.rect}: ${callout.rect}`);
+        }
+      });
+    }
   }
-  console.log(failures ? `${failures} framing faults` : 'framing: no cut text or controls in any held view');
+  console.log(failures ? `${failures} framing faults` : 'framing: no cut text or controls in any held view, every callout in view');
   process.exit(failures ? 1 : 0);
 }
 

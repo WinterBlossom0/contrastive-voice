@@ -919,8 +919,14 @@
           ]
         }
       ],
-      "clip": null,
-      "gapAfterSec": 0.6
+      "clip": {
+        "file": "clips/s4_listen.wav",
+        "durationSec": 7,
+        "caption": "The example recording, 13.8 to 20.8 s: the rushed words in the middle",
+        "sourceStartSec": 13.8
+      },
+      "gapAfterSec": 0.6,
+      "clipAfterLine": 1
     },
     {
       "id": "s5_finding",
@@ -1148,8 +1154,25 @@
           ]
         }
       ],
-      "clip": null,
-      "gapAfterSec": 0.6
+      "clip": {
+        "file": "clips/s5_finding.wav",
+        "durationSec": 4.14,
+        "caption": "Listen: yours, 15.80–17.14 s, then the reference, 16.52–18.62 s",
+        "segments": [
+          {
+            "label": "Yours",
+            "startSec": 0,
+            "endSec": 1.34
+          },
+          {
+            "label": "Reference",
+            "startSec": 1.69,
+            "endSec": 3.79
+          }
+        ]
+      },
+      "gapAfterSec": 0.6,
+      "clipAfterLine": 3
     },
     {
       "id": "s6_hear_fixed",
@@ -1384,8 +1407,30 @@
           ]
         }
       ],
-      "clip": null,
-      "gapAfterSec": 0.6
+      "clip": {
+        "file": "clips/s6_hear_fixed.wav",
+        "durationSec": 11.438,
+        "caption": "Hear it fixed: yours, the edited take, then the reference (the target), each with a second around the words",
+        "segments": [
+          {
+            "label": "Yours",
+            "startSec": 0,
+            "endSec": 3.34
+          },
+          {
+            "label": "Edited",
+            "startSec": 3.34,
+            "endSec": 6.988
+          },
+          {
+            "label": "Target",
+            "startSec": 6.988,
+            "endSec": 11.088
+          }
+        ]
+      },
+      "gapAfterSec": 0.6,
+      "clipAfterLine": 2
     },
     {
       "id": "s7_melody",
@@ -1610,8 +1655,25 @@
           ]
         }
       ],
-      "clip": null,
-      "gapAfterSec": 0.6
+      "clip": {
+        "file": "clips/s7_melody.wav",
+        "durationSec": 9.07,
+        "caption": "With the reference's melody: the edited take, then yours",
+        "segments": [
+          {
+            "label": "Edited",
+            "startSec": 0,
+            "endSec": 4.36
+          },
+          {
+            "label": "Yours",
+            "startSec": 4.36,
+            "endSec": 8.72
+          }
+        ]
+      },
+      "gapAfterSec": 0.6,
+      "clipAfterLine": 2
     },
     {
       "id": "s8_fix_all",
