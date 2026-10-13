@@ -28,5 +28,3 @@ kaggle.json
 *.zip
 *.log
 **/*:Zone.Identifier
-fly.toml
-render.yaml

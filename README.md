@@ -72,8 +72,8 @@ Full results, the stress matrix, baselines and the cause-label accuracy are in t
 ### Prerequisites
 
 - Linux x86-64, macOS arm64 or Windows x86-64 (the platforms in `uv.lock`).
-- [uv](https://docs.astral.sh/uv/) 0.12.x (`pyproject.toml` requires `>=0.12.3,<0.13`), for example `curl -LsSf https://astral.sh/uv/0.12.3/install.sh | sh` on Linux and macOS. uv installs Python 3.12 if it is missing.
-- `ffmpeg` on `PATH` (decodes uploads), for example `sudo apt-get install ffmpeg` or `brew install ffmpeg`.
+- [uv](https://docs.astral.sh/uv/) 0.12.x (`pyproject.toml` requires `>=0.12.3,<0.13`): `curl -LsSf https://astral.sh/uv/0.12.3/install.sh | sh` on Linux and macOS, `powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/0.12.3/install.ps1 | iex"` on Windows. If another uv version is installed, `uv self update 0.12.3` switches to it. uv installs Python 3.12 if it is missing.
+- `ffmpeg` on `PATH` (decodes uploads), for example `sudo apt-get install ffmpeg`, `brew install ffmpeg` or `winget install Gyan.FFmpeg`.
 - Network access on the first analysis: torchaudio downloads the wav2vec2 alignment checkpoint (377,664,473 bytes; its size and SHA-256 are checked). Browsing the gallery needs no checkpoint.
 - Optional: Docker; a Kaggle account and the Kaggle CLI (full rebuild).
 
@@ -82,10 +82,12 @@ Full results, the stress matrix, baselines and the cause-label accuracy are in t
 Dependencies are declared in `pyproject.toml` and pinned in `uv.lock` (numpy, scipy, soundfile, soxr, praat-parselmouth, cmudict, FastAPI, uvicorn, python-multipart, torch and torchaudio 2.10.0).
 
 ```bash
-git clone https://github.com/WinterBlossom0/contrastive-voice.git
+git clone --depth 1 https://github.com/WinterBlossom0/contrastive-voice.git
 cd contrastive-voice
 uv sync --locked --extra cpu
 ```
+
+`--depth 1` skips the history (about 95 MB instead of 250 MB). Without Python tools, the Docker commands under [Run with Docker](#run-with-docker) are the shortest way to a running app.
 
 The extras `cpu` and `gpu` are mutually exclusive; `gpu` installs the CUDA 12.6 wheels and is used on Kaggle. Add `--group dev` for the tests and `--group build` for dataset building, calibration, evaluation and the gallery rebuild.
 
@@ -137,15 +139,6 @@ docker run --rm -p 7860:7860 cvoice
 
 Open `http://localhost:7860`. The image uses Python 3.12, ffmpeg and the locked CPU environment, runs as a non-root user and bakes in the verified alignment checkpoint, so the container needs no network at run time. The server listens on `$PORT` when it is set, otherwise on 7860.
 
-### Deploy
-
-The image needs about 2 GB of RAM (CPU PyTorch and the 378 MB alignment checkpoint). Run exactly one instance: the analysis queue is held in memory. The health check is `GET /api/health`. No secrets or environment variables are needed.
-
-- **Fly.io** (`fly.toml`): `fly launch --copy-config --no-deploy`, change `app` to a unique name, then `fly deploy` and `fly scale count 1`.
-- **Render** (`render.yaml`): New > Blueprint, then select the repository. It uses the Docker runtime on the `standard` plan (2 GB).
-- **Hugging Face Docker Spaces**: a plain `git push` of this repository is refused, because the Hub needs files over 10 MB stored with Git Xet or LFS, and `docs/video/contrastive-voice-launch.mp4` (38 MB) is in the history without it. Create a Docker Space and upload the tracked files without the video instead: `mkdir space && git archive HEAD -- . ':!video' ':!docs/video' | tar -x -C space`, add the front matter `sdk: docker` and `app_port: 7860` at the top of `space/README.md`, then `hf upload YOUR_USERNAME/cvoice space . --repo-type space` (`hf upload` stores large files itself).
-- **Google Cloud Run**: `gcloud run deploy cvoice --source . --memory 2Gi --cpu 2 --max-instances 1` (Cloud Run sets `PORT=8080`).
-
 ### Static gallery (no server)
 
 ```bash
@@ -153,7 +146,7 @@ uv run --extra cpu python -m cvoice.gallery site out/pages
 uv run --extra cpu python -m http.server 8000 --directory out/pages
 ```
 
-Open `http://127.0.0.1:8000`. `out/pages` holds the page, the vendored scripts and the gallery data, ready for GitHub Pages. The static site plays the examples; uploads need the local server.
+Open `http://127.0.0.1:8000`. `out/pages` holds the page, the vendored scripts and the gallery data. The static site plays the examples; uploads need the local server.
 
 ## Reproduce from public origins
 
@@ -235,7 +228,6 @@ The second command runs 658 tests (all pass, about 82 s on a laptop CPU, 2026-10
 | `scripts/` | `stage_project.sh`, `import_run.sh`, `rebuild_after_final.sh`, `build_pdf.sh`, `fetch_norms_corpus.py` (LibriTTS download for the duration norms) |
 | `tests/` | Unit and regression tests |
 | `pyproject.toml`, `uv.lock`, `Dockerfile`, `.dockerignore` | Locked environment and container |
-| `fly.toml`, `render.yaml` | Deploy configurations for Fly.io and Render |
 | `video/` | Source of the launch video (Remotion); `npm install && npm run render` |
 
 ## Data and licences
